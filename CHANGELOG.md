@@ -6,6 +6,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-04] - Recall and source trust order
+
+Asked to "find context" on a topic, the agent searched only the vault and its memory, answered from partial notes, and missed detail that existed in an earlier chat session. Nothing told it that past session transcripts are a recall source, or how to weigh a past chat against a vault doc.
+
+### Added
+- **Assistant Guideline "Recall and source trust order"** in `templates/CLAUDE.md` -- when a recall ask comes up thin in the vault, run a targeted search of past session transcripts (search only, never loaded at startup or read whole). Trust order for decisions and rules: canonical docs, vault notes, past session transcripts, built-in memory last. For changing facts the most recent dated source wins. Conflicts are shown with dates, never resolved silently; past chats are cited as dated leads; durable facts found only in a chat get filed into the vault; a "don't log" instruction in the matched session is honored.
+
+---
+
 ## [2026-09-24] - Local routines are backed up in the vault
 
 A Claude desktop LOCAL scheduled task lives only on the machine that created it (prompt on disk under `~/.claude/scheduled-tasks/`, schedule and approvals in app state that nothing exports, absent from the account's cloud routine list). A crashed or replaced computer lost them silently, and no rule told the agent to back them up.
