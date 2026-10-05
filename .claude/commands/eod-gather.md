@@ -35,7 +35,7 @@ Data gathering phase. Triages Brain Dump first, then fetches Fathom transcripts,
 - **#**: Sequential number (1, 2, 3...)
 - **Item**: Brief description of the action item
 - **Client**: Client name ([Client A], [Client B], etc.) or "Cross-Client"
-- **Type**: `action-owner`, `action-other`, `research`, `decision`, `followup`, `email-response`, `note`
+- **Type**: `action-owner`, `action-other`, `research`, `decision`, `followup`, `email-response`, `note`, plus `COMPLETED` and `CONFIRM` (written only by Section 5: Completion Check)
 - **Source**: Where it came from (e.g., "Fathom: [Contact Name] call", "Email: from jack@...", "Slack: [Client A] DM")
 - **Routed To**: File path where item was written (e.g., `Inbox/[Client A].md`)
 - **Status**: checkmark once routed, `ORPHAN` if couldn't determine destination
