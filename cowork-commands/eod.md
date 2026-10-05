@@ -67,6 +67,7 @@ Execute these steps in order:
 3. TOMORROW'S CALENDAR: Get a Google OAuth access token using the refresh token. Fetch $TOMORROW's events from Google Calendar API. Format as a readable schedule. Write to `/tmp/eod-calendar-$TODAY.md`.
 4. EMAIL CHECK: Reuse the Google OAuth token. Fetch today's emails via Gmail API (first 15-20 messages). Surface emails needing response. Route actionable items to client inbox files. Log to manifest.
 5. SLACK CHECK: For each workspace token in `.env` (`SLACK_TOKEN_WORKSPACE_*`), check unread DMs and mentions. Route items to client inbox files. Log to manifest.
+6. COMPLETION CHECK: Only if at least one `Inbox/*.md` file has open items under `## Open Tasks`. Check every open task against what steps 2 to 5 just read, plus up to 30 targeted lookups of the thread or conversation a task cites. Clear evidence that it is finished (by anyone): check it off and log a `COMPLETED` manifest row. Partial evidence, or an inbound "no longer needed": log a `CONFIRM` row (at most 5) and leave the task alone. No evidence: nothing. Full rules: `eod-gather.md` Section 5.
 
 When done, read back `$MANIFEST` and confirm it exists and has entries. Report totals by source and client.
 

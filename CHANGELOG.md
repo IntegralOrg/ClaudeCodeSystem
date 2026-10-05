@@ -6,6 +6,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-05] - Completion check moves into EOD; /morning-precheck retired
+
+`/morning-precheck` ran as its own scheduled morning job to find tasks that were already done. In practice it re-read the same day `/eod` had just read a few hours earlier, needed its own scheduled run and credentials, and existed only to serve task tracking, which not every vault uses.
+
+### Changed
+- **`/eod-gather` gains Section 5: Completion Check** (`.claude/commands/` and `cowork-commands/`). It checks open tasks against what the run already read plus up to 30 targeted thread lookups, checks off tasks with clear evidence, and records uncertain ones as `CONFIRM` rows. It runs only when the vault has open task lists; a vault not used for task management skips it entirely.
+- **`/eod-today`** lists `CONFIRM` rows in `Today.md` under `## Possibly Done` for `/morning` to settle.
+
+### Removed
+- **`/morning-precheck`** (both command folders). If you scheduled it as a routine or a local job, delete that schedule.
+
+---
+
 ## [2026-10-04] - Recall and source trust order
 
 Asked to "find context" on a topic, the agent searched only the vault and its memory, answered from partial notes, and missed detail that existed in an earlier chat session. Nothing told it that past session transcripts are a recall source, or how to weigh a past chat against a vault doc.
