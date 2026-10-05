@@ -171,9 +171,36 @@ For each workspace (customize with your workspace names):
 
 ---
 
+## Section 5: Completion Check
+
+EOD is the one place that checks whether open tasks already got finished. It runs here because Sections 1 to 4 have just read the day's calls, mail, and Slack. (It replaces the separate `/morning-precheck` routine, which re-read the same day a few hours later.)
+
+**Skip rule.** Run this section only when the vault tracks tasks: at least one `Inbox/*.md` file has open items under `## Open Tasks`. If none does, print `Completion check skipped (no task lists in use)` and move on. A vault that is not used for task management carries no completion check at all.
+
+**Hard rules.**
+- Only two writes are allowed: check off a task on HIGH evidence, or record a `CONFIRM` row. Never delete, defer, reschedule, or reword a task here.
+- Match on the exact task line, never on a bare keyword. If two open tasks match the same evidence, treat both as MEDIUM.
+- Done by anyone counts: a teammate or the client resolving the request closes the task. Do not require the user's own message.
+- When torn between HIGH and MEDIUM, choose MEDIUM.
+- Work inline. If you use subagents, wait for every one to finish before continuing.
+- A source that errors is noted and skipped; this section never stops the run.
+
+1. **Collect open tasks.** From every `Inbox/*.md` file, read the `## Open Tasks` list. Keep each task's file, exact line, and provenance note (`*from <source>*`) when it has one.
+2. **Look for evidence, in two passes.**
+   - **Pass A, what this run already read.** Check every open task against the messages, threads, and transcripts Sections 1, 3, and 4 read today. Match by the person, client, subject, or specific identifier in the task (order number, invoice number, document name).
+   - **Pass B, targeted lookups.** For open tasks with no Pass A hit whose provenance names a specific email thread or Slack conversation, open it and read the messages since the task was added, both sides, including thread replies. Cap this at 30 lookups per run: the newest tasks first, then the oldest.
+   - Completion signals: from the user (sent, done, delivered, shared, scheduled, set up, fixed, approved); from a teammate or client resolving it (added, shipped, deployed, handled, "got it, all set"); or an inbound "never mind / already handled / no longer needed", which is MOOT. A meeting-prep task whose meeting happened today is MEDIUM.
+   - A clear resolution in the cited thread is HIGH. Partial or indirect evidence is MEDIUM. No evidence is nothing: do not record or report it.
+3. **Act.**
+   - **HIGH:** edit the Inbox file the same way the other sections do: change `- [ ]` to `- [x]` on the exact line and append ` -- verified via [source] [HH:MM]`. Append a manifest row with type `COMPLETED` and the evidence.
+   - **MEDIUM or MOOT:** append a manifest row with type `CONFIRM`, the task line, its file, and the evidence (for MOOT, quote the inbound message). Do not edit the task. At most 5 `CONFIRM` rows per run, MOOT first, then MEDIUM by most recent evidence.
+4. **Hand off.** The Phase 1 summary prints the `COMPLETED` and `CONFIRM` lists. Phase 5 carries the `CONFIRM` rows into `Today.md` so `/morning` can settle each one in a single pass.
+
+---
+
 ## Phase 1 Complete
 
 After all sections finish:
-1. Read back the manifest and print a summary: total items extracted, routed, orphaned
+1. Read back the manifest and print a summary: total items extracted, routed, orphaned, plus the `COMPLETED` and `CONFIRM` lists from Section 5
 2. Print the calendar preview for tomorrow
 3. The manifest at `/tmp/eod-manifest-TODAY.md` and all transcript/inbox files on disk are the handoff to Phase 2

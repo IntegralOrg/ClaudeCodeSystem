@@ -80,6 +80,10 @@ If Today.md has a `## Brain Dump` section with remaining items (not strikethroug
 
 ---
 
+### Possibly done
+
+If the manifest has `CONFIRM` rows (Phase 1, Section 5: Completion Check), list them in `Today.md` under `## Possibly Done`, each with its task line, file, and evidence, so `/morning` can confirm or dismiss each one. Omit the heading when there are none.
+
 ## Step 6: Meeting Prep
 
 For each meeting tomorrow, pull context from client Company Profile, recent transcripts, and open tasks. Format:
