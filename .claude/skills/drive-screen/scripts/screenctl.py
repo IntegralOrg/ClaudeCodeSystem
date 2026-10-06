@@ -496,9 +496,13 @@ elif OS == "Darwin":
         # only problem was this grant. Ask System Events directly instead.
         # Process names are readable without the grant; window attributes are
         # not, so the probe has to touch a window.
-        r = _osa('tell application "System Events" to get count of windows of '
-                 'first application process whose frontmost is true')
-        return r.returncode != 0 and ("-25211" in r.stderr or "-1728" in r.stderr
+        # Finder, not the frontmost process: when the driver runs from inside
+        # the Claude desktop app, the frontmost process is that app, and
+        # System Events refuses its windows even with the grant in place.
+        # Finder is always running and its windows are always readable.
+        r = _osa('tell application "System Events" to tell process "Finder" '
+                 'to get count of windows')
+        return r.returncode != 0 and ("-25211" in r.stderr
                                       or "assistive" in r.stderr.lower())
 
     def list_windows() -> list[Win]:
