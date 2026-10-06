@@ -6,6 +6,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-07] - Guard hooks, credential isolation, Current State / Log profile shape
+
+### Added
+- **`templates/scripts/hooks/`** -- `guard_secrets.py` (blocks reading, printing, or searching the credentials file and environment), `log_tool_use.py` (masked JSONL action log under `_generated/agent-actions/`), `guard_state_writes.py` (one `## Current State`, append-only `## Log`), `session_context.py` (session start context), plus a README with two proof commands. Wired into `examples/settings.json`.
+- **`templates/scripts/{envload,with-env,sanitize_ingest,profile-convert}.py`** with tests in `templates/scripts/tests/`.
+- **`templates/Client Note.md`** -- the client profile skeleton (`engagement: prospect`, five-key Current State, Log).
+
+### Changed
+- **Commands** (both command folders) -- no step sources the credentials file any more; helpers run through `python3 scripts/with-env.py -- ...`. `/graph-daily` Phase 4 writes takeaways to the Log and replaces changed Current State lines.
+- **`templates/CLAUDE.md`** -- credential guideline rewritten, new write-path guideline, and the logins-file explanation for non-technical users.
+- **`/onboard`** installs the hooks and scripts into the vault, and creates client profiles from `templates/Client Note.md`.
+
+---
+
 ## [2026-10-06] - System Journal capture + metadata-rendered knowledge graph
 
 Two portable building blocks land in the template. The **System Journal** turns every Claude Code session into a deterministic evidence record plus one distilled journal line, so a later review can spot what keeps coming back. The **knowledge graph** stops being hand-linked: `Graph/index.md` and the MOCs are now rendered from frontmatter, and the inline "link every first mention" pass is retired.

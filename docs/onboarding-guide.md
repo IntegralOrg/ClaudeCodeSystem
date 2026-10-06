@@ -100,6 +100,10 @@ Claude Code documentation also mentions `~/.claude/settings.json` (in the worksp
 
 ---
 
+### Guardrail hooks
+
+`/onboard` installs four small hooks with `examples/settings.json` (merged into your vault's `.claude/settings.json`). They guarantee that Claude cannot open or print your credentials file or the environment (your scripts still use the logins through `scripts/envload.py` and `scripts/with-env.py`), that every tool call is logged with secrets masked, that a client profile keeps exactly one `## Current State` plus an append-only `## Log`, and that each session starts with the branch, uncommitted work, and latest handoff. To prove they are on, run the two commands in the README "Guardrails" section from the vault root: the first must exit 2 (blocked) and the second exit 0.
+
 ## Step 3: Create Your Notes Folder (Vault)
 
 Your vault is a Git repository of plain Markdown files that Claude reads and writes directly in your cloud workspace. Plain text means your notes stay portable and readable for decades, and Git keeps a full history so nothing is ever lost.
