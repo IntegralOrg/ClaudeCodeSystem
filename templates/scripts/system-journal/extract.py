@@ -392,6 +392,15 @@ def main():
             write_if_changed(os.path.join(args.out, sid + ".json"), rec)
             done += 1
             continue
+        # Stale-Stop guard: a live Stop extract read the transcript at some point; if an
+        # overlapping SessionEnd/idle run has since FINALIZED this session from an equal-or-larger
+        # transcript, re-publishing our older record would let the distiller process stale
+        # evidence. Re-read the state (cheap, unlocked) and bow out when that has happened.
+        if args.stop and named:
+            fresh_prev = load_state().get(sid, {})
+            if fresh_prev.get("final") and (fresh_prev.get("size") or 0) >= st.st_size:
+                skipped += 1
+                continue
         epath = evidence_path(args.vault, rec["started"], sid)
         write_if_changed(epath, rec)
         # Journal-line bookkeeping. A transcript that actually grew (or was named at
