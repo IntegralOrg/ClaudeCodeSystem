@@ -28,7 +28,7 @@ Reads the manifest, inbox files, today's plan, and tomorrow's calendar. Produces
 
 ## Step 2: Calendar Fetch
 
-1. Read cached calendar at `/tmp/eod-calendar-TODAY.md` (from Phase 1). If missing, fetch via Google Calendar API with OAuth refresh token for TOMORROW's date range.
+1. Read cached calendar at `/tmp/eod-calendar-TODAY.md` (from Phase 1). If missing, fetch via Google Calendar API with the OAuth refresh token for TOMORROW's date range, running the token exchange and the Calendar request in a credential-loaded child (`python3 scripts/with-env.py -- ...`).
 2. Build schedule table with daily skeleton, slotting meetings into their times:
 
    | Time | Block | Notes |

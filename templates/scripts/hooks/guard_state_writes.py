@@ -26,7 +26,7 @@ def in_scope(path):
 
 
 def _section(content, title):
-    m = re.search(r"^## " + re.escape(title) + r"\s*$(.*?)(?=^## |\Z)", content, re.MULTILINE | re.DOTALL)
+    m = re.search(r"^## " + re.escape(title) + r"\s*$(.*?)(?=^## |\Z)", content, re.MULTILINE | re.DOTALL | re.IGNORECASE)
     return m.group(1) if m else None
 
 
