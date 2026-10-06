@@ -230,10 +230,13 @@ def test_edit_missing_file_fails_open(tmp_path):
     assert code == 0
 
 def test_session_context_outputs_nested_additional_context(tmp_path, monkeypatch):
+    import shutil
+    if not shutil.which("git"):
+        pytest.skip("git not available")
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     (tmp_path / "a.md").write_text("x")
     subprocess.run(["git", "-C", str(tmp_path), "add", "."], check=True)
-    subprocess.run(["git", "-C", str(tmp_path), "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "first"], check=True)
+    subprocess.run(["git", "-C", str(tmp_path), "-c", "user.email=t@t", "-c", "user.name=t", "-c", "commit.gpgsign=false", "commit", "-qm", "first"], check=True)
     (tmp_path / ".handoffs").mkdir()
     (tmp_path / ".handoffs" / "foo.md").write_text("# Foo handoff\nline2\n")
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
