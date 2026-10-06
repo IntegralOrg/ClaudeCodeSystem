@@ -172,7 +172,11 @@ def save_index(vault, index):
     os.replace(tmp, path)
 
 
-def refresh_index(vault, index, files):
+def refresh_index(vault, index, files, today=None):
+    """hash_since (Phase 5) records the day a row's content hash last changed;
+    the staleness flag reads it. Rows from before the field exists are
+    backfilled with today, so the 180-day clock starts honestly, not at zero."""
+    today = today or date.today().isoformat()
     added, changed, deleted = [], [], []
     current = set(files)
     for rel in files:
@@ -180,12 +184,15 @@ def refresh_index(vault, index, files):
         row = index["files"].get(rel)
         if row is None:
             index["files"][rel] = {"hash": h, "concept": "", "entities": [],
-                                   "verdict": "", "stale": True}
+                                   "verdict": "", "stale": True, "hash_since": today}
             added.append(rel)
         elif row.get("hash") != h:
             row["hash"] = h
             row["stale"] = True
+            row["hash_since"] = today
             changed.append(rel)
+        elif not row.get("hash_since"):
+            row["hash_since"] = today
     for rel in sorted(index["files"]):
         if rel not in current:
             del index["files"][rel]
@@ -256,12 +263,161 @@ def read_frontmatter_keys_and_body(path):
     return [], text
 
 
+def read_frontmatter_values(path):
+    """Parse the handful of top-level scalar frontmatter keys the invariant
+    check needs: canonical (bool), status (str), superseded_by (wikilink text).
+    Line scan only; not a full YAML parser."""
+    vals = {}
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            text = f.read()
+    except OSError:
+        return vals
+    if not text.startswith("---\n"):
+        return vals
+    end = text.find("\n---", 4)
+    if end == -1:
+        return vals
+    for ln in text[4:end].splitlines():
+        if not ln or ln.startswith((" ", "-", "#")) or ":" not in ln:
+            continue
+        key, _, raw = ln.partition(":")
+        key = key.strip()
+        val = raw.strip()
+        if key == "canonical":
+            vals["canonical"] = (val.lower() == "true")
+        elif key == "status":
+            vals["status"] = val.strip("\"'")
+        elif key == "superseded_by":
+            m = re.search(r"\[\[([^\]|#]+)", val)
+            vals["superseded_by"] = m.group(1).strip() if m else val.strip("\"'")
+    return vals
+
+
+def resolve_wikilink(target_text, files):
+    forms = {}
+    for t in files:
+        for form in _link_forms(t):
+            forms[form] = t
+    return forms.get(target_text)
+
+
+def invariant_check(vault, files, index=None):
+    """Deterministic integrity check over docs carrying a canonical/superseded
+    marker. Returns violation strings shaped invariant:<rule>:<rel>. Never
+    modifies anything; the audit fails loudly rather than silently drifting."""
+    violations = []
+    marks = {}
+    for rel in files:
+        vals = read_frontmatter_values(os.path.join(vault, rel))
+        if vals.get("canonical") or vals.get("status") == "superseded":
+            marks[rel] = vals
+    superseded = {rel for rel, v in marks.items() if v.get("status") == "superseded"}
+    for rel, v in sorted(marks.items()):
+        is_canon = bool(v.get("canonical"))
+        is_sup = v.get("status") == "superseded"
+        if is_canon and is_sup:
+            violations.append("invariant:canonical_and_superseded:" + rel)
+        if is_sup:
+            target = v.get("superseded_by")
+            if not target:
+                violations.append("invariant:superseded_no_pointer:" + rel)
+                continue
+            resolved = resolve_wikilink(target, files)
+            if resolved is None:
+                violations.append("invariant:dangling_superseded_by:" + rel)
+            elif resolved in superseded:
+                violations.append("invariant:superseded_chain:" + rel)
+    violations.extend(_cluster_invariants(marks, index))
+    return violations
+
+
+STALE_CANONICAL_DAYS = 180
+
+
+def stale_days_from_schema(schema):
+    """Config, not a constant: the staleness threshold may be set in the
+    schema's `embedding:` block (`stale_days: N`). Falls back to the default."""
+    cfg = (schema or {}).get("embedding") or {}
+    try:
+        return int(cfg.get("stale_days", STALE_CANONICAL_DAYS))
+    except (TypeError, ValueError):
+        return STALE_CANONICAL_DAYS
+
+
+def stale_canonical(vault, files, index, days=STALE_CANONICAL_DAYS, today=None):
+    """Report-only staleness flag (Phase 5): a doc stamped canonical whose
+    content hash has not changed in `days`. Drift in a canonical doc is the
+    failure the research called near-invisible; this makes it visible. Returns
+    [{rel, hash_since, days_unchanged}] sorted oldest first."""
+    today_d = date.fromisoformat(today) if today else date.today()
+    rows = (index or {}).get("files") or {}
+    out = []
+    for rel in files:
+        row = rows.get(rel)
+        since = (row or {}).get("hash_since")
+        if not since:
+            continue
+        vals = read_frontmatter_values(os.path.join(vault, rel))
+        if not vals.get("canonical"):
+            continue
+        try:
+            age = (today_d - date.fromisoformat(since)).days
+        except ValueError:
+            continue
+        if age > days:
+            out.append({"rel": rel, "hash_since": since, "days_unchanged": age})
+    out.sort(key=lambda r: (-r["days_unchanged"], r["rel"]))
+    return out
+
+
+def _cluster_invariants(marks, index):
+    """A confirmed fork/duplicate cluster must hold exactly one canonical.
+    No-op until Phase 2 populates canonical_judgments."""
+    if not index:
+        return []
+    judgments = index.get("canonical_judgments") or {}
+    adj = {}
+    for j in judgments.values():
+        if j.get("status") != "confirmed":
+            continue
+        if j.get("verdict") not in ("version-fork", "duplicate"):
+            continue
+        a, b = j.get("relA"), j.get("relB")
+        if not a or not b:
+            continue
+        adj.setdefault(a, set()).add(b)
+        adj.setdefault(b, set()).add(a)
+    seen = set()
+    out = []
+    for node in sorted(adj):
+        if node in seen:
+            continue
+        stack = [node]
+        comp = []
+        while stack:
+            x = stack.pop()
+            if x in seen:
+                continue
+            seen.add(x)
+            comp.append(x)
+            stack.extend(adj.get(x, ()))
+        canon = [r for r in comp if marks.get(r, {}).get("canonical")]
+        if len(canon) != 1:
+            out.append("invariant:cluster_multi_canonical:" + "+".join(sorted(comp)))
+    return out
+
+
 def structural_checks(vault, schema, files):
     findings = {"root_clutter": [], "unknown_folder": [], "naming_violations": [],
                 "missing_frontmatter": [], "empty_stubs": []}
     whitelist = set(schema.get("root_whitelist") or [])
     folders = schema.get("folders") or []
     required = schema.get("frontmatter_required") or []
+    # Per-file frontmatter exemptions (glob patterns matched against rel path).
+    # For repo-canonical mirror files that refuse local edits / are overwritten
+    # on their next sync, so stamping vault frontmatter is futile and corrupting.
+    fm_exempt = schema.get("frontmatter_exempt") or []
     now = time.time()
     for rel in files:
         full = os.path.join(vault, rel)
@@ -284,7 +440,8 @@ def structural_checks(vault, schema, files):
         if is_record(d, schema):
             continue
         keys, body = read_frontmatter_keys_and_body(full)
-        if required and not all(k in keys for k in required):
+        exempt = any(fnmatch.fnmatch(rel, pat) for pat in fm_exempt)
+        if required and not exempt and not all(k in keys for k in required):
             findings["missing_frontmatter"].append(rel)
         if len("".join(body.split())) < 40 and (now - os.path.getmtime(full)) > 3 * 86400:
             findings["empty_stubs"].append(rel)
@@ -359,10 +516,11 @@ def inbound_links(vault, targets, files):
     return result
 
 
-def stage_files(vault, rels):
+def stage_files(vault, rels, today=None):
     schema = load_schema(vault)
     protected = schema.get("protected", [])
-    dest_dir = os.path.join(vault, HYGIENE_DIR, "audit-trash", date.today().isoformat())
+    day = today or date.today().isoformat()
+    dest_dir = os.path.join(vault, HYGIENE_DIR, "audit-trash", day)
     os.makedirs(dest_dir, exist_ok=True)
     index = load_index(vault)
     for rel in rels:
@@ -426,35 +584,10 @@ def apply_row_update(vault, rel, concept, entities, verdict):
 
 # ---------- CLI ----------
 
-# Files that used to live under .claude/ before the 2026-09 relocation.
-_LEGACY_HYGIENE = ["vault-schema.md", "vault-index.json", "audit-log.md", "audit-trash"]
-
-
-def migrate_legacy_hygiene(vault):
-    """One-time move of pre-relocation audit state from .claude/ into
-    _generated/vault-hygiene/. A no-op once migrated (or on a fresh vault with
-    no legacy state), so it is safe to call on every scan. Returns the list of
-    item names moved."""
-    new_dir = os.path.join(vault, HYGIENE_DIR)
-    # If the new location already has a schema, we have already migrated.
-    if os.path.exists(os.path.join(new_dir, "vault-schema.md")):
-        return []
-    moved = []
-    for name in _LEGACY_HYGIENE:
-        src = os.path.join(vault, ".claude", name)
-        dst = os.path.join(new_dir, name)
-        if os.path.exists(src) and not os.path.exists(dst):
-            os.makedirs(new_dir, exist_ok=True)
-            shutil.move(src, dst)
-            moved.append(name)
-    return moved
-
-
 def cmd_scan(args):
-    migrate_legacy_hygiene(args.vault)
     schema = load_schema(args.vault)
     protected = schema.get("protected", [])
-    purged = purge_trash(args.vault)
+    purged = 0 if getattr(args, "no_purge", False) else purge_trash(args.vault)
     files = walk_vault(args.vault, protected)
     index = load_index(args.vault)
     added, changed, deleted = refresh_index(args.vault, index, files)
@@ -467,8 +600,18 @@ def cmd_scan(args):
         "watched_clusters": index.get("watched_clusters", []),
         "no_merge_paths": no_merge_paths(schema),
         "trash_purged": purged, "file_count": len(files),
+        "invariant_violations": invariant_check(args.vault, files, index),
+        "stale_canonical": stale_canonical(args.vault, files, index,
+                                           days=stale_days_from_schema(schema)),
     })
     print(json.dumps(order, indent=1, ensure_ascii=False))
+
+
+def cmd_invariant(args):
+    schema = load_schema(args.vault)
+    files = walk_vault(args.vault, schema.get("protected", []))
+    print(json.dumps(invariant_check(args.vault, files, load_index(args.vault)),
+                     indent=1, ensure_ascii=False))
 
 
 def cmd_links(args):
@@ -523,12 +666,16 @@ def main():
         ("links", cmd_links, ["files"]),
         ("stage", cmd_stage, ["files"]),
         ("watch", cmd_watch, ["files"]),
+        ("invariant", cmd_invariant, []),
     ]:
         sp = sub.add_parser(name)
         sp.add_argument("--vault", required=True)
         if extra:
             sp.add_argument("files", nargs="+")
         sp.set_defaults(func=fn)
+        if name == "scan":
+            sp.add_argument("--no-purge", action="store_true",
+                            help="skip the 7-day trash purge (freshness gate: input not current)")
     sp = sub.add_parser("update-row")
     sp.add_argument("--vault", required=True)
     sp.add_argument("--file", required=True)
