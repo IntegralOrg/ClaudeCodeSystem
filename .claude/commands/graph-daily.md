@@ -20,9 +20,11 @@ misses earlier commits on a multi-commit day and ignores uncommitted work, so us
 bound the range and always include the working tree:
 
 ```bash
+# Marker is keyed to THIS vault so a second vault's commit can never become this vault's diff base.
+MARKER="/tmp/graph-daily-marker-$(printf '%s' "$VAULT" | cksum | cut -d' ' -f1)"
 # Committed changes since the last successful run (marker), else since midnight as a first run.
-if [ -f /tmp/graph-daily-marker ]; then
-  base=$(cat /tmp/graph-daily-marker)
+if [ -f "$MARKER" ]; then
+  base=$(cat "$MARKER")
   git -C "$VAULT" diff --name-status --diff-filter=ACMRD "$base"..HEAD
 else
   git -C "$VAULT" log --since=midnight --name-status --diff-filter=ACMRD --pretty=format:
@@ -36,7 +38,7 @@ git -C "$VAULT" status --porcelain
 Exclude `.claude/`, `.obsidian/`, `_generated/`, `scripts/`, `Templates/`, and `Graph/` (those
 are outputs or non-content). If the combined set is empty, report "No changes today" and skip to
 Phase 5 (render + stats only). After a successful run, record the new marker so the next run
-starts where this one ended: `git -C "$VAULT" rev-parse HEAD > /tmp/graph-daily-marker`.
+starts where this one ended: `git -C "$VAULT" rev-parse HEAD > "$MARKER"`.
 
 ---
 

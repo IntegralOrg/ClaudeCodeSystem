@@ -601,13 +601,19 @@ def export_graph(core, docs, index, out_path, vectors_path, top_k=3):
     # of `core`. Iterate the full scanned set, resolve the target against core, and add the
     # superseded source as a node so the edge is not dangling (it stays out of the navigation MOCs).
     for r in sorted(docs):
-        sb = docs[r]["fm"].get("superseded_by")
+        fm = docs[r]["fm"]
+        # Only eligible superseded pages become non-core source nodes. A record (transcript, daily
+        # note, inbox, index) or an underscore-prefixed file is never exposed in the export, even
+        # if it happens to carry a superseded_by field.
+        if str(fm.get("type", "")).lower() in RECORD_TYPES or os.path.basename(r).startswith("_"):
+            continue
+        sb = fm.get("superseded_by")
         if isinstance(sb, str) and sb.startswith("[["):
             t = resolve(sb.strip("[]").split("|")[0])
             if t:
                 if r not in node_ids:
                     node_ids.add(r)
-                    nodes.append(node_of(r, docs[r]["fm"]))
+                    nodes.append(node_of(r, fm))
                 add(r, t, "superseded_by")
     # entity co-occurrence (from the concept index)
     by_entity = defaultdict(list)

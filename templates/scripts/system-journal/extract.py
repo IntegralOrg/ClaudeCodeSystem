@@ -397,12 +397,15 @@ def main():
         # Journal-line bookkeeping. A transcript that actually grew (or was named at
         # SessionEnd) needs a fresh line. A --force re-extract keeps the line unless
         # --redistill. A Stop-hook extract never queues one: the session is still live.
+        omit_final = False
         if args.stop and named:
             distilled = bool(prev.get("distilled"))
-            # A live-session Stop extract must not UN-finalize a session that the idle sweep or
-            # SessionEnd already marked final (and is still waiting to distill). Only an actual
-            # transcript change clears `final`.
-            final = bool(prev.get("final")) and unchanged
+            # A live-session Stop extract must never UN-finalize a session. If the transcript did
+            # not grow, OMIT `final` from the patch entirely so merge_state (which re-reads the
+            # file under the lock) preserves whatever a concurrent idle-sweep/SessionEnd wrote,
+            # rather than clobbering it with this run's stale snapshot. Only genuine growth clears it.
+            final = False
+            omit_final = unchanged
         else:
             requeue = named or not unchanged or args.redistill
             distilled = (not requeue) and bool(prev.get("distilled"))
@@ -415,6 +418,8 @@ def main():
             "final": final,
             "distilled": distilled,
         }
+        if omit_final:
+            del patch["final"]
         updates[sid] = patch
         done += 1
         kept += distilled
