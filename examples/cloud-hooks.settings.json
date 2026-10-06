@@ -1,0 +1,21 @@
+{
+  "_comment": "Repo-level hook block for cloud capture. Merge this `hooks` object into your vault's OWN .claude/settings.json (the committed, repo-level one that ships to every cloud container cloning your vault). These hooks run cloud-land.sh (lands the session's file edits on main without the agent running git) and cloud-journal.sh (writes the System Journal evidence + journal line). They are repo-level on purpose so they travel with the vault into every cloud container; hooks bypass the permission classifier, so an unattended cloud run never stalls on a prompt. The cloud environment needs push access to your vault's origin (main). Assumes install placed the scripts at scripts/cloud-land.sh and scripts/system-journal/cloud-journal.sh. Both scripts exit immediately unless they are in a cloud container, so this block is inert on a local machine.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/cloud-land.sh\"", "timeout": 120 },
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/system-journal/cloud-journal.sh\"", "timeout": 120 }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/cloud-land.sh\" --final", "timeout": 120 },
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/system-journal/cloud-journal.sh\" --final", "timeout": 60 }
+        ]
+      }
+    ]
+  }
+}

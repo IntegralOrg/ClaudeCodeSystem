@@ -182,6 +182,49 @@ uv run --python 3.12 --with fastembed,numpy scripts/vault-embed.py report --vaul
 ### EOD Command
 The default `/eod` flow should run as one command in one Claude session. Claude Code now supports long-context sessions, so the simplest setup is a single `/eod` that gathers, routes, syncs, writes the daily note, and builds tomorrow's plan. If a user's workflow is unusually heavy, or if they want unattended scheduled automation, you can still split EOD into separate phases as an advanced fallback.
 
+## Install the System Journal (optional)
+
+The System Journal turns every Claude Code session into a durable, checkable record so a later
+review can spot what keeps coming back. It ships in `templates/scripts/system-journal/` (full
+reference: that folder's `README.md`). This template ships **capture** only: there is no weekly
+reflection command and no Themes writer yet.
+
+In the cloud edition, capture happens through **repo-level hooks** that ship with your vault to
+every container:
+
+1. **Wire the hooks.** The hook block is already in `examples/settings.json`, which `/onboard`
+   installs as your vault's committed `.claude/settings.json` (a standalone copy is in
+   `examples/cloud-hooks.settings.json` if you need to merge it into an existing file by hand).
+   The hooks run `scripts/cloud-land.sh` (lands the session's file edits on `main` without the
+   agent running git) and `scripts/system-journal/cloud-journal.sh` (writes the evidence record
+   and distills one journal line).
+2. **Why hooks, not a command.** Hooks bypass the permission classifier, so an unattended cloud
+   run never stalls on a prompt. A container keeps its transcript only while it lives, so capture
+   has to happen while alive: the `Stop` hook extracts every ~60 s and distills at most every 15
+   minutes; `SessionEnd --final` does a last pass.
+3. **Push access.** The cloud environment needs push access to your vault's `origin` (main); the
+   hooks fast-forward their file onto `main` from a throwaway worktree, never your working branch.
+4. **Per-session cost.** The journal line is produced by your own `claude -p` call with the
+   default Sonnet distiller: about **nine cents per finished session**. Set `SYSTEM_JOURNAL_MODEL`
+   to change the model.
+5. **What is kept.** Your words verbatim, the agent's visible words capped, the tool calls it
+   made and the errors that came back. **No tool outputs**, no thinking, no attachments. Full
+   transcripts are never stored (and a torn-down container keeps none).
+6. **Where the files land.** `_generated/system-journal/` in your vault repo: `evidence/<YYYY-MM>/`
+   (deterministic, kept forever) and `cloud/<date>.<sid8>.json` (one journal line per session).
+7. **Cost guard and privacy.** Before any bulk re-run, read the pending count first
+   (`python3 scripts/system-journal/distill.py --dry-run | tail -1`). Everything stays in your own
+   vault repo; the audit tier (a work-only projection with personal lines dropped) is **generated
+   locally only and shipped nowhere**.
+
+**Also run your vault locally?** Then also install the Mac-side hooks so local sessions are
+captured too: `bash scripts/system-journal/install.sh --vault "$VAULT" --write-hooks` (it merges
+three hooks into your user-level `~/.claude/settings.json`). See the system-journal README.
+
+**Knowledge graph.** `scripts/graph-render.py` renders `Graph/index.md` and the MOCs from
+frontmatter and the concept index; `/graph-daily` and `/graph-sync` drive it. Graph files are
+generated, not hand-edited, and links are structural edges only (no inline wiki-link pass).
+
 ## FAQ
 
 **Do I need all these tool connections?**
