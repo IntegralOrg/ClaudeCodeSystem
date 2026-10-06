@@ -18,6 +18,24 @@
       "/tmp"
     ]
   },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/cloud-land.sh\"", "timeout": 120 },
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/system-journal/cloud-journal.sh\"", "timeout": 120 }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/cloud-land.sh\" --final", "timeout": 120 },
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/system-journal/cloud-journal.sh\" --final", "timeout": 60 }
+        ]
+      }
+    ]
+  },
   "alwaysThinkingEnabled": true,
   "effortLevel": "high"
 }

@@ -6,6 +6,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-06] - System Journal capture + metadata-rendered knowledge graph
+
+Two portable building blocks land in the template. The **System Journal** turns every Claude Code session into a deterministic evidence record plus one distilled journal line, so a later review can spot what keeps coming back. The **knowledge graph** stops being hand-linked: `Graph/index.md` and the MOCs are now rendered from frontmatter, and the inline "link every first mention" pass is retired.
+
+### Added
+- **`templates/scripts/system-journal/`** -- capture pipeline (`extract.py`, `distill.py`, `run.sh`, `cloud-journal.sh`, `install.sh`, `themes-inject.py`, a generic `vocab.json`, and a README). In the cloud, repo-level `Stop`/`SessionEnd` hooks capture while the container is alive; locally, hooks install via `install.sh --vault <path> --write-hooks`. About nine cents per finished session with the default Sonnet distiller. Capture only: no reflection command and no Themes writer yet; the audit tier is generated locally and shipped nowhere.
+- **`templates/scripts/cloud-land.sh`** plus the hook block merged into **`examples/settings.json`** (and a standalone copy in **`examples/cloud-hooks.settings.json`**) -- repo-level hooks that land a cloud session's file edits and journal on `main` without the agent running git, bypassing the permission classifier so an unattended cloud run never stalls.
+- **`templates/scripts/graph-render.py`** -- deterministic, stdlib-only renderer for `Graph/index.md` and the MOCs, from frontmatter plus the concept index. Private top-level folders (`graph_private_top:`) and the internal/company folder (`graph_company_folder:`) are configurable in the vault schema YAML; `--schema` sets the schema path. Includes `templates/scripts/test_graph_render.py`.
+
+### Changed
+- **`/graph-daily` and `/graph-sync`** (both command folders) -- no inline wiki-link pass; structural edges only (a `## Related` line to a hub on new docs, entity-registry rows), and the renderer regenerates index/MOCs. No orphan report.
+- **`templates/CLAUDE.md` Graph Navigation guideline** -- Graph files are rendered, not hand-edited; links are structural, path-qualified; do not link every mention in prose.
+
+---
+
 ## [2026-10-05] - Completion check moves into EOD; /morning-precheck retired
 
 `/morning-precheck` ran as its own scheduled morning job to find tasks that were already done. In practice it re-read the same day `/eod` had just read a few hours earlier, needed its own scheduled run and credentials, and existed only to serve task tracking, which not every vault uses.
