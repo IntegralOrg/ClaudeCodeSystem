@@ -182,6 +182,17 @@ uv run --python 3.12 --with fastembed,numpy scripts/vault-embed.py report --vaul
 ### EOD Command
 The default `/eod` flow should run as one command in one Claude session. Claude Code now supports long-context sessions, so the simplest setup is a single `/eod` that gathers, routes, syncs, writes the daily note, and builds tomorrow's plan. If a user's workflow is unusually heavy, or if they want unattended scheduled automation, you can still split EOD into separate phases as an advanced fallback.
 
+## Guardrails
+
+Four hooks in `templates/scripts/hooks/` (installed into your vault's `.claude/settings.json` from `examples/settings.json`) keep the assistant honest: `guard_secrets.py` blocks any attempt to read, print, or search the credentials file or the environment; `log_tool_use.py` writes one masked line per tool call to `_generated/agent-actions/`; `guard_state_writes.py` keeps client profiles to one `## Current State` plus an append-only `## Log`; and `session_context.py` starts each session with the branch, uncommitted work, and the newest handoff. Scripts load credentials themselves through `scripts/envload.py`, and a one-off call goes through `python3 scripts/with-env.py -- <command>`.
+
+Two proof commands, run from the vault root (expect `exit=2`, then `exit=0`):
+
+```bash
+echo '{"tool_name":"Read","tool_input":{"file_path":".env"}}' | python3 scripts/hooks/guard_secrets.py; echo "exit=$?"
+echo '{"tool_name":"Read","tool_input":{"file_path":"README.md"}}' | python3 scripts/hooks/guard_secrets.py; echo "exit=$?"
+```
+
 ## Install the System Journal (optional)
 
 The System Journal turns every Claude Code session into a durable, checkable record so a later
