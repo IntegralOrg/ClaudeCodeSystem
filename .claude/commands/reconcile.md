@@ -35,14 +35,15 @@ PY
    ```bash
    python3 scripts/with-env.py -- python3 - "$TODAY" <<'PY'
    import os, sys, json, urllib.request, urllib.parse
+   def _v(k): return os.getenv(k) or sys.exit('missing ' + k)
    d = sys.argv[1]
    TZ_OFFSET = "[YOUR_UTC_OFFSET]"  # replace with your UTC offset. Examples: -05:00 (EST), -08:00 (PST), +00:00 (UTC), +01:00 (CET), +05:30 (IST), +09:00 (JST)
    tok = json.load(urllib.request.urlopen('https://oauth2.googleapis.com/token',
        urllib.parse.urlencode({
            'grant_type': 'refresh_token',
-           'client_id': os.environ['GOOGLE_CLIENT_ID'],
-           'client_secret': os.environ['GOOGLE_CLIENT_SECRET'],
-           'refresh_token': os.environ['GOOGLE_REFRESH_TOKEN'],
+           'client_id': _v('GOOGLE_CLIENT_ID'),
+           'client_secret': _v('GOOGLE_CLIENT_SECRET'),
+           'refresh_token': _v('GOOGLE_REFRESH_TOKEN'),
        }).encode()))['access_token']
    url = f"https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin={d}T00:00:00{TZ_OFFSET}&timeMax={d}T23:59:59{TZ_OFFSET}&singleEvents=true&orderBy=startTime"
    for e in json.load(urllib.request.urlopen(urllib.request.Request(url, headers={'Authorization': f'Bearer {tok}'}))).get('items', []):
@@ -89,13 +90,14 @@ Goal: the calendar should show **what actually happened**, so future-you can see
 
 ```bash
 python3 scripts/with-env.py -- python3 - <<'PY'
-import os, json, urllib.request, urllib.parse
+import os, sys, json, urllib.request, urllib.parse
+def _v(k): return os.getenv(k) or sys.exit('missing ' + k)
 tok = json.load(urllib.request.urlopen('https://oauth2.googleapis.com/token',
     urllib.parse.urlencode({
         'grant_type': 'refresh_token',
-        'client_id': os.environ['GOOGLE_CLIENT_ID'],
-        'client_secret': os.environ['GOOGLE_CLIENT_SECRET'],
-        'refresh_token': os.environ['GOOGLE_REFRESH_TOKEN'],
+        'client_id': _v('GOOGLE_CLIENT_ID'),
+        'client_secret': _v('GOOGLE_CLIENT_SECRET'),
+        'refresh_token': _v('GOOGLE_REFRESH_TOKEN'),
     }).encode()))['access_token']
 H = {'Authorization': f'Bearer {tok}', 'Content-Type': 'application/json'}
 BASE = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'

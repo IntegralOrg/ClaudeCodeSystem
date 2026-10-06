@@ -3,6 +3,7 @@
 moved verbatim, never rewritten. Dry-run by default; --apply backs up then writes.
 --skip-engagement-seed leaves only the Engagement status line (use when the scraped Engagement bullet is stale or contradicts the status)."""
 import argparse
+import hashlib
 import difflib
 import re
 import subprocess
@@ -183,7 +184,8 @@ def main():
         return
     trash = Path(a.trash_root) / today
     trash.mkdir(parents=True, exist_ok=True)
-    (trash / (path.parent.name + "." + path.name)).write_text(text, encoding="utf-8")
+    tag = hashlib.sha1(str(path.resolve()).encode()).hexdigest()[:8]
+    (trash / (path.parent.name + "." + tag + "." + path.name)).write_text(text, encoding="utf-8")
     path.write_text(new, encoding="utf-8")
     print(f"converted {path}: {rep}; backup in {trash}")
 

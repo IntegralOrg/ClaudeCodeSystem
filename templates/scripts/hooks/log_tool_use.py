@@ -32,7 +32,7 @@ def _mask(text):
 def _summary(tool, tool_input):
     tool_input = tool_input or {}
     if "file_path" in tool_input:
-        return str(tool_input["file_path"])
+        return _mask(str(tool_input["file_path"]))
     if tool in ("Bash", "PowerShell"):
         return _mask(" ".join(str(tool_input.get("command", "")).split())[:120])
     if "pattern" in tool_input:

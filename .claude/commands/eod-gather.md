@@ -97,7 +97,7 @@ Process the Brain Dump section in `Inbox/Today.md`. This is the user's quick-cap
    python3 scripts/fathom-fetch.py --date $TODAY --json-file /tmp/fathom-report-$TODAY.json 2>/tmp/fathom-fetch-$TODAY.log
    FATHOM_EXIT=$?
    ```
-Gather only routes tasks. Takeaways from transcripts land in each client profile's `## Log` (and `## Current State` when a fact changed) during the graph sync phase (`/graph-daily`), under the write-path rule in CLAUDE.md.
+Gather still routes tasks and Inbox notes from each transcript (step 5 below). What it does not do is write transcript takeaways into the client profile: decisions and other durable facts land in the profile's `## Log` (and `## Current State` when a fact changed) during the graph sync phase (`/graph-daily`), under the write-path rule in CLAUDE.md. A decision-only transcript therefore produces a note here and a Log entry there, never two profile writes.
 
 2. Check the exit code and stderr log:
    - Exit 0: all calls processed OK
