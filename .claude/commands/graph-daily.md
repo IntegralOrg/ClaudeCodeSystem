@@ -15,17 +15,28 @@ prose" convention (which existed for Obsidian's graph view) is retired.
 
 ## Phase 1: Identify Changed and Deleted Files
 
-Find files created, modified, or deleted since the last run. Prefer git when the vault is a repo:
+Find everything changed since the **last successful run**, not just the last commit. `HEAD~1`
+misses earlier commits on a multi-commit day and ignores uncommitted work, so use a marker to
+bound the range and always include the working tree:
 
 ```bash
-git -C "$VAULT" diff --name-status --diff-filter=ACMRD HEAD~1 2>/dev/null
-# fallback when there is no useful history:
-find "$VAULT" -name "*.md" -mtime -1
+# Committed changes since the last successful run (marker), else since midnight as a first run.
+if [ -f /tmp/graph-daily-marker ]; then
+  base=$(cat /tmp/graph-daily-marker)
+  git -C "$VAULT" diff --name-status --diff-filter=ACMRD "$base"..HEAD
+else
+  git -C "$VAULT" log --since=midnight --name-status --diff-filter=ACMRD --pretty=format:
+fi
+# Plus uncommitted and untracked working-tree files (in-flight edits):
+git -C "$VAULT" status --porcelain
+# If the vault is NOT a git repo (the commands above print nothing useful), fall back to mtime:
+#   find "$VAULT" -name "*.md" -mtime -1
 ```
 
 Exclude `.claude/`, `.obsidian/`, `_generated/`, `scripts/`, `Templates/`, and `Graph/` (those
-are outputs or non-content). If nothing changed, report "No changes today" and skip to Phase 5
-(render + stats only).
+are outputs or non-content). If the combined set is empty, report "No changes today" and skip to
+Phase 5 (render + stats only). After a successful run, record the new marker so the next run
+starts where this one ended: `git -C "$VAULT" rev-parse HEAD > /tmp/graph-daily-marker`.
 
 ---
 
@@ -64,10 +75,15 @@ Report: `Edges: N Related sections added, N registry rows added`
 For each changed file that is a transcript (`**/Transcripts/` folder or `type: transcript`):
 
 1. Read the transcript.
-2. Extract 2-5 key takeaways (decisions, action items, important facts). If the frontmatter
-   already has `key_takeaways`, do not re-extract; count it as already extracted.
-3. Push each takeaway to the relevant entity page (usually the client's Company Profile): add to
-   a `## Recent Decisions` or `## Recent Activity` section with a source backlink
+2. **Dedupe first.** The transcript's own `key_takeaways` frontmatter is the per-transcript
+   completion marker: if it is already present, this transcript was processed on an earlier run,
+   so do **not** re-extract and do **not** re-push to entity pages. Count it as already extracted
+   and move on. (This is what stops a later edit to the same transcript from adding the same
+   decisions to a Company Profile twice.)
+3. Otherwise extract 2-5 key takeaways (decisions, action items, important facts), write them to
+   the transcript's `key_takeaways` frontmatter (so the next run sees it as done), and push each
+   takeaway to the relevant entity page (usually the client's Company Profile): add to a
+   `## Recent Decisions` or `## Recent Activity` section with a source backlink
    `-- [source](relative/path/to/transcript.md)`, newest at the top.
 
 If no transcripts changed, skip this phase.

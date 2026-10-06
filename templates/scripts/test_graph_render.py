@@ -33,7 +33,7 @@ def doc(type_, body, **extra):
 
 
 def build_vault(root):
-    os.makedirs(os.path.join(root, "Graph"))
+    # Deliberately do NOT pre-create Graph/ -- the renderer must create it on first run.
     write(os.path.join(root, "Work", "Clients", "Acme", "Company Profile.md"),
           doc("client-profile", "Acme makes widgets for the enterprise market.", client="Acme"))
     write(os.path.join(root, "Resources", "Concepts", "Widget Pipeline.md"),

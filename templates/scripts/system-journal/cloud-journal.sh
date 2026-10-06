@@ -101,7 +101,10 @@ cat >/dev/null 2>&1 || true
         mkdir -p "$TMP/_generated/system-journal/evidence/$(basename "$m")"
         cp "$m"*.json "$TMP/_generated/system-journal/evidence/$(basename "$m")/" 2>/dev/null
       done
-      if (cd "$TMP" && git add -f _generated/system-journal/cloud _generated/system-journal/evidence && git commit -q -m "System Journal: cloud session ${CLAUDE_CODE_SESSION_ID} (hook)" && git push -q origin HEAD:main) 2>&1; then
+      # If another process (e.g. cloud-land.sh) already landed these files, `git add` stages
+      # nothing and `git commit` would fail and burn all three retries. Skip the commit when the
+      # index is clean and treat it as success.
+      if (cd "$TMP" && git add -f _generated/system-journal/cloud _generated/system-journal/evidence && { git diff --cached --quiet && echo "nothing new staged; already landed" || (git commit -q -m "System Journal: cloud session ${CLAUDE_CODE_SESSION_ID} (hook)" && git push -q origin HEAD:main); }) 2>&1; then
         echo "landed on main (attempt $i)"
         git worktree remove --force "$TMP" 2>/dev/null
         break

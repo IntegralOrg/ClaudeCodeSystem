@@ -49,7 +49,8 @@ case "${1:-}" in
     [ -z "$SID" ] && exit 0
     STAMP="$STATE_DIR/stop-stamps/$SID"
     if [ -f "$STAMP" ]; then
-      age=$(( $(date +%s) - $(stat -f %m "$STAMP" 2>/dev/null || echo 0) ))
+      mt=$(stat -f %m "$STAMP" 2>/dev/null || stat -c %Y "$STAMP" 2>/dev/null || echo 0)
+      age=$(( $(date +%s) - mt ))
       [ "$age" -lt "$STOP_THROTTLE_SECS" ] && exit 0
     fi
     touch "$STAMP"
@@ -84,9 +85,9 @@ trap 'rmdir "$LOCK" 2>/dev/null' EXIT
   if [ -n "$REDISTILL_SESSION" ]; then
     # Re-derive ONE journal line from the evidence file (no transcript needed). ~$0.10.
     echo "$(date '+%F %T') redistill from evidence: $REDISTILL_SESSION"
-    python3 - "$REDISTILL_SESSION" <<'PY' 2>&1
+    python3 - "$REDISTILL_SESSION" "$DIR" <<'PY' 2>&1
 import json, os, sys
-sys.path.insert(0, os.path.expanduser("~/scripts/system-journal"))
+sys.path.insert(0, sys.argv[2])
 from extract import load_state, merge_state
 sid = sys.argv[1]
 s = load_state().get(sid, {})

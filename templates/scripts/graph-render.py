@@ -41,11 +41,10 @@ import re
 import sys
 from collections import defaultdict
 
+# Default vault: the directory two levels up from this script (the vault root when the script
+# sits at `<vault>/scripts/`). Override at runtime with --vault. All other paths (Graph/, the
+# concept index, schema, and vector cache) are derived from the selected vault inside main().
 VAULT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-GRAPH_DIR = os.path.join(VAULT, "Graph")
-INDEX_PATH = os.path.join(VAULT, "_generated", "vault-hygiene", "vault-index.json")
-SCHEMA_PATH = os.path.join(VAULT, "_generated", "vault-hygiene", "vault-schema.md")
-VECTORS_PATH = os.path.join(VAULT, "_generated", "vault-hygiene", "vault-vectors.json")
 
 SKIP_DIRS = {".git", ".obsidian", ".claude", "Attachments", "Templates", "Graph",
              "node_modules", "scripts", "docs", "_generated", "Inbox", ".handoffs",
@@ -522,10 +521,13 @@ def render_moc(path, title, note, body_lines, today):
     if not changed:
         return old, False
     fm_block = set_updated(fm_block, today)
-    parts = [fm_block, intro.rstrip("\n") + "\n", "", new_body.replace("{DATE}", today)]
+    # Normalize blank-line runs ONLY inside the generated block; the hand-written intro and tail
+    # (which the docs promise to preserve) are joined verbatim with a single blank-line separator.
+    gen_block = re.sub(r"\n{3,}", "\n\n", new_body.replace("{DATE}", today)).strip("\n")
+    sections = [fm_block.rstrip("\n"), intro.rstrip("\n"), gen_block]
     if tail.strip():
-        parts.extend(["", tail.rstrip("\n") + "\n"])
-    return "\n".join(p for p in parts if p is not None).replace("\n\n\n", "\n\n"), True
+        sections.append(tail.rstrip("\n"))
+    return "\n\n".join(s for s in sections if s.strip()) + "\n", True
 
 
 def render_index_file(path, body, today):
@@ -552,7 +554,7 @@ def render_index_file(path, body, today):
 WIKILINK = re.compile(r"\[\[([^\]|#]+)")
 
 
-def export_graph(core, docs, index, out_path, top_k=3):
+def export_graph(core, docs, index, out_path, vectors_path, top_k=3):
     rels = sorted(core)
     stems = {stem(r).lower(): r for r in rels}
     bases = defaultdict(list)
@@ -568,14 +570,15 @@ def export_graph(core, docs, index, out_path, top_k=3):
             return bases[b][0]
         return None
 
-    nodes = []
-    for r in rels:
-        fm = core[r]["fm"]
-        nodes.append({"id": r, "title": display_name(r, fm), "type": fm.get("type", ""),
-                      "client": client_of(r, fm), "status": fm.get("status", ""),
-                      "canonical": str(fm.get("canonical", "")).lower() == "true",
-                      "concept": (index.get(r) or {}).get("concept", ""),
-                      "entities": (index.get(r) or {}).get("entities", [])})
+    def node_of(r, fm):
+        return {"id": r, "title": display_name(r, fm), "type": fm.get("type", ""),
+                "client": client_of(r, fm), "status": fm.get("status", ""),
+                "canonical": str(fm.get("canonical", "")).lower() == "true",
+                "concept": (index.get(r) or {}).get("concept", ""),
+                "entities": (index.get(r) or {}).get("entities", [])}
+
+    node_ids = set(rels)
+    nodes = [node_of(r, core[r]["fm"]) for r in rels]
     edges = []
     seen = set()
 
@@ -589,15 +592,22 @@ def export_graph(core, docs, index, out_path, top_k=3):
         edges.append({"source": a, "target": b, "kind": kind, "weight": round(w, 4)})
 
     for r in rels:
-        fm, body = core[r]["fm"], core[r]["body"]
+        body = core[r]["body"]
         for m in WIKILINK.finditer(body):
             t = resolve(m.group(1))
             if t:
                 add(r, t, "link")
-        sb = fm.get("superseded_by")
+    # superseded_by edges: the SOURCE docs carry `status: superseded`, so they were filtered out
+    # of `core`. Iterate the full scanned set, resolve the target against core, and add the
+    # superseded source as a node so the edge is not dangling (it stays out of the navigation MOCs).
+    for r in sorted(docs):
+        sb = docs[r]["fm"].get("superseded_by")
         if isinstance(sb, str) and sb.startswith("[["):
             t = resolve(sb.strip("[]").split("|")[0])
             if t:
+                if r not in node_ids:
+                    node_ids.add(r)
+                    nodes.append(node_of(r, docs[r]["fm"]))
                 add(r, t, "superseded_by")
     # entity co-occurrence (from the concept index)
     by_entity = defaultdict(list)
@@ -609,9 +619,9 @@ def export_graph(core, docs, index, out_path, top_k=3):
             for i, a in enumerate(members):
                 for b in members[i + 1:]:
                     add(a, b, "entity:" + e, 0.5)
-    # semantic neighbors (optional, from the vector cache)
+    # semantic neighbors (optional, from the vector cache of the SELECTED vault)
     try:
-        with open(VECTORS_PATH, encoding="utf-8") as fh:
+        with open(vectors_path, encoding="utf-8") as fh:
             vec = json.load(fh).get("files", {})
     except (OSError, ValueError):
         vec = {}
@@ -671,6 +681,9 @@ def main():
         counts[fname[:-3].lower()] = n
         outputs.append((fname, (title, note, lines), False))
 
+    writing = not (args.dry_run or args.stats)
+    if writing:
+        os.makedirs(graph_dir, exist_ok=True)  # first-time setup: Graph/ may not exist yet
     changed = []
     for fname, payload, is_index in outputs:
         path = os.path.join(graph_dir, fname)
@@ -681,12 +694,14 @@ def main():
             text, did = render_moc(path, title, note, lines, today)
         if did:
             changed.append(fname)
-            if not (args.dry_run or args.stats):
+            if writing:
                 with open(path, "w", encoding="utf-8") as fh:
                     fh.write(text)
 
     if args.json and not args.stats:
-        n, e = export_graph(core, docs, index, args.json)
+        os.makedirs(os.path.dirname(os.path.abspath(args.json)), exist_ok=True)
+        vectors_path = os.path.join(vault, "_generated", "vault-hygiene", "vault-vectors.json")
+        n, e = export_graph(core, docs, index, args.json, vectors_path)
         counts["graph_nodes"], counts["graph_edges"] = n, e
 
     mode = "dry-run" if args.dry_run else ("stats" if args.stats else "wrote")

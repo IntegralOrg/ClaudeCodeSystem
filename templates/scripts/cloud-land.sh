@@ -126,7 +126,9 @@ EXCLUDES=(
     if [ -z "$TREE" ]; then echo "write-tree failed"; break; fi
     if [ "$TREE" = "$(git rev-parse "$MAIN^{tree}")" ]; then echo "delta already on main"; break; fi
 
-    COMMIT=$(git commit-tree "$TREE" -p "$MAIN" -m "Cloud session ${CLAUDE_CODE_SESSION_ID:0:8}: land $n_add file(s), $n_del deletion(s) (hook)" 2>&1)
+    # Do NOT fold stderr into COMMIT: on failure that error text would be pushed as a ref and
+    # miscounted as a push race. Check the exit status and stop the loop instead.
+    COMMIT=$(git commit-tree "$TREE" -p "$MAIN" -m "Cloud session ${CLAUDE_CODE_SESSION_ID:0:8}: land $n_add file(s), $n_del deletion(s) (hook)") || { echo "commit-tree failed"; break; }
     if git push -q origin "$COMMIT:refs/heads/main" 2>&1; then
       echo "landed on main (attempt $i): +$n_add -$n_del skipped=$n_skip commit=${COMMIT:0:7}"
       # Move the local branch pointer so a later turn diffs against what is now on main.

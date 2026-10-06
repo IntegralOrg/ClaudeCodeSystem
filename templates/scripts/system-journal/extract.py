@@ -399,7 +399,10 @@ def main():
         # --redistill. A Stop-hook extract never queues one: the session is still live.
         if args.stop and named:
             distilled = bool(prev.get("distilled"))
-            final = False
+            # A live-session Stop extract must not UN-finalize a session that the idle sweep or
+            # SessionEnd already marked final (and is still waiting to distill). Only an actual
+            # transcript change clears `final`.
+            final = bool(prev.get("final")) and unchanged
         else:
             requeue = named or not unchanged or args.redistill
             distilled = (not requeue) and bool(prev.get("distilled"))

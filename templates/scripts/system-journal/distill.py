@@ -95,20 +95,18 @@ def load_vocab(vault):
     return out
 
 
-_VOCAB = load_vocab(DEFAULT_VAULT)
-# Audit tier: any of these tags (exact or as a prefix before ':' or '-') drops the whole
-# line from the shared tier. Whole-line drop, never field scrubbing: a scrubbed line can
-# still leak through `ask`/`why`.
-SENSITIVE_TAGS = set(_VOCAB["sensitive_tags"])
-# Paths that mark a line personal regardless of tags.
-SENSITIVE_PATH_PREFIXES = tuple(_VOCAB["sensitive_path_prefixes"])
-# Controlled vocabulary for `systems`. Trend-spotting only works when the same thing gets
-# the same tag every time; 341 free-form tags with 218 singletons (measured 2026-09-21)
-# aggregate to nothing. The distiller must pick from this list (plus "client:<slug>");
-# anything else it wants to say goes in the free-form `topics` list, so nothing is lost.
-SYSTEMS_VOCAB = set(_VOCAB["systems"])
+# The vocabulary is loaded per run from the SELECTED vault (in main(), after arg parsing), never
+# at import time, so `--vault` and the cloud `--vault "$REPO"` pick up that vault's own vocab.json
+# and the audit tier applies that vault's sensitivity rules. See load_vocab() and build_prompt().
+#
+# Audit tier (`sensitive_tags`): any tag (exact or as a prefix before ':' or '-') drops the whole
+# line from the shared tier. Whole-line drop, never field scrubbing: a scrubbed line can still leak
+# through `ask`/`why`. `sensitive_path_prefixes`: paths that mark a line personal regardless of
+# tags. `systems`: the controlled vocabulary the distiller must pick from (plus "client:<slug>");
+# anything off-list goes in the free-form `topics` list, so nothing is lost. Trend-spotting only
+# works when the same thing gets the same tag every time.
 
-PROMPT = """You are distilling one Claude Code session into a single journal entry for a weekly
+PROMPT_TEMPLATE = """You are distilling one Claude Code session into a single journal entry for a weekly
 trend-spotting review. The reviewer will read hundreds of these lines at once and ask
 "what keeps coming back, and why?". Be concrete and short. Quote the user's own words
 for complaints. Never invent facts not present in the input. The input is a deterministic
@@ -139,17 +137,22 @@ Return ONLY a JSON object with exactly these keys:
 - "why": one sentence guessing the deeper reason this session was needed (the first "why" of five), max 200 chars.
 
 Session data follows as JSON.
-""" % ", ".join(sorted(SYSTEMS_VOCAB))
+"""
 
 
-def normalize_systems(summary):
+def build_prompt(systems_vocab):
+    """Build the distiller prompt with the selected vault's controlled `systems` list."""
+    return PROMPT_TEMPLATE % ", ".join(sorted(systems_vocab))
+
+
+def normalize_systems(summary, systems_vocab):
     """Enforce the vocabulary after the fact: unknown tags move to `topics` instead of vanishing."""
     systems, topics = [], list(summary.get("topics") or [])
     for t in summary.get("systems") or []:
         t = str(t).strip().lower()
         if not t:
             continue
-        if t in SYSTEMS_VOCAB or (t.startswith("client:") and len(t) > 7):
+        if t in systems_vocab or (t.startswith("client:") and len(t) > 7):
             if t not in systems:
                 systems.append(t)
         elif t not in topics:
@@ -209,11 +212,11 @@ def fallback_title(ask, limit=60):
     return (cut or ask[:limit]) + "…"
 
 
-def call_claude(raw, model):
+def call_claude(raw, model, prompt_text):
     env = dict(os.environ)
     env.pop("CLAUDECODE", None)  # allow running from inside a SessionEnd hook
     env.pop("CLAUDE_CODE_ENTRYPOINT", None)
-    prompt = PROMPT + "\n" + json.dumps(raw, ensure_ascii=False)
+    prompt = prompt_text + "\n" + json.dumps(raw, ensure_ascii=False)
     cmd = ["claude", "-p", prompt, "--model", model, "--output-format", "json"]
     # cwd is the state dir so the headless run's own transcript lands under a project dir
     # that extract.py skips (otherwise the journal would journal itself).
@@ -317,19 +320,19 @@ def vault_relative(path, vault):
     return s
 
 
-def sensitivity(entry, vault=None):
-    """Return (is_sensitive, reasons). Tag match is exact or on the segment before ':'/'-'."""
-    vault = vault or DEFAULT_VAULT
+def sensitivity(entry, vault, sensitive_tags, sensitive_path_prefixes):
+    """Return (is_sensitive, reasons). Tag match is exact or on the segment before ':'/'-'.
+    The sensitivity rules come from the SELECTED vault's vocab (passed in by the caller)."""
     reasons = []
     for t in entry.get("systems") or []:
         t = str(t).lower()
         head = t.split(":")[0]
-        if t in SENSITIVE_TAGS or head in SENSITIVE_TAGS or any(seg in SENSITIVE_TAGS for seg in t.split("-")):
+        if t in sensitive_tags or head in sensitive_tags or any(seg in sensitive_tags for seg in t.split("-")):
             reasons.append(f"tag:{t}")
     for fp in entry.get("files_touched") or []:
         s = str(fp)
         rel = vault_relative(s, vault)
-        if rel.startswith(SENSITIVE_PATH_PREFIXES) or "/Personal/" in s:
+        if rel.startswith(sensitive_path_prefixes) or "/Personal/" in s:
             reasons.append(f"path:{rel[:60]}")
     return (len(reasons) > 0, reasons)
 
@@ -363,9 +366,9 @@ def audit_entry(entry):
     }
 
 
-def route_audit(vault, entry, lock):
+def route_audit(vault, entry, lock, sensitive_tags, sensitive_path_prefixes):
     """Write the audit-tier line or drop it, and log the decision either way."""
-    sensitive, reasons = sensitivity(entry, vault)
+    sensitive, reasons = sensitivity(entry, vault, sensitive_tags, sensitive_path_prefixes)
     apath = audit_path(vault, entry.get("started"))
     decision = {
         "ts": now_iso(),
@@ -403,6 +406,14 @@ def main():
         print(f"distill: vault not found at {args.vault}", file=sys.stderr)
         return 2
 
+    # Load the vocabulary from the SELECTED vault (not import-time DEFAULT_VAULT), so --vault and
+    # the cloud's --vault "$REPO" apply that vault's own controlled list and sensitivity rules.
+    vocab = load_vocab(args.vault)
+    systems_vocab = set(vocab["systems"])
+    sensitive_tags = set(vocab["sensitive_tags"])
+    sensitive_path_prefixes = tuple(vocab["sensitive_path_prefixes"])
+    prompt_text = build_prompt(systems_vocab)
+
     if args.reaudit:
         import glob as _glob
         lock = threading.Lock()
@@ -428,7 +439,7 @@ def main():
         for entry in entries:
             if not entry.get("session_id"):
                 continue
-            if route_audit(args.vault, entry, lock) == "dropped":
+            if route_audit(args.vault, entry, lock, sensitive_tags, sensitive_path_prefixes) == "dropped":
                 dropped += 1
             else:
                 kept += 1
@@ -461,8 +472,8 @@ def main():
             print(f"would distill {sid} ({raw.get('title')}, {raw.get('user_turns')} turns)")
             return ("dry", 0.0, None)
         try:
-            summary, cost = call_claude(raw, args.model)
-            summary = normalize_systems(summary)
+            summary, cost = call_claude(raw, args.model, prompt_text)
+            summary = normalize_systems(summary, systems_vocab)
         except Exception as e:  # noqa: BLE001
             log_error(sid, f"distill failed: {e}")
             return ("fail", 0.0, None)
@@ -511,7 +522,7 @@ def main():
             }})
         action = None
         if not args.no_audit:
-            action = route_audit(args.vault, entry, lock)
+            action = route_audit(args.vault, entry, lock, sensitive_tags, sensitive_path_prefixes)
         return ("replaced" if was_replaced else "ok", cost or 0.0, action)
 
     with ThreadPoolExecutor(max_workers=max(1, args.workers)) as ex:

@@ -62,10 +62,12 @@ Report: `Frontmatter: N files changed`
 
 Only for docs with no path to a hub. Triage, do not auto-action everything.
 
-1. Find core docs with no `## Related` section and no link to a Company Profile, concept page, or
-   SOP. The renderer's export helps: `python3 scripts/graph-render.py --json /tmp/graph.json
-   --dry-run`, then find nodes with zero `link` edges in the `edges` array (a short Python
-   one-liner is fine).
+1. Find core docs with no path to a hub. A `link` edge to just any page does not count; the
+   target must be a hub (a Company Profile, a concept page, or an SOP). Use the renderer's export:
+   `python3 scripts/graph-render.py --json /tmp/graph.json --dry-run`, then for each node find its
+   outgoing `link` edges and check whether any target is a `client-profile`, `concept`, or `sop`
+   node (join against the `nodes` array by `type`). Nodes with no such hub link, and no `## Related`
+   section in the file, are the ones that need one (a short Python snippet over the export is fine).
 2. Client and sales docs under `Work/Clients/<X>/` get one `## Related` line to their hub,
    path-qualified. Resources and internal notes: leave unless an obvious hub exists. Records
    (transcripts, daily notes) are never edited.
