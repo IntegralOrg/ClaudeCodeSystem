@@ -957,7 +957,14 @@ def act_paste(a) -> None:
         saved = None
 
     def norm(s: str) -> str:
-        return s.replace("\r\n", "\n").rstrip("\n")
+        return s.replace("\r\n", "\n")
+
+    def same_payload(got: str, want: str) -> bool:
+        # The OS clipboard routinely adds or drops ONE trailing newline on a
+        # round trip; allow that and nothing more. Stripping all trailing
+        # newlines let an empty clipboard pass for a payload of "\n\n".
+        got, want = norm(got), norm(want)
+        return got == want or got == want + "\n" or got + "\n" == want
 
     # Everything after this point runs under one finally, because die() exits
     # through SystemExit: a FOCUS_FAILED or CLIPBOARD_MISMATCH halfway through
@@ -969,7 +976,7 @@ def act_paste(a) -> None:
         # Compare normalised. A round trip through the OS clipboard routinely
         # adds or drops one trailing newline, and a strict compare turns a paste
         # that would have worked into a refusal.
-        if norm(get_clipboard()) != norm(payload):
+        if not same_payload(get_clipboard(), payload):
             die("CLIPBOARD_MISMATCH", "the clipboard did not take the payload.",
                 ["Nothing was pasted. Retry; if it repeats, another application is",
                  "holding the clipboard open."])

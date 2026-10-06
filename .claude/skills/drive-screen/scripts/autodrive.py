@@ -214,7 +214,12 @@ def main() -> int:
             # Default lives outside the skill folder: this folder is copied
             # into every vault and may be committed, and a screenshot of the
             # user's screen must never ride along.
-            d = a.shot_dir or os.path.join(os.path.expanduser("~"), ".screenctl", "prompts")
+            # One directory per run, so two concurrent runs (two repos, two
+            # sessions) cannot overwrite each other's prompt-01.png before the
+            # human has looked at it.
+            d = a.shot_dir or os.path.join(
+                os.path.expanduser("~"), ".screenctl", "prompts",
+                time.strftime("%Y%m%d-%H%M%S") + f"-{os.getpid()}")
             os.makedirs(d, exist_ok=True)
             shot = os.path.join(d, f"prompt-{approvals + 1:02d}.png")
             # The capture can fail - most often FOCUS_FAILED, which is exactly
