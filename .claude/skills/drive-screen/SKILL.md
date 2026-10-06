@@ -71,7 +71,9 @@ rather than from the user.
 
 **6. Confirm before anything destructive or outward-facing.** Closing unsaved
 work, deleting, sending, posting, purchasing, pushing. Never auto-approve a
-permission prompt whose command you have not read out loud first.
+permission prompt whose command you have not read out loud first. The one
+exception is `autodrive.py --approve-blind`, below, and it has its own consent
+requirement.
 
 **7. Never close or restart anything you did not open.** The editor above all,
 because the driving session usually lives inside it and restarting it kills the
@@ -268,10 +270,14 @@ that often cannot see the thing it is filtering. And `autodrive` without
 is not there - which is the safe outcome, and is why the screenshot exists.
 
 `--approve-blind` is therefore the flag that actually runs a turn unattended, and
-it is exactly what it says: **Enter on whatever is on screen, unread**. It works
-(verified live through a three-approval task), and it is only appropriate for a
-task whose worst case you have already accepted. Use `--shot-dir` with it so
-there is a record of what was approved.
+it is just what it says: **Enter on whatever is on screen, unread**. It works
+(verified live through a three-approval task). It is a deliberate exception to
+Rule 6, so it has its own gate: **the user has to authorize this flag, for this
+task, in this session, in so many words.** Consent to drive the screen does not
+include it, and neither does a past run that used it. Offer it only for a task
+whose worst case the user has already accepted, say what that worst case is
+when you offer, and use `--shot-dir` with it so there is a record of what was
+approved.
 
 It also stops if an approval produces no new transcript records, because a
 keystroke that is not landing never starts landing by being repeated. Exit 0 is a

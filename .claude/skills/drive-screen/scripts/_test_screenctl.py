@@ -143,7 +143,11 @@ check("junk records do not crash it",
 
 # Path mangling: every non-alphanumeric becomes a hyphen. Getting this wrong means
 # the directory is never found and the error blames the wrong thing.
-check("drive letter and separators", sw.mangle(r"C:\Users\me\proj"), "C--Users-me-proj")
+if sc.OS == "Windows":
+    check("drive letter and separators", sw.mangle(r"C:\Users\me\proj"), "C--Users-me-proj")
+else:
+    # mangle() resolves the path first, so a Windows literal is relative here.
+    truthy("posix separators", sw.mangle("/Users/me/proj").endswith("-Users-me-proj"))
 truthy("spaces and parens survive", "-" in sw.mangle(r"C:\Users\me\my proj (v2)"))
 check("no non-alphanumerics remain",
       any(not (c.isalnum() or c == "-") for c in sw.mangle(r"C:\a b.c(d)\e")), False)

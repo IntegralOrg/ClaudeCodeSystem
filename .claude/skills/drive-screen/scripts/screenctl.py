@@ -83,7 +83,16 @@ def die(code: str, msg: str, extra: list[str] | None = None) -> None:
 
 
 def run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, capture_output=True, text=True, **kw)
+    # Bounded: osascript blocks for as long as macOS waits on an Automation
+    # consent dialog, and an unbounded wait here also stalls autodrive's own
+    # --timeout loop one layer up.
+    kw.setdefault("timeout", 60)
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, **kw)
+    except subprocess.TimeoutExpired:
+        die("TIMEOUT", f"{cmd[0]} exceeded {kw['timeout']} seconds",
+            ["On macOS this is usually an Automation consent dialog waiting",
+             "for the user. Answer it, then retry."])
 
 
 def run_utf8(cmd: list[str], **kw) -> str:
@@ -240,7 +249,10 @@ if OS == "Windows":
 
     def raise_window(win: Win) -> None:
         h = wintypes.HWND(int(win.id))
-        user32.ShowWindow(h, 9)          # SW_RESTORE
+        if user32.IsIconic(h):
+            user32.ShowWindow(h, 9)      # SW_RESTORE: un-minimize only. On a
+            # maximized window SW_RESTORE also un-maximizes it, which silently
+            # rearranges the user's layout.
         user32.SetForegroundWindow(h)
 
     def unlock_foreground() -> None:
@@ -383,6 +395,11 @@ if OS == "Windows":
         time.sleep(0.05)
         user32.mouse_event(0x0800, 0, 0, int(amount) * 120, 0)   # WHEEL
 
+    def _ps_quote(s: str) -> str:
+        # A single-quoted PowerShell literal; the only escape is '' for '.
+        # A username like O'Brien puts an apostrophe into %TEMP%.
+        return "'" + s.replace("'", "''") + "'"
+
     def get_clipboard() -> str:
         # Deliberately NOT through stdout. PowerShell writes stdout in the
         # console code page and Python decodes it with the locale encoding, so
@@ -396,7 +413,7 @@ if OS == "Windows":
         try:
             run(["powershell.exe", "-NoProfile", "-Command",
                  f"Get-Clipboard -Raw | "
-                 f"Set-Content -LiteralPath '{path}' -Encoding UTF8 -NoNewline"])
+                 f"Set-Content -LiteralPath {_ps_quote(path)} -Encoding UTF8 -NoNewline"])
             # Windows PowerShell 5.1 writes a BOM with -Encoding UTF8.
             with open(path, encoding="utf-8-sig") as f:
                 return f.read()
@@ -413,7 +430,7 @@ if OS == "Windows":
             path = f.name
         try:
             run(["powershell.exe", "-NoProfile", "-Command",
-                 f"Set-Clipboard -Value (Get-Content -Raw -Encoding UTF8 '{path}')"])
+                 f"Set-Clipboard -Value (Get-Content -Raw -Encoding UTF8 -LiteralPath {_ps_quote(path)})"])
         finally:
             os.unlink(path)
 
@@ -440,7 +457,7 @@ if ({tw} -ne {w}) {{
   $g2.DrawImage($bmp, 0, 0, {tw}, {th})
   $g2.Dispose(); $bmp.Dispose(); $bmp = $small
 }}
-$bmp.Save('{out}', [System.Drawing.Imaging.ImageFormat]::Png)
+$bmp.Save({_ps_quote(out)}, [System.Drawing.Imaging.ImageFormat]::Png)
 $bmp.Dispose()
 """
         r = run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
@@ -939,32 +956,36 @@ def act_paste(a) -> None:
     except Exception:
         saved = None
 
-    set_clipboard(payload)
-    time.sleep(0.2)
-
     def norm(s: str) -> str:
         return s.replace("\r\n", "\n").rstrip("\n")
 
-    # Compare normalised. A round trip through the OS clipboard routinely adds or
-    # drops one trailing newline, and a strict compare turns a paste that would
-    # have worked into a refusal.
-    if norm(get_clipboard()) != norm(payload):
-        die("CLIPBOARD_MISMATCH", "the clipboard did not take the payload.",
-            ["Nothing was pasted. Retry; if it repeats, another application is",
-             "holding the clipboard open."])
+    # Everything after this point runs under one finally, because die() exits
+    # through SystemExit: a FOCUS_FAILED or CLIPBOARD_MISMATCH halfway through
+    # used to leave the payload on the user's clipboard.
+    try:
+        set_clipboard(payload)
+        time.sleep(0.2)
 
-    focus(a.title, wid=a.id)
-    send_chord(PASTE_CHORD)
-    time.sleep(0.6)
-    log(f"PASTE {len(payload)} chars into {a.title!r}")
-    print(f"PASTED {len(payload)} chars verbatim (no Enter sent)")
+        # Compare normalised. A round trip through the OS clipboard routinely
+        # adds or drops one trailing newline, and a strict compare turns a paste
+        # that would have worked into a refusal.
+        if norm(get_clipboard()) != norm(payload):
+            die("CLIPBOARD_MISMATCH", "the clipboard did not take the payload.",
+                ["Nothing was pasted. Retry; if it repeats, another application is",
+                 "holding the clipboard open."])
 
-    if saved is not None and not a.keep_clipboard:
-        try:
-            set_clipboard(saved)
-            print("CLIPBOARD_RESTORED")
-        except Exception:
-            print("CLIPBOARD_RESTORE_FAILED (the payload is still on the clipboard)")
+        focus(a.title, wid=a.id)
+        send_chord(PASTE_CHORD)
+        time.sleep(0.6)
+        log(f"PASTE {len(payload)} chars into {a.title!r}")
+        print(f"PASTED {len(payload)} chars verbatim (no Enter sent)")
+    finally:
+        if saved is not None and not a.keep_clipboard:
+            try:
+                set_clipboard(saved)
+                print("CLIPBOARD_RESTORED")
+            except Exception:
+                print("CLIPBOARD_RESTORE_FAILED (the payload is still on the clipboard)")
 
 
 def act_click(a) -> None:

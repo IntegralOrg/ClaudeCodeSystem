@@ -112,8 +112,12 @@ def _target(a) -> list:
 
 
 def screenctl(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run([sys.executable, os.path.join(HERE, "screenctl.py"), *args],
-                          capture_output=True, text=True)
+    cmd = [sys.executable, os.path.join(HERE, "screenctl.py"), *args]
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(
+            cmd, 124, stdout="", stderr="TIMEOUT: screenctl exceeded 90 seconds")
 
 
 def main() -> int:
@@ -207,7 +211,10 @@ def main() -> int:
 
         shot = None
         if a.shot_dir or not a.approve_blind:
-            d = a.shot_dir or os.path.join(HERE, "_prompts")
+            # Default lives outside the skill folder: this folder is copied
+            # into every vault and may be committed, and a screenshot of the
+            # user's screen must never ride along.
+            d = a.shot_dir or os.path.join(os.path.expanduser("~"), ".screenctl", "prompts")
             os.makedirs(d, exist_ok=True)
             shot = os.path.join(d, f"prompt-{approvals + 1:02d}.png")
             # The capture can fail - most often FOCUS_FAILED, which is exactly
