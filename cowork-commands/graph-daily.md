@@ -27,12 +27,16 @@ bound the range and always include the working tree:
 ```bash
 # Marker is keyed to THIS vault so a second vault's commit can never become this vault's diff base.
 MARKER="/tmp/graph-daily-marker-$(printf '%s' "$VAULT" | cksum | cut -d' ' -f1)"
+# Capture the discovery-time HEAD up front and use it as the range's UPPER bound. Persist this
+# exact revision at the end (never a fresh HEAD), so a commit that lands mid-run is not skipped by
+# the next run.
+HEAD_AT_START=$(git -C "$VAULT" rev-parse HEAD 2>/dev/null)
 # Committed changes since the last successful run (marker), else since midnight as a first run.
 if [ -f "$MARKER" ]; then
   base=$(cat "$MARKER")
-  git -C "$VAULT" diff --name-status --diff-filter=ACMRD "$base"..HEAD
+  git -C "$VAULT" diff --name-status --diff-filter=ACMRD "$base".."$HEAD_AT_START"
 else
-  git -C "$VAULT" log --since=midnight --name-status --diff-filter=ACMRD --pretty=format:
+  git -C "$VAULT" log --since=midnight --name-status --diff-filter=ACMRD --pretty=format: "$HEAD_AT_START"
 fi
 # Plus uncommitted and untracked working-tree files (in-flight edits):
 git -C "$VAULT" status --porcelain
@@ -42,8 +46,8 @@ git -C "$VAULT" status --porcelain
 
 Exclude `.claude/`, `.obsidian/`, `_generated/`, `scripts/`, `Templates/`, and `Graph/` (those
 are outputs or non-content). If the combined set is empty, report "No changes today" and skip to
-Phase 5 (render + stats only). After a successful run, record the new marker so the next run
-starts where this one ended: `git -C "$VAULT" rev-parse HEAD > "$MARKER"`.
+Phase 5 (render + stats only). After a successful run, persist the revision you discovered from
+so the next run starts exactly where this one ended: `printf '%s' "$HEAD_AT_START" > "$MARKER"`.
 
 ---
 
