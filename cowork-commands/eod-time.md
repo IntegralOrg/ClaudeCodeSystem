@@ -20,14 +20,14 @@ Fetches today's time tracking sessions, detects untracked gaps, classifies each 
 ## Step 1: Setup
 
 1. Run `date` to confirm today's date and current time ([Your Timezone])
-2. Source the `.env` file at the vault root to load `RIZE_API_KEY`
+2. Do not read or source the credentials file. Run the Step 2 and Step 6 Rize requests through `python3 scripts/with-env.py -- ...` (export `START_UTC` and `END_UTC` first so the credential-loaded child sees them); `scripts/rize-classify.py` loads `RIZE_API_KEY` itself through `scripts/envload.py`
 3. Set `TODAY` as the current date in `YYYY-MM-DD` format
 4. Compute UTC boundaries for today:
    ```bash
    START_UTC=$(date -u -d "$TODAY 00:00:00 [Your Timezone]" +%Y-%m-%dT%H:%M:%SZ)
    END_UTC=$(date -u -d "$TODAY 23:59:59 [Your Timezone]" +%Y-%m-%dT%H:%M:%SZ)
    ```
-5. Verify the Rize API key is set; abort with a clear message if missing
+5. Verify the Rize API key is set by checking inside the credential-loaded child (`python3 scripts/with-env.py -- bash -c '[ -n "$RIZE_API_KEY" ]'`; never print it); abort with a clear message if missing
 
 ---
 
@@ -35,10 +35,13 @@ Fetches today's time tracking sessions, detects untracked gaps, classifies each 
 
 1. Query the Rize GraphQL API for today's sessions:
    ```bash
+   export START_UTC END_UTC
+   python3 scripts/with-env.py -- bash <<'SH'
    curl -s -X POST https://api.rize.io/api/v1/graphql \
      -H "Authorization: Bearer $RIZE_API_KEY" \
      -H "Content-Type: application/json" \
      -d '{"query":"{ sessions(startTime: \"'$START_UTC'\", endTime: \"'$END_UTC'\") { id title startTime endTime duration apps { name } } }"}'
+   SH
    ```
 2. Parse the response into a local sessions list
 3. Write raw session data to `/tmp/eod-rize-sessions-$TODAY.json`
@@ -67,7 +70,6 @@ Fetches today's time tracking sessions, detects untracked gaps, classifies each 
    python3 scripts/rize-classify.py \
      --sessions /tmp/eod-rize-sessions-$TODAY.json \
      --calendar /tmp/eod-calendar-$TODAY.md \
-     --env .env \
      --output /tmp/eod-rize-classified-$TODAY.json
    ```
 2. The script classifies each session on two axes:
@@ -98,10 +100,12 @@ Fetches today's time tracking sessions, detects untracked gaps, classifies each 
 
 1. For each confirmed classification, update the session label via Rize GraphQL mutation:
    ```bash
+   python3 scripts/with-env.py -- bash <<'SH'
    curl -s -X POST https://api.rize.io/api/v1/graphql \
      -H "Authorization: Bearer $RIZE_API_KEY" \
      -H "Content-Type: application/json" \
      -d '{"query":"mutation { updateSession(id: \"SESSION_ID\", title: \"[Client] - WorkType\") { id title } }"}'
+   SH
    ```
 2. Log each mutation result (success or failure)
 3. Skip any sessions the user marked as "skip" or left unconfirmed

@@ -45,8 +45,8 @@ Tell the user:
 
 **Action:** Read `~/.claude/settings.json` (it may not exist yet).
 
-- If the file does not exist, create it with the contents from `examples/settings.json` in this repository.
-- If it exists, **merge** permissions: add any missing entries from `examples/settings.json` to the existing `allow` array and `additionalDirectories` array without removing anything. Preserve any other settings (like `mcpServers`).
+- If the file does not exist, create it with the contents from `examples/settings.json` in this repository, leaving out its `hooks` object (hooks are installed per vault in Phase 6A).
+- If it exists, **merge** permissions: add any missing entries from `examples/settings.json` to the existing `allow` array and `additionalDirectories` array without removing anything. Do not copy its `hooks` object here; hooks are installed per vault in Phase 6A. Preserve any other settings (like `mcpServers`).
 
 **Note:** `~/.claude/settings.json` lives in the temporary workspace, so it only covers the current session. That is fine for setup -- the durable copy is written into the vault itself in Phase 6D, and every future session picks it up from the repository automatically.
 
@@ -377,6 +377,8 @@ Options:
 
 Map the answer: "keep tidy but never rewrite" -> mark that folder `no_merge: true` in the schema (filed and indexed, never merged or rewritten). "Never touch it at all" -> add it to `protected` (skipped entirely). Everything else about the schema -- folder purposes, naming patterns -- write from the structure above and correct it later; `/vault-audit`'s own Step 5 self-amends the schema when it sees the same misfile pattern 3+ nights running, so an imperfect first draft is fine.
 
+Also install the guardrail hooks and credential helpers: `mkdir -p VAULT_PATH/scripts && cp -R REPO_PATH/templates/scripts/hooks VAULT_PATH/scripts/hooks && cp REPO_PATH/templates/scripts/{envload,with-env,sanitize_ingest,profile-convert}.py VAULT_PATH/scripts/ && mkdir -p VAULT_PATH/scripts/tests && cp REPO_PATH/templates/scripts/tests/*.py VAULT_PATH/scripts/tests/`. The `hooks` object in `examples/settings.json` points at `$CLAUDE_PROJECT_DIR/scripts/hooks/...`, so it belongs in the VAULT's `VAULT_PATH/.claude/settings.json` (merge the `hooks` object in; keep any hooks already there), never in the home-folder settings. They block reading the credentials file or environment, log every tool call, and keep client profiles to one `## Current State` plus an append-only `## Log`. Create each client's `Work/Clients/<Client>/Company Profile.md` from `REPO_PATH/templates/Client Note.md` (copy it to `VAULT_PATH/Templates/Client Note.md` first).
+
 Also copy the audit scripts into the vault: `mkdir -p VAULT_PATH/scripts && cp REPO_PATH/templates/scripts/vault-audit.py REPO_PATH/templates/scripts/vault-embed.py VAULT_PATH/scripts/`. (`vault-embed.py` is the semantic layer `/vault-audit` Step 4b uses to detect same-subject forks; it imports `vault-audit.py`, so ship both.)
 
 Also copy the local-routines backup script and registry template: first `cp REPO_PATH/templates/scripts/local-routines-backup.sh VAULT_PATH/scripts/local-routines-backup.sh && chmod 755 VAULT_PATH/scripts/local-routines-backup.sh && mkdir -p "VAULT_PATH/Resources/Reference"` (stop and report if this fails), then as a SEPARATE command `if [ ! -f "VAULT_PATH/Resources/Reference/Local Routines Registry.md" ]; then cp "REPO_PATH/templates/Local Routines Registry.md" "VAULT_PATH/Resources/Reference/Local Routines Registry.md"; fi`. Keep the two commands separate: chaining the guard onto the install line with `&& ... ||` would run the copy whenever an earlier step failed. The `if [ ! -f ]` guard matters: on a repeat setup of an existing vault the registry already holds hand-recorded task settings that exist nowhere else, so it is never overwritten (the script copy is safe to refresh). When the registry was just created, set the `created` date in its frontmatter to today. This is the backup for any scheduled task the user later creates as a LOCAL routine in the Claude Desktop app (Guideline "Local routines are backed up in the vault" in CLAUDE.md).
@@ -436,7 +438,7 @@ Do this:
 
 ### 6D: Vault Settings (persist across sessions)
 
-Write `VAULT_PATH/.claude/settings.json` -- the vault's **committed** settings file -- using the permissions from `examples/settings.json` as the base, plus any MCP permissions for tools they selected. Because this file is checked into the vault repository, every future cloud session starts with the right permissions automatically.
+Write `VAULT_PATH/.claude/settings.json` -- the vault's **committed** settings file -- using the permissions and the `hooks` object from `examples/settings.json` as the base (the hooks scripts are copied in Phase 6A), plus any MCP permissions for tools they selected. Because this file is checked into the vault repository, every future cloud session starts with the right permissions automatically.
 
 Do NOT put these in `VAULT_PATH/.claude/settings.local.json` -- local settings are untracked by convention and would evaporate with the workspace. (The `~/.claude/settings.json` from Phase 1 also only covers the current session.)
 

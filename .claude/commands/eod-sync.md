@@ -13,7 +13,7 @@ Cleanup, deduplication, and external sync phase. Reads state from disk (manifest
 ## Setup
 
 1. Run `date` to get today's date and current time ([Your Timezone])
-2. Source the `.env` file at the vault root to load API credentials
+2. Do not read or source the credentials file. Scripts load credentials themselves (`scripts/envload.py`); for a one-off external call use `python3 scripts/with-env.py -- <command>`
 3. Set `TODAY` as the current date in `YYYY-MM-DD` format
 4. Set `DOW` to the current day of the week (for Monday archive logic)
 5. **Read the manifest** from `/tmp/eod-manifest-TODAY.md`. Confirm it exists and contains at least one item row. If missing, abort with a clear error: "No manifest found. Run Phase 1 first."

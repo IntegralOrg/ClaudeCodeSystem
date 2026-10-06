@@ -36,3 +36,6 @@ __pycache__/
 # Internal process/SOP work belongs in the Brain vault (Integral/SOPs/), not here.
 docs/superpowers/
 .handoffs/
+
+# Hook action log (local, masked, per machine)
+_generated/agent-actions/
