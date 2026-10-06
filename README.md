@@ -164,6 +164,21 @@ Your vault is a Git repository in a cloud workspace -- there is no background fi
 ### Route-As-You-Go
 Every extracted item is routed to its destination file immediately, not batched for later. This prevents data loss if a step fails partway through or the process runs long.
 
+### Vault Hygiene and Canonical Detection
+`/vault-audit` runs every night (standalone, or as an EOD phase) and keeps the vault matching its own design contract. Each run: **(1) structure** -- walks the tree, refiles misfiled notes, backfills frontmatter, stages removals into `_generated/vault-hygiene/audit-trash/` (never deletes); **(2) index** -- hashes every file and keeps a one-line concept/entities row per note; **(3) embeddings** -- embeds changed notes locally and generates same-subject candidate pairs; **(4) canonical proposals** -- a comparator classifies each pair as a version-fork, a duplicate, or legitimately distinct, a deterministic rule picks the winner, and the proposal lands in `_generated/vault-hygiene/pending-supersession-review.md`; **(5) file-mode review** -- you edit the `decision:` line in each block (`confirm` folds and retires the loser, `confirm-keep` labels only, `reject`, or `swap`), and the next run applies your decisions; **(6) invariant** -- a fail-loud check that no canonical/superseded marker is dangling, chained, or self-contradictory. Nothing is merged or hidden without a human decision; a wrong merge is high-consequence and near-invisible, so the human gate is mandatory.
+
+Run the embedding step directly when you want to inspect candidates:
+
+```
+# in the cloud / a scheduled run (self-installs its one dependency at run start):
+python3 scripts/vault-embed.py report --vault <path> --install
+
+# locally (installs the embedder into a throwaway env):
+uv run --python 3.12 --with fastembed,numpy scripts/vault-embed.py report --vault <path>
+```
+
+**Privacy:** the **embedding** step runs in-process with a small local model (`bge-small`) and sends no note content off the machine; its only outbound call is a one-time download of the model weights. (The separate **judging** step hands the candidate pair's text to Claude, the same as any other Claude session that reads your vault.) After a file or folder rename, run `python3 scripts/vault-embed.py migrate --vault <path> --rename "<old>" "<new>"` to re-key the saved state so nothing re-embeds or re-judges. Thresholds, the owner/company exclusion list, and the staleness window are config in the schema's `embedding:` block.
+
 ### EOD Command
 The default `/eod` flow should run as one command in one Claude session. Claude Code now supports long-context sessions, so the simplest setup is a single `/eod` that gathers, routes, syncs, writes the daily note, and builds tomorrow's plan. If a user's workflow is unusually heavy, or if they want unattended scheduled automation, you can still split EOD into separate phases as an advanced fallback.
 

@@ -6,6 +6,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-06] - Embedding + canonical detection ported into `/vault-audit`
+
+The nightly hygiene run now has a semantic layer: it detects same-subject document forks and proposes merges to a human review queue, instead of letting duplicates quietly accumulate.
+
+### Added
+- **`templates/scripts/vault-embed.py`**: local, in-process embeddings (`bge-small`, no data egress), same-subject candidate generation, a deterministic survivorship rule, a file-mode review queue, and fold-and-retire `apply` (only ever modifies a doc on a human-decided block). Thresholds, the owner/company exclusion list, the staleness window, and canonical-home folders are config in the schema's `embedding:` block (CLI flags override). A `migrate --rename` subcommand re-keys the saved state (index, vectors, judgments, watched clusters, golden set) after a rename.
+- **`templates/scripts/tests/`**: stdlib-only unit tests for both scripts (run with `cd templates/scripts/tests && python3 -m unittest discover`).
+- **`/vault-audit` Step 4b**: the nightly canonical-judgment pass (embed, judge, survivorship, dry-run, apply) plus a fail-loud invariant check on canonical/superseded markers. On the web runner, `report --install` self-installs the embedder at run start, so the scheduled routine needs no setup step.
+
+### Changed
+- **`templates/scripts/vault-audit.py`** refreshed to the current version (the invariant check, `hash_since`, and a report-only `stale_canonical` flag).
+- **`templates/CLAUDE.md`** documents the canonical-marker frontmatter fields (`canonical`, `status: superseded`, `superseded_by`, `superseded_at`, `superseded_reason`).
+- **`/onboard`** copies `vault-embed.py` alongside `vault-audit.py` and writes the schema `embedding:` block.
+
+---
+
 ## [2026-10-05] - Completion check moves into EOD; /morning-precheck retired
 
 `/morning-precheck` ran as its own scheduled morning job to find tasks that were already done. In practice it re-read the same day `/eod` had just read a few hours earlier, needed its own scheduled run and credentials, and existed only to serve task tracking, which not every vault uses.
