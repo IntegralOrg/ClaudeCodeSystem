@@ -222,7 +222,7 @@ captured too: `bash scripts/system-journal/install.sh --vault "$VAULT" --write-h
 three hooks into your user-level `~/.claude/settings.json`). See the system-journal README.
 
 **Knowledge graph.** `scripts/graph-render.py` renders `Graph/index.md` and the MOCs from
-frontmatter and the concept index; `/graph-daily` and `/graph-sync` drive it. Graph files are
+frontmatter and, when present, the concept index (`_generated/vault-hygiene/vault-index.json`, written by `/vault-audit`); `/graph-daily` and `/graph-sync` drive it. Graph files are
 generated, not hand-edited, and links are structural edges only (no inline wiki-link pass).
 
 ## FAQ

@@ -361,7 +361,7 @@ The default `/eod` flow covers:
 - Time tracking: review and classify sessions if configured
 - Daily note: generate `Work/Daily/YYYY-MM-DD.md`
 - Tomorrow's plan: generate `Inbox/Today.md` with schedule, priorities, and meeting prep
-- Graph sync: incremental knowledge graph update on files changed today (frontmatter, structural edges on new docs, render index/MOCs from metadata)
+- Graph sync: incremental knowledge graph update on files changed since the last successful run (frontmatter, structural edges on new docs, render index/MOCs from metadata)
 - Persist: commit and push the vault (the workspace is temporary; an unpushed close-out is lost when the session ends)
 
 Write important state to disk as you go (manifest files, inbox files, temp files in `/tmp/`). If the workflow later needs more resilience or starts hitting practical limits, split it into phases and pass state between them through files.
@@ -412,8 +412,8 @@ if __name__ == "__main__":
 This approach means API calls are consistent across sessions, testable on their own, and do not break silently when an API changes.
 
 ### Knowledge Graph Maintenance
-- **The graph is rendered from metadata.** `scripts/graph-render.py` regenerates `Graph/index.md` and the MOCs from frontmatter and the concept index. There is no inline "link every first mention" pass (that existed for Obsidian's graph view and is retired). Links are structural edges only: a `## Related` line to a hub, `superseded_by`, and entity-registry rows, all path-qualified.
-- **Daily (incremental)**: `/graph-daily` (or an EOD graph phase) processes files changed that day: completes frontmatter, adds structural edges on new docs, extracts transcript knowledge, then runs the renderer
+- **The graph is rendered from metadata.** `scripts/graph-render.py` regenerates `Graph/index.md` and the MOCs from frontmatter and, when present, the concept index (`_generated/vault-hygiene/vault-index.json`, written by `/vault-audit`; without it descriptions fall back to `summary` or the first paragraph). There is no inline "link every first mention" pass (that existed for Obsidian's graph view and is retired). Links are structural edges only: a `## Related` line to a hub, `superseded_by`, and entity-registry rows for new People and Concepts pages (projects are indexed, not registered), all path-qualified.
+- **Daily (incremental)**: `/graph-daily` (or an EOD graph phase) processes files changed since the last successful run plus uncommitted working-tree changes (the first run uses changes since midnight; after a skipped day the window spans every missed day): completes frontmatter, adds structural edges on new docs, extracts transcript knowledge, then runs the renderer
 - **On-demand**: Run `/graph-sync` for a full re-render (initial setup, periodic deep sweep, post-restructure)
 - **Entity pages**: People in `Resources/People/`, concepts in `Resources/Concepts/`, projects alongside their parent context
 - **Entity registry**: `Graph/entity-registry.md` maps terms to their page. Update when adding new entity pages.
