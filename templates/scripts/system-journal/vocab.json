@@ -1,0 +1,14 @@
+{
+  "_comment": "Controlled vocabulary for the System Journal distiller. distill.py loads this from <vault>/scripts/system-journal/vocab.json; when it is absent, distill.py falls back to its own built-in generic default. This file ships the same generic default so a fresh vault starts with a sensible list. systems = the controlled `systems` tag list (the distiller must pick from it, plus client:<slug>); sensitive_tags = tags that drop a whole line from the audit tier; sensitive_path_prefixes = vault-relative path prefixes that also drop a line. Extend deliberately for your own vault; every sensitive tag that matters should also appear in systems.",
+  "systems": [
+    "tasks", "routines", "documentation", "email", "slack", "calendar", "transcripts",
+    "vault-hygiene", "knowledge-graph", "claude-code", "hooks", "mcp", "skills", "subagents",
+    "github", "deploy", "testing", "sales", "proposals", "hiring", "team",
+    "personal", "health", "finance", "family", "relationships"
+  ],
+  "sensitive_tags": [
+    "personal", "health", "medical", "therapy", "relationships", "family",
+    "finance", "taxes", "legal-personal", "mental-health"
+  ],
+  "sensitive_path_prefixes": ["Personal/", "Personal\\"]
+}
