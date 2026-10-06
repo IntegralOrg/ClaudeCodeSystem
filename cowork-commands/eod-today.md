@@ -21,7 +21,7 @@ Reads the manifest, inbox files, today's plan, and tomorrow's calendar. Produces
 
 1. Run `date` to get today's date and current time
 2. Compute `TOMORROW` (format: `YYYY-MM-DD` and display name like `Wednesday, March 18, 2026`)
-3. Source `.env` at vault root for API credentials
+3. Do not read or source the credentials file; scripts load credentials themselves (`scripts/envload.py`)
 4. Confirm manifest exists at `/tmp/eod-manifest-TODAY.md` (warn if missing, continue)
 
 ---

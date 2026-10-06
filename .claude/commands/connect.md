@@ -325,13 +325,14 @@ Ask the user to paste each value.
 
 Test:
 ```bash
-source "<vault_path>/.env"
+python3 scripts/with-env.py -- bash <<'SH'
 ACCESS_TOKEN=$(curl -s -X POST "https://oauth2.googleapis.com/token" \
   --data "grant_type=refresh_token&client_id=${GOOGLE_CLIENT_ID}&client_secret=${GOOGLE_CLIENT_SECRET}&refresh_token=${GOOGLE_REFRESH_TOKEN}" \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 curl -s "https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=3&timeMin=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   | python3 -c "import sys,json; events=json.load(sys.stdin).get('items',[]); [print(f'  {e.get(\"summary\",\"(no title)\")}') for e in events[:3]]" 2>/dev/null
+SH
 ```
 
 AskUserQuestion: "I found these events: [list]. Look right?"
@@ -468,10 +469,11 @@ FATHOM_API_KEY=<key>
 
 5. Test:
 ```bash
-source "<vault_path>/.env"
+python3 scripts/with-env.py -- bash <<'SH'
 curl -s -H "X-Api-Key: ${FATHOM_API_KEY}" \
   "https://api.fathom.ai/external/v1/meetings?limit=3" \
   | python3 -c "import sys,json; meetings=json.load(sys.stdin).get('meetings',[]); [print(f'  {m.get(\"title\",\"(no title)\")} -- {m.get(\"date\",\"\")}') for m in meetings[:3]]" 2>/dev/null
+SH
 ```
 
 AskUserQuestion: "Found these meetings: [list]. Look right?"
@@ -540,10 +542,11 @@ SLACK_TOKEN_WORKSPACE_A=<token>
 
 9. Test:
 ```bash
-source "<vault_path>/.env"
+python3 scripts/with-env.py -- bash <<'SH'
 curl -s "https://slack.com/api/conversations.list?types=public_channel&limit=5" \
   -H "Authorization: Bearer ${SLACK_TOKEN_WORKSPACE_A}" \
   | python3 -c "import sys,json; chs=json.load(sys.stdin).get('channels',[]); [print(f'  #{c[\"name\"]}') for c in chs[:5]]" 2>/dev/null
+SH
 ```
 
 AskUserQuestion: "Found these channels: [list]. Your workspace?"
