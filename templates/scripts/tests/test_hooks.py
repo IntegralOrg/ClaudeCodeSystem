@@ -168,7 +168,7 @@ type: client-profile
 
 ## Current State
 <!-- one dated line per key; REPLACE on change -->
-- **Engagement** (2026-09-29): coaching offer, $1,500/mo or Eva seat
+- **Engagement** (2026-09-29): offer moves to a flat monthly retainer or a seat
 - **Owner** (2026-10-02): Alex
 
 ## Overview

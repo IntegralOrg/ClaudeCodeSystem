@@ -12,17 +12,17 @@ status: active
 # Company Profile: Acme
 
 ## Recent Activity
-- **2026-10-02** — Dev lead handed to Diego. -- [source](Transcripts/a.md)
-- **2026-09-29** — Reclassified non-build; offer moves to $1,500/mo coaching.
+- **2026-10-02** — Dev lead handed to Sam. -- [source](Transcripts/a.md)
+- **2026-09-29** — Reclassified non-build; offer moves to a flat monthly retainer.
 
 ## Overview
 Acme does things.
 
 ## Engagement
-- **Recurring (from 2026-09-02):** $5k/mo fractional partnership.
+- **Recurring (from 2026-09-02):** a fixed monthly fractional partnership.
 
 ### Recent Activity
-- **2026-09-25** — Dean is PM.
+- **2026-09-25** — Alex is PM.
 
 ## Related
 - [[Work/Clients/Acme/Company Profile|Acme]]
@@ -34,12 +34,12 @@ def test_converts_losslessly():
     assert out.count("## Current State") == 1 and out.count("## Log") == 1
     assert "Recent Activity" not in out
     # every original bullet text survives verbatim
-    for frag in ["Dev lead handed to Diego. -- [source](Transcripts/a.md)", "Reclassified non-build; offer moves to $1,500/mo coaching.", "Dean is PM."]:
+    for frag in ["Dev lead handed to Sam. -- [source](Transcripts/a.md)", "Reclassified non-build; offer moves to a flat monthly retainer.", "Alex is PM."]:
         assert frag in out
     log = out.split("## Log")[1]
     assert log.index("(2026-10-02)") < log.index("(2026-09-29)") < log.index("(2026-09-25)")
     assert "- **Engagement status** (2026-10-06): maintenance" in out
-    assert "- **Engagement** (2026-10-02): $5k/mo fractional partnership. (verify)" in out
+    assert "- **Engagement** (2026-10-02): a fixed monthly fractional partnership. (verify)" in out
     assert "engagement: maintenance" in out.split("---")[1]
     assert "## Overview\nAcme does things." in out and "## Related" in out
 

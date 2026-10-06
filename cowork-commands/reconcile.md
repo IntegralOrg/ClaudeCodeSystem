@@ -15,11 +15,7 @@ Interactive end-of-day command. Run when the user finishes deep-work blocks. It 
 
 Run `date`. Set `TODAY=YYYY-MM-DD`. Trust the live clock, never the system-prompt date. Run every calendar helper through the credential wrapper so it has credentials without you reading the credentials file:
 
-```bash
-python3 scripts/with-env.py -- python3 - "$TODAY" <<'PY'
-...helper...
-PY
-```
+The exact invocations are in Sections 1 and 2 (`python3 scripts/with-env.py -- python3 - ... <<'PY'`).
 
 (The wrapper exports the variables into the child process only. Never read, source, or print the credentials file.)
 
