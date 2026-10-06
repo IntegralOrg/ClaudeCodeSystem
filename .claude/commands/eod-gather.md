@@ -19,7 +19,7 @@ Data gathering phase. Triages Brain Dump first, then fetches Fathom transcripts,
 ## Setup
 
 1. Run `date` to get today's date and current time ([Your Timezone])
-2. Source the `.env` file at the vault root to load API credentials
+2. Do not read or source the credentials file. Scripts load credentials themselves (`scripts/envload.py`); for a one-off external call use `python3 scripts/with-env.py -- <command>`
 3. Set `TODAY` as the current date in `YYYY-MM-DD` format and `TOMORROW` as the next calendar day
 4. **Create the manifest file** at `/tmp/eod-manifest-TODAY.md`:
    ```markdown
@@ -94,9 +94,11 @@ Process the Brain Dump section in `Inbox/Today.md`. This is the user's quick-cap
 
 1. Run the deterministic Fathom fetch script:
    ```bash
-   python3 scripts/fathom-fetch.py --date $TODAY --env .env --json-file /tmp/fathom-report-$TODAY.json 2>/tmp/fathom-fetch-$TODAY.log
+   python3 scripts/fathom-fetch.py --date $TODAY --json-file /tmp/fathom-report-$TODAY.json 2>/tmp/fathom-fetch-$TODAY.log
    FATHOM_EXIT=$?
    ```
+Gather only routes tasks. Takeaways from transcripts land in each client profile's `## Log` (and `## Current State` when a fact changed) during the graph sync phase (`/graph-daily`), under the write-path rule in CLAUDE.md.
+
 2. Check the exit code and stderr log:
    - Exit 0: all calls processed OK
    - Exit 1: fatal error (API failure, missing env). Read the log for details. Alert the user.

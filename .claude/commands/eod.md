@@ -26,7 +26,7 @@ Advanced fallback:
 ## Setup
 
 1. Run `date` to get today's date and current time ([Your Timezone])
-2. Source the `.env` file at the vault root to load API credentials
+2. Do not read or source the credentials file. Scripts load credentials themselves (`scripts/envload.py`); for a one-off external call use `python3 scripts/with-env.py -- <command>`
 3. Set variables:
    - `TODAY` = current date in YYYY-MM-DD format
    - `TOMORROW` = next calendar day in YYYY-MM-DD format
@@ -43,13 +43,13 @@ Advanced fallback:
    ```
 5. Check CLAUDE.md for a time tracking integration (look for an uncommented entry mentioning time tracking, Rize, Toggl, or similar). Set `HAS_TIME_TRACKING` = true or false.
 
-Cloud-workspace note: in an ephemeral cloud container, credentials usually arrive as exported environment variables rather than a `.env` file. Read them from the environment first; only source `.env` if it exists, and never create a stub `.env` to satisfy a script. Also expect that some raw third-party APIs return 503s when called from datacenter IPs -- prefer an MCP connector for those services in the cloud, and do not retry the raw endpoint in a loop.
+Cloud-workspace note: in an ephemeral cloud container, credentials usually arrive as exported environment variables rather than a logins file. Scripts read them through `scripts/envload.py`, and a one-off call goes through `python3 scripts/with-env.py -- <command>`; never read or source a logins file, and never create a stub one to satisfy a script. Also expect that some raw third-party APIs return 503s when called from datacenter IPs -- prefer an MCP connector for those services in the cloud, and do not retry the raw endpoint in a loop.
 
 ---
 
 ## 1. Gather
 
-Source "$VAULT/.env" before any API calls. The manifest is at $MANIFEST.
+Credentials are loaded inside scripts (`scripts/envload.py`); for a one-off call use `python3 scripts/with-env.py -- <command>`. Never read or source the credentials file. The manifest is at $MANIFEST.
 
 Continuity check first: look at the newest note in `Work/Daily/` and the date on the current `Inbox/Today.md`. If the newest daily note is not from the previous calendar day, one or more days have no note. Say so explicitly at the top of the run and name the missing dates before proceeding. Date-scoped API fetches only cover the day you run for, so a silent gap means those days are never captured. Do not backfill mid-run; just surface it.
 
@@ -65,7 +65,7 @@ Execute these steps in order:
 2. CALL TRANSCRIPTS: If a transcript fetcher script exists (for example `scripts/fathom-fetch.py`), run it and parse the results. For each call, extract action items, decisions, and follow-ups. Route to client inbox files. Log to manifest. If no transcript service is configured, skip this step.
 3. TOMORROW'S CALENDAR: Get a Google OAuth access token using the refresh token. Fetch $TOMORROW's events from Google Calendar API. Format as a readable schedule. Write to `/tmp/eod-calendar-$TODAY.md`.
 4. EMAIL CHECK: Reuse the Google OAuth token. Fetch today's emails via Gmail API (first 15-20 messages). Surface emails needing response. Route actionable items to client inbox files. Log to manifest.
-5. SLACK CHECK: For each workspace token in `.env` (`SLACK_TOKEN_WORKSPACE_*`), check unread DMs and mentions. Route items to client inbox files. Log to manifest.
+5. SLACK CHECK: For each workspace token available to the scripts (`SLACK_TOKEN_WORKSPACE_*`), check unread DMs and mentions. Route items to client inbox files. Log to manifest.
 6. COMPLETION CHECK: Only if at least one `Inbox/*.md` file has open items under `## Open Tasks`. Check every open task against what steps 2 to 5 just read, plus up to 30 targeted lookups of the thread or conversation a task cites. Clear evidence that it is finished (by anyone): check it off and log a `COMPLETED` manifest row. Partial evidence, or an inbound "no longer needed": log a `CONFIRM` row (at most 5) and leave the task alone. No evidence: nothing. Full rules: `eod-gather.md` Section 5.
 
 When done, read back `$MANIFEST` and confirm it exists and has entries. Report totals by source and client.
@@ -91,7 +91,7 @@ Report: items deduped, completed moved, tasks synced, stale items flagged.
 
 Only run this section if `HAS_TIME_TRACKING` is true.
 
-Source "$VAULT/.env" before any API calls. Read the calendar cache at `/tmp/eod-calendar-$TODAY.md` for cross-referencing.
+Credentials are loaded inside scripts (`scripts/envload.py`); for a one-off call use `python3 scripts/with-env.py -- <command>`. Never read or source the credentials file. Read the calendar cache at `/tmp/eod-calendar-$TODAY.md` for cross-referencing.
 
 Execute these steps:
 

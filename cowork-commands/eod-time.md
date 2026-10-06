@@ -20,7 +20,7 @@ Fetches today's time tracking sessions, detects untracked gaps, classifies each 
 ## Step 1: Setup
 
 1. Run `date` to confirm today's date and current time ([Your Timezone])
-2. Source the `.env` file at the vault root to load `RIZE_API_KEY`
+2. Do not read or source the credentials file; `scripts/rize-classify.py` loads `RIZE_API_KEY` itself through `scripts/envload.py`
 3. Set `TODAY` as the current date in `YYYY-MM-DD` format
 4. Compute UTC boundaries for today:
    ```bash
@@ -67,7 +67,6 @@ Fetches today's time tracking sessions, detects untracked gaps, classifies each 
    python3 scripts/rize-classify.py \
      --sessions /tmp/eod-rize-sessions-$TODAY.json \
      --calendar /tmp/eod-calendar-$TODAY.md \
-     --env .env \
      --output /tmp/eod-rize-classified-$TODAY.json
    ```
 2. The script classifies each session on two axes:

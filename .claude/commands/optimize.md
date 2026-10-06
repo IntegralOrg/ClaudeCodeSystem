@@ -24,7 +24,7 @@ Based on their choice:
 
 **If tech stack:**
 - Read CLAUDE.md integrations section for currently connected tools
-- Read `.env` for all configured services
+- Ask which services are configured (never open the credentials file; list the services named in CLAUDE.md)
 - Ask: "Are there tools you pay for that are not listed here?"
 - Build a table: Tool, Purpose, Monthly Cost (if known), How Often Used
 

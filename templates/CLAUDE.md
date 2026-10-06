@@ -52,7 +52,7 @@ Run this automatically as part of every monthly review:
 
 **CLAUDE.md Self-Audit (run automatically every review):**
 Before asking the user anything, audit this file against reality:
-1. **Integrations**: For each listed integration, verify the connection is live (MCP: test call; API: check the credential is present in the environment or `.env`). Flag dead connections and undocumented live ones.
+1. **Integrations**: For each listed integration, verify the connection is live (MCP: test call; API: run the script that uses it and check it connects). Flag dead connections and undocumented live ones.
 2. **Scripts**: For each script listed under Local Tools, verify the file exists in the workspace. Flag missing scripts and undocumented scripts in `scripts/`.
 3. **Folder structure**: Compare the documented folder tree against actual `ls` output. Flag mismatches.
 4. **Skills**: Compare skills referenced in this file against files in `.claude/commands/`. Flag mismatches.
@@ -79,7 +79,7 @@ If the ClaudeCodeSystem setup repo folder still exists in the workspace outside 
 | Client profiles & archives | `Work/Clients/<Client>/Company Profile.md` + `Archive/` subfolder |
 | Call transcripts | Per-client: `Work/Clients/<Client>/Transcripts/`, admin: `Work/Transcripts/`, private: `[YourCompany]/Transcripts/` |
 | Task management | [Your Task Manager] (e.g., ClickUp via MCP) |
-| Credentials/API keys | Environment variables set in the Claude Code environment settings (`.env` is a session-local, untracked fallback; `Resources/API Keys/` has references only) |
+| Credentials/API keys | Environment variables set in the Claude Code environment settings (a session-local, untracked logins file is the fallback; scripts load either via `scripts/envload.py`; `Resources/API Keys/` has references only) |
 | Work projects | `Work/Clients/` |
 | Personal projects | `Projects/Personal/` |
 | System updates | Change Log (bottom of this file) + `CHANGELOG.md` for full history |
@@ -109,7 +109,7 @@ I am your personal assistant built to handle the repetitive, organizational part
 
 - **Your notes folder (the vault) is my workspace.** Everything I do revolves around the files in this folder.
 - **CLAUDE.md (this file) is my instruction manual.** I read it every session to know how you want things done.
-- **Your .env file gives me login information for your tools.** Calendar, email, task manager, and other services are connected through passwords and keys stored there.
+- **Your tool logins live in a file I am not allowed to open; my scripts use them for me.** Calendar, email, task manager, and other services are connected through passwords and keys stored there, and a guard blocks me from reading, printing, or searching that file.
 - **Skills let me run multi-step processes with one instruction.** For example, `/morning` reviews your day and `/eod` closes it out. Skills are text files in `.claude/commands/` that I follow step by step. Your skills library grows over time as you turn successful tasks into reusable routines.
 - **I do not remember things between conversations unless they are written to a file AND pushed.** The cloud workspace I run in is temporary: it starts from a fresh clone of the vault repository and is thrown away after the session. Anything not committed and pushed to the vault's Git remote is gone when the session ends. If something is important, I save it to your notes and push it.
 - **Version control is my job, never yours.** You should never have to see or think about Git, GitHub, branches, pull requests, or merge conflicts. The Git Autopilot rules below handle all of that silently.
@@ -149,7 +149,7 @@ When working with [Your Name]:
 - If they seem unaware of a capability, explain what you can do and offer to do it. Do not assume they know every feature.
 - If they are struggling with something, walk them through it step by step using everyday language.
 - During monthly reviews, assess whether they are getting full value from the system and suggest underused features.
-- When explaining anything technical, use everyday language first, then the technical term in parentheses. For example: "your password keychain file (.env)" or "direct connections (MCP servers)."
+- When explaining anything technical, use everyday language first, then the technical term in parentheses. For example: "your password keychain file (the logins file)" or "direct connections (MCP servers)."
 
 ## Folder Structure
 
@@ -172,7 +172,7 @@ Brain/
 ├── Projects/        # Personal projects and goals
 │   └── Personal/    # Life, goals, relationships
 ├── Resources/       # Reference and knowledge
-│   ├── API Keys/    # Credential references (keys stored in .env)
+│   ├── API Keys/    # Credential references (keys live in the guarded logins file)
 │   ├── Health/      # Fitness, nutrition, wellness
 │   ├── Interests/   # Hobbies and interests
 │   ├── Learning/    # Educational notes
@@ -201,7 +201,7 @@ Brain/
 <!-- - **Google Calendar** -- Calendar events, scheduling, free time lookup -->
 - **Context7** -- Up-to-date library documentation
 
-### Tools That Need Login Credentials (stored in .env)
+### Tools That Need Login Credentials (stored in the guarded logins file)
 
 Read `Resources/Reference/API Integration Guide.md` for full docs (endpoints, auth, examples).
 
@@ -238,7 +238,7 @@ Read `Resources/Reference/API Integration Guide.md` for full docs (endpoints, au
   - Routing: client contacts -> `Work/Clients/<Client>/Transcripts/`, devs only -> `Work/Transcripts/`, private -> `[YourCompany]/Transcripts/`
 
 - **Transcript Fetcher** -- Downloads transcripts from your service. Script: `scripts/fathom-fetch.py`
-  - Usage: `python3 scripts/fathom-fetch.py --date YYYY-MM-DD --env .env --json-file /tmp/fathom-report.json`
+  - Usage: `python3 scripts/fathom-fetch.py --date YYYY-MM-DD --json-file /tmp/fathom-report.json`
   - Downloads today's call recordings, saves transcripts, classifies per-client routing
 -->
 
@@ -249,7 +249,7 @@ Read `Resources/Reference/API Integration Guide.md` for full docs (endpoints, au
   - Pulls sessions from Rize GraphQL API, cross-references calendar for gap detection
 
 - **Time Tracking Classifier** -- Two-axis classification. Script: `scripts/rize-classify.py`
-  - Usage: `python3 scripts/rize-classify.py --date YYYY-MM-DD --env .env [--json]`
+  - Usage: `python3 scripts/rize-classify.py --date YYYY-MM-DD [--json]`
   - Axis 1: Client (who is the time for?)
   - Axis 2: Work type (delivery, sales, audit, meeting, admin, internal)
 -->
@@ -259,7 +259,7 @@ Read `Resources/Reference/API Integration Guide.md` for full docs (endpoints, au
   - Converts markdown to styled HTML (using Python `markdown` library), then uploads to Google Drive as a Google Doc
   - **Preferred method** for creating formatted Google Docs (avoids Docs API formatting issues; Google's import converter handles HTML-to-Doc)
   - **Always use this instead of the Google Docs API** for any document with tables, code blocks, or complex formatting
-  - Requires: `pip3 install markdown requests`, Google OAuth credentials in `.env`
+  - Requires: `pip3 install markdown requests`, Google OAuth credentials in the guarded logins file
 
 ## Assistant Guidelines
 
@@ -271,7 +271,7 @@ When working in this vault:
 3. **ClickUp Status**: When marking tasks done in ClickUp, use the done-type status for that list (usually **"done"** or **"completed"**). Never use "closed". Different lists may have different done-status names; check the list's available statuses if unsure.
 -->
 4. **File Organization**: Follow the existing folder structure
-5. **Sensitive Data**: Credentials come from environment variables configured in the Claude Code environment settings (a session-local `.env` may mirror them for scripts, but it is untracked and disposable). Never put raw keys in vault markdown files and never commit secrets to the repository. `Resources/API Keys/` contains reference pointers only
+5. **Sensitive Data**: credentials live in a gitignored logins file (local) or pre-exported environment variables (cloud). Scripts load them through `scripts/envload.py`; a one-off external call goes through `python3 scripts/with-env.py -- <command>`. Never read, source, grep, or print the logins file or the environment; a hook blocks it. Never put raw keys in vault markdown; `Resources/API Keys/` is pointers only. Variables are expanded by the shell before the wrapper runs, so put the command in single quotes: `python3 scripts/with-env.py -- bash -c 'curl -H "Authorization: Bearer $TOKEN" https://...'`.
 6. **Context Awareness**: Read relevant notes before making decisions
 7. **Proactive Assistance**: Suggest improvements, identify patterns, and help optimize workflows
 8. **Timezone Handling**: All times should be interpreted and displayed in **[Your Timezone]**. When querying APIs that return ISO timestamps (typically UTC), convert to your local timezone before reporting dates/times. Evening UTC times may appear as the next day if not converted properly.
@@ -296,11 +296,11 @@ When working in this vault:
     4. **Ask [Your Name]** -- If none of the above work, tell [Your Name] what access you need. They may be able to get you API credentials or enable a connection. Do not try to work around it.
     Never use browser automation (agent-browser, Playwright, Puppeteer, or any headless browser tool). Never fall back to a browser to work around a blocked page, missing API, or 403 error. If a service has no API and no Claude.ai integration, it is not connected yet -- say so and ask how [Your Name] wants to handle it.
     **Never configure direct connections (MCP servers) yourself.** Built-in connectors (Gmail, Google Calendar, etc.) can only be added by [Your Name] through claude.ai's **Settings > Connectors** page. Do not attempt to write `mcpServers` configuration, edit MCP config files, or instruct yourself to set up a new MCP connection on your own initiative. Instead, tell [Your Name] what tool to connect and where to add it. Editing the vault's `.mcp.json` is valid only when [Your Name] explicitly requests it.
-18. **Script-First for API Calls**: Do not write raw curl commands inline for API interactions. Instead, create a reusable Python script in `scripts/` for any API call that will be used more than once. Scripts must: source credentials from environment variables (falling back to `.env` if present), handle errors and non-200 responses gracefully, support `--json` output for machine-readable results, include a `--help` flag, and log what they did. If a script already exists for the task, use it. This makes API interactions consistent, testable, and debuggable instead of fragile one-liners that break silently. One-off exploratory API calls (testing an endpoint, checking a value) are fine as inline curl, but anything that runs in a skill or will be repeated should be a script.
+18. **Script-First for API Calls**: Do not write raw curl commands inline for API interactions. Instead, create a reusable Python script in `scripts/` for any API call that will be used more than once. Scripts must: load credentials through `scripts/envload.py` (environment first, local logins file as fallback), handle errors and non-200 responses gracefully, support `--json` output for machine-readable results, include a `--help` flag, and log what they did. If a script already exists for the task, use it. This makes API interactions consistent, testable, and debuggable instead of fragile one-liners that break silently. One-off exploratory API calls (testing an endpoint, checking a value) are fine as inline curl, but anything that runs in a skill or will be repeated should be a script.
 19. **Self-Updating Documentation**: Every time a new integration, tool, or script is added to the system, immediately update ALL relevant references:
     - **CLAUDE.md**: Add the integration under the appropriate section (Direct Connections, Tools That Need Login Credentials, or Local Tools). Include what it does, how to use it, and any key details.
     - **`Resources/Reference/API Integration Guide.md`**: Add endpoint documentation, auth method, example calls, rate limits, and any gotchas discovered during setup.
-    - **`Resources/API Keys/`**: Create a reference pointer file for the new credential (what it is, where it is stored in `.env`, scopes, rate limits).
+    - **`Resources/API Keys/`**: Create a reference pointer file for the new credential (what it is, which variable name holds it, scopes, rate limits).
     - **`scripts/`**: If a script was created, document its usage in CLAUDE.md under Local Tools.
     - **Skills**: If any skills reference integrations (like `/eod-gather`), update them to include the new integration where appropriate.
     Do not consider an integration "done" until all of these references are updated. If you add an API and skip the documentation, the next session will not know it exists.
@@ -308,6 +308,7 @@ When working in this vault:
 21. **Persistence -- commit and push continuously, always to `main`**: The cloud workspace is temporary; Git is the durability layer. Follow the **Git Autopilot** rules (see "About This System"): sync on start, commit and push after every completed unit of work, always land changes on `origin/main` (never a side branch, never a pull request), and resolve any conflict yourself without asking. On a rejected push: `git pull --rebase`, then push again. If pushes keep failing, say so plainly instead of ending the session as if the work were safe. Skills like `/eod`, `/morning`, and `/handoff` have an explicit final push step; the rule applies to ad-hoc work too.
 22. **Local routines are backed up in the vault.** A Claude desktop LOCAL scheduled task (Desktop app, Routines page, kind Local) lives only on the machine that created it: the prompt at `~/.claude/scheduled-tasks/<name>/SKILL.md`, everything else (schedule, folder, model, permission mode, worktree toggle, always-allow approvals) in app state that nothing exports, and it is absent from the account's cloud routine list. Whenever you create, edit, pause, or delete one: run `bash scripts/local-routines-backup.sh` (mirrors the prompts to `Resources/Reference/Local Routines/<device>/`) and update its row in `Resources/Reference/Local Routines Registry.md` in the same session, so a new computer can recreate it exactly. Never hand the user a block to create a local task without also writing the registry row. Cloud routines (kind Remote) need nothing; they belong to the account.
 23. **Recall and source trust order.** When [Your Name] asks to find context or recall something ("what did we say about X") and the vault search comes up thin, search past session transcripts before answering "not found" (`~/.claude/projects/<project-folder>/*.jsonl` on a local machine; cloud sessions keep none). Search for the topic and read only the matching session; never load transcripts at startup or read them whole. (a) **Trust order** for decisions and rules: canonical docs, then other vault notes, then past session transcripts, then Claude's built-in memory last. A past chat never overrides a vault doc. (b) **Changing facts**: the most recent dated source wins regardless of tier; say which date you are relying on. (c) **Never resolve a conflict silently**: show both sources with their dates and say which one you are using. (d) **Past chats are dated leads**: cite the date and treat the content, including your own earlier reasoning, as possibly stale. (e) **File what recall surfaces**: a durable fact found only in a chat gets written into its proper vault home in the same session. (f) **Honor "don't log"**: if the matched session carried a do-not-log instruction, use it to answer and do not write its content into the vault without asking.
+24. **Write path (state vs event)**: every fact you write is state (one current value that changes: rate, status, owner, date) or event (a thing that happened). State replaces its dated line in the file's `## Current State`; events append to `## Log`. Unsure means append and say so. A hook refuses a second Current State, a Recent Activity section beside one, an undated or duplicate state line.
 
 ## Common Workflows
 
@@ -372,7 +373,7 @@ When you need to call an external API (Gmail, Slack, Google Drive, etc.) for any
 1. **Check `scripts/` first** -- a script may already exist for this API
 2. **Create a new script** in `scripts/` if one does not exist:
    - Name it descriptively: `gmail-check.py`, `slack-scan.py`, `calendar-fetch.py`
-   - Source credentials from environment variables, falling back to `.env` if present (never hardcode keys)
+   - Load credentials through `scripts/envload.py` (environment first, logins file as fallback; never hardcode keys)
    - Accept relevant parameters via command-line arguments (dates, filters, limits)
    - Handle errors: check HTTP status codes, catch exceptions, print clear error messages
    - Support `--json` flag for machine-readable output (so skills can parse results)
