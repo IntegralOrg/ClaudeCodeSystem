@@ -177,7 +177,7 @@ python3 scripts/vault-embed.py report --vault <path> --install
 uv run --python 3.12 --with fastembed,numpy scripts/vault-embed.py report --vault <path>
 ```
 
-**Privacy:** embeddings are computed in-process with a small local model (`bge-small`); no note content ever leaves the machine. The only outbound call is a one-time download of the model weights. After a file or folder rename, run `scripts/vault-embed.py migrate --rename "<old>" "<new>"` to re-key the saved state so nothing re-embeds or re-judges. Thresholds, the owner/company exclusion list, and the staleness window are config in the schema's `embedding:` block.
+**Privacy:** the **embedding** step runs in-process with a small local model (`bge-small`) and sends no note content off the machine; its only outbound call is a one-time download of the model weights. (The separate **judging** step hands the candidate pair's text to Claude, the same as any other Claude session that reads your vault.) After a file or folder rename, run `python3 scripts/vault-embed.py migrate --vault <path> --rename "<old>" "<new>"` to re-key the saved state so nothing re-embeds or re-judges. Thresholds, the owner/company exclusion list, and the staleness window are config in the schema's `embedding:` block.
 
 ### EOD Command
 The default `/eod` flow should run as one command in one Claude session. Claude Code now supports long-context sessions, so the simplest setup is a single `/eod` that gathers, routes, syncs, writes the daily note, and builds tomorrow's plan. If a user's workflow is unusually heavy, or if they want unattended scheduled automation, you can still split EOD into separate phases as an advanced fallback.

@@ -11,8 +11,8 @@ Modes:
 Hard rules:
 - Never touch anything under a `protected` path or a non-markdown file.
 - Never `rm` a vault file: removals go through the `stage` subcommand.
-- Records (files under `no_merge` folders) are never merged, split, or rewritten. A pair with a record on either side can never be folded (it downgrades to label-only).
-- Only Step 4b item 5 (`apply`) ever modifies an authored doc, and only on a block a human has decided. Everything else writes only under `_generated/vault-hygiene/`.
+- Records (files under `no_merge` folders) are never merged, split, or have their body rewritten. A pair with a record on either side is never folded: it downgrades to a label-only supersession (confirm-keep), which may add a `canonical`/`superseded_by` marker to the record's frontmatter but never touches its body.
+- Only Step 4b item 5 (`apply`) ever folds, merges, or stamps canonical/superseded markers on an authored doc, and only on a block a human has decided. (Step 2's deterministic fixes -- refiling, frontmatter backfill, stub expansion, link repointing -- also edit the vault, exactly as the structural audit always has.) The embedding subcommands other than `apply` write only under `_generated/vault-hygiene/`.
 - **Invariant violations fail loud, never auto-fix.** A contradictory canonical/superseded marker is reported and counted, not silently repaired.
 - This command never runs git itself. In vaults using the EOD pipeline, `/eod` makes a pre-audit checkpoint commit right before invoking this command (see its Phase 5.5), so every edit this run makes to the live vault is trivially revertible. If you're running this standalone outside `/eod`, commit your own checkpoint first.
 - **The trash purge is the one exception to that revertibility.** `scan` permanently deletes `_generated/vault-hygiene/audit-trash/` day-folders older than 7 days (files staged by EARLIER runs, which no pre-audit checkpoint of the current run can restore). Recovery window: a staged file sits under `_generated/vault-hygiene/audit-trash/YYYY-MM-DD/` for 7 days and can be restored by moving it back out; after purge it is gone (vaults that commit `_generated/` can still recover it from git history). Every purge is recorded in the receipt (Step 6 `trash_purged`).
@@ -97,7 +97,7 @@ frontmatter: <count>
 watched: <N clusters (M new this run), or none>
 amendments: <list or none>
 violations: <kind:folder-or-path:destination-or-rule, ... or none>
-candidates: <meta.candidates from Step 4b's pending output, or 0 when skipped>
+candidates: <meta.candidates from Step 4b's pending output; append " (embedding skipped)" when item 0 skipped embedding, since pending still reads the prior candidate list>
 judged: <verdicts accepted in Step 4b this run> (backlog: <meta.pending after judging>)
 proposals_open: <queue.open from the survivorship output, or 0 when skipped>
 applied: <receipt.applied from the apply step, or 0> (folded N, kept N, rejected N)

@@ -643,10 +643,6 @@ class TestCalibration(unittest.TestCase):
             self.assertEqual(res["invoked"], 0)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class TestApplyHelpers(unittest.TestCase):
     def test_set_fm_keys_replaces_and_inserts(self):
         t = "---\ntype: note\nstatus: draft\ncreated: 2026-01-01\n---\nbody\n"
@@ -1189,6 +1185,21 @@ class TestEmbedConfig(unittest.TestCase):
         self.assertEqual(cfg["gate_high"], 0.86)
         self.assertEqual(cfg["stale_days"], 180)
 
+    def test_parses_documented_block_with_inline_comments(self):
+        # The exact shape of the schema example a vault copies in, with inline comments.
+        block = ("version: 1\nembedding:\n"
+                 "  owners: []                 # dropped before overlap\n"
+                 "  gate_high: 0.86            # cosine gate\n"
+                 "  gate_fallback: 0.90        # fallback gate\n"
+                 "  stale_days: 180            # window\n"
+                 "  canonical_home_dirs: [Resources/Reference]  # home folders\n")
+        cfg = ve.load_embed_config(ve.va.parse_yaml_subset(block))
+        self.assertEqual(cfg["owners"], ())
+        self.assertEqual(cfg["gate_high"], 0.86)
+        self.assertEqual(cfg["gate_fallback"], 0.90)
+        self.assertEqual(cfg["stale_days"], 180)
+        self.assertEqual(cfg["canonical_home_dirs"], ("Resources/Reference",))
+
 
 class TestMigrate(unittest.TestCase):
     def test_rename_folder_rekeys_all_state(self):
@@ -1213,6 +1224,14 @@ class TestMigrate(unittest.TestCase):
                     {"relA": old_a, "relB": old_b, "expected": "version-fork"},
                     {"relA": "Resources/Reference/Keep.md", "relB": "Resources/Reference/Other.md",
                      "expected": "distinct-purpose"}]}, f)
+
+            # A human has already decided the proposal in the review queue.
+            ve.write_review_queue(tmp, ve.va.load_index(tmp)["canonical_judgments"], "2026-10-05")
+            qp = os.path.join(tmp, ve.REVIEW_PATH)
+            with open(qp) as f:
+                qt = f.read().replace("decision: pending", "decision: confirm", 1)
+            with open(qp, "w") as f:
+                f.write(qt)
 
             res = ve.run_migrate(tmp, "Work/Clients/Old Name", "Work/Clients/New Name", today="2026-10-06")
             # golden counts path fields remapped (both sides of the first pair matched).
@@ -1243,6 +1262,11 @@ class TestMigrate(unittest.TestCase):
             paths = {(p["relA"], p["relB"]) for p in golden["pairs"]}
             self.assertIn((new_a, new_b), paths)
             self.assertIn(("Resources/Reference/Keep.md", "Resources/Reference/Other.md"), paths)
+            # the human decision survives the pair-id change (edits survive regeneration)
+            with open(qp) as f:
+                decisions = ve.parse_review_decisions(f.read())
+            self.assertEqual(decisions.get(new_pid), "confirm")
+            self.assertNotIn(pid, decisions)
 
     def test_rename_single_file_dry_run_then_apply(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1265,3 +1289,43 @@ class TestMigrate(unittest.TestCase):
         self.assertEqual(ve.remap_path("A.md", "A.md", "Z.md"), "Z.md")
         self.assertEqual(ve.remap_path("Archived/A.md", "A", "Z"), "Archived/A.md")
         self.assertEqual(ve.remap_path("Other/x.md", "A", "Z"), "Other/x.md")
+
+
+class TestLoserCanonicalClear(unittest.TestCase):
+    def test_superseding_a_canonical_loser_clears_its_canonical(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            w = _mini_vault(tmp)
+            w("Resources/Reference/W.md", "---\ntype: reference\ncanonical: true\n---\nwinner\n")
+            w("Resources/Reference/L.md", "---\ntype: reference\ncanonical: true\n---\nloser body\n")
+            hW = ve.va.sha256_file(os.path.join(tmp, "Resources/Reference/W.md"))
+            hL = ve.va.sha256_file(os.path.join(tmp, "Resources/Reference/L.md"))
+            pid = "f" * 64
+            index = {"meta": {}, "files": {}, "watched_clusters": [], "canonical_judgments": {
+                pid: {"relA": "Resources/Reference/W.md", "relB": "Resources/Reference/L.md",
+                      "hashA": hW, "hashB": hL, "verdict": "version-fork", "status": "proposed",
+                      "winner": "Resources/Reference/W.md", "loser": "Resources/Reference/L.md",
+                      "winner_rule": "tie", "confidence": 0.7, "reason": "r"}}}
+            ve.va.save_index(tmp, index)
+            schema = ve.va.load_schema(tmp)
+            files = ve.va.walk_vault(tmp, schema.get("protected", []))
+            acts = ve.plan_apply(tmp, schema, index, {pid: "confirm-keep"}, {}, files, "2026-10-06")
+            a = acts[0]
+            self.assertEqual(a["effective"], "kept")
+            self.assertIn("status: superseded", a["loser_new"])
+            self.assertIn("canonical: false", a["loser_new"])
+            self.assertNotIn("canonical: true", a["loser_new"])
+            # a plain (non-canonical) loser is not given a canonical line it never had
+            w("Resources/Reference/L2.md", "---\ntype: reference\n---\nplain loser\n")
+            hL2 = ve.va.sha256_file(os.path.join(tmp, "Resources/Reference/L2.md"))
+            index["canonical_judgments"]["e" * 64] = {
+                "relA": "Resources/Reference/W.md", "relB": "Resources/Reference/L2.md",
+                "hashA": hW, "hashB": hL2, "verdict": "version-fork", "status": "proposed",
+                "winner": "Resources/Reference/W.md", "loser": "Resources/Reference/L2.md",
+                "winner_rule": "priority", "confidence": 0.8, "reason": "r"}
+            ve.va.save_index(tmp, index)
+            acts = ve.plan_apply(tmp, schema, index, {"e" * 64: "confirm-keep"}, {}, files, "2026-10-06")
+            self.assertNotIn("canonical:", acts[0]["loser_new"])
+
+
+if __name__ == "__main__":
+    unittest.main()

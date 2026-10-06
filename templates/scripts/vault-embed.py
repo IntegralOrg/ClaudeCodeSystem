@@ -1305,9 +1305,14 @@ def plan_apply(vault, schema, index, decisions, folds, files, today):
         if mode == "folded" and a["fold_text"] and a["fold_text"].strip():
             w_new = w_new.rstrip("\n") + fold_section(loser, a["fold_text"], today)
         a["winner_new"] = w_new
-        a["loser_new"] = set_fm_keys(a["loser_old"], {
-            "status": "superseded", "superseded_by": "[[%s]]" % doc_stem(winner),
-            "superseded_at": today, "superseded_reason": a["reason"]})
+        l_upd = {"status": "superseded", "superseded_by": "[[%s]]" % doc_stem(winner),
+                 "superseded_at": today, "superseded_reason": a["reason"]}
+        # A tie or a swap can make the loser a doc that is itself canonical: true.
+        # Leaving that marker would trip the canonical_and_superseded invariant on
+        # the next check, so clear it when we stamp the loser superseded.
+        if read_fm_scalars(os.path.join(vault, loser), ("canonical",)).get("canonical", "").lower() == "true":
+            l_upd["canonical"] = "false"
+        a["loser_new"] = set_fm_keys(a["loser_old"], l_upd)
         if mode == "folded":
             a["links"] = repoint_links(vault, files, loser, winner, write=False)
             a["stage_dest"] = os.path.join(HYGIENE_DIR, "audit-trash", today, loser)
@@ -1595,9 +1600,25 @@ def run_migrate(vault, old, new, today=None, dry_run=False):
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(golden, f, indent=1, ensure_ascii=False)
             os.replace(tmp, gpath)
-        # Pair ids in the queue may have changed; regenerate from the re-keyed judgments.
-        write_review_queue(vault, index.get("canonical_judgments") or {},
-                           today or date.today().isoformat())
+        # Pair ids in the queue may have changed; carry each human decision across
+        # to the new id via renamed_from_pair_id, so an edited decision survives.
+        day = today or date.today().isoformat()
+        judgments = index.get("canonical_judgments") or {}
+        qpath = os.path.join(vault, REVIEW_PATH)
+        if os.path.exists(qpath):
+            with open(qpath, encoding="utf-8") as f:
+                prior = parse_review_decisions(f.read())
+            remapped = dict(prior)
+            for npid, j in judgments.items():
+                old_pid = j.get("renamed_from_pair_id")
+                if old_pid and old_pid in prior and npid != old_pid:
+                    remapped[npid] = remapped.pop(old_pid)
+            tmp = qpath + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(render_review_queue(judgments, remapped, day))
+            os.replace(tmp, qpath)
+        else:
+            write_review_queue(vault, judgments, day)
     return {"old": old, "new": new, "dry_run": dry_run, "changed": changed}
 
 

@@ -47,8 +47,18 @@ def parse_yaml_subset(text):
     return value
 
 
+def _strip_inline_comment(s):
+    """Drop a trailing ' #...' inline comment (space before the hash) from an
+    unquoted value, so `gate_high: 0.86  # note` parses as 0.86, not a string.
+    Quoted values are left to the caller (a '#' inside quotes is preserved)."""
+    i = s.find(" #")
+    return s[:i].rstrip() if i != -1 else s
+
+
 def _parse_scalar(s):
     s = s.strip()
+    if not s or s[0] not in "\"'":
+        s = _strip_inline_comment(s)
     if s.startswith("[") and s.endswith("]"):
         inner = s[1:-1].strip()
         return [_parse_scalar(x) for x in inner.split(",")] if inner else []

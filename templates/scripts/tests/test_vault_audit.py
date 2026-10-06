@@ -436,10 +436,6 @@ class TestInvariantCheck(unittest.TestCase):
             self.assertTrue(any(x.startswith("invariant:cluster_multi_canonical:") for x in v))
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class TestStaleCanonical(unittest.TestCase):
     def test_hash_since_set_backfilled_and_preserved(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -481,3 +477,25 @@ class TestStaleDaysConfig(unittest.TestCase):
         self.assertEqual(va.stale_days_from_schema({}), 180)
         self.assertEqual(va.stale_days_from_schema({"embedding": {"stale_days": 90}}), 90)
         self.assertEqual(va.stale_days_from_schema({"embedding": {"stale_days": "bad"}}), 180)
+
+
+class TestInlineComments(unittest.TestCase):
+    def test_inline_comments_stripped_in_embedding_block(self):
+        block = ("version: 1\nembedding:\n"
+                 "  owners: []                 # names dropped before overlap\n"
+                 "  gate_high: 0.86            # cosine gate\n"
+                 "  stale_days: 180            # staleness window\n"
+                 "  canonical_home_dirs: [Resources/Reference]  # home folders\n")
+        s = va.parse_yaml_subset(block)
+        self.assertEqual(s["embedding"]["gate_high"], "0.86")
+        self.assertEqual(s["embedding"]["stale_days"], 180)
+        self.assertEqual(s["embedding"]["owners"], [])
+        self.assertEqual(s["embedding"]["canonical_home_dirs"], ["Resources/Reference"])
+        self.assertEqual(va.stale_days_from_schema(s), 180)
+
+    def test_hash_inside_quotes_preserved(self):
+        self.assertEqual(va.parse_yaml_subset('note: "a # b"\n')["note"], "a # b")
+
+
+if __name__ == "__main__":
+    unittest.main()
