@@ -468,6 +468,13 @@ Claude Code on the web auto-discovers `.claude/commands/` files, so installing m
 
 3. **Create the handoff storage directory:** `VAULT_PATH/.handoffs/` (where `/handoff` stores named handoff files).
 
+3a. **Copy the skills folder, unconditionally.** Same golden rule as the commands: copy the whole folder, not a list.
+   ```
+   mkdir -p VAULT_PATH/.claude/skills
+   cp -R REPO_PATH/.claude/skills/. VAULT_PATH/.claude/skills/
+   ```
+   Skills differ from commands in that they can carry scripts and references next to their `SKILL.md`; Claude Code loads them by folder. Today the folder holds `drive-screen` (take real control of the desktop on Windows, macOS or Linux, for the steps that can only be clicked through; MIT, by Cole Medin). Its first-run setup is per operating system and lives in `.claude/skills/drive-screen/references/driving-agents.md` ("First run, per operating system"); run `python3 VAULT_PATH/.claude/skills/drive-screen/scripts/screenctl.py doctor` and have the user grant whatever it reports as missing. Do not block setup on it: if the user's OS needs a permission or a package, note it as a task in `Inbox/[YourCompany].md` and continue.
+
 3b. **If the user also uses Claude Cowork:** copy `REPO_PATH/cowork-commands/` into `VAULT_PATH/cowork-commands/` (all of it -- same golden rule). These are the same commands with the YAML frontmatter Cowork needs; the user uploads them through Cowork's **Customize** section whenever they want a skill available there. Do not walk through uploads during onboarding -- just tell them the folder exists and every file in it is upload-ready.
 
 4. **Install the Superpowers plugin (the USER runs this, not you).** Superpowers is a community plugin that adds a library of high-leverage skills (brainstorming an idea into a spec, systematic debugging, writing plans, test-driven development, and more). It installs as a custom Claude Code plugin.

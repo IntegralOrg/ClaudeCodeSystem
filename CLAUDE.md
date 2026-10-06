@@ -65,6 +65,8 @@ description: One-line description of what the command does.
 
 The `name` field should match the filename (without `.md`). The `description` should be a clear one-liner that helps the user understand when to use the command.
 
+**Skills with scripts live in `.claude/skills/<name>/`** (a `SKILL.md` plus `scripts/` and `references/`). They have no CoWork mirror: their scripts run on the user's own machine, which CoWork and Claude Code on the web do not have. Onboarding Phase 6E copies the whole folder. Keep each one's upstream license file in its folder.
+
 **There is exactly one folder of Code commands: `.claude/commands/`.** (The old `examples/commands/` folder was removed -- it created the illusion that some commands were optional examples, which is how they kept getting dropped during onboarding. All commands are first-class and shipped.)
 
 **To add a new command:**

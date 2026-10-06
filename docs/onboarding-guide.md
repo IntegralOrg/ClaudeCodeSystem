@@ -245,7 +245,7 @@ Plain-language definitions for terms you will see in the documentation.
 |---|---|
 | **Vault** | Your notes repository -- a Git repo of Markdown (text) files that Claude Code reads and writes in your cloud workspace. |
 | **CLAUDE.md** | Claude's instruction manual. A text file at the root of your notes folder that Claude reads every session. |
-| **Skill** | A successful task turned into a repeatable routine. A text file in `.claude/commands/` that tells Claude how to run a multi-step process. You type `/name` to run it. Your skills library grows over time from your actual work. |
+| **Skill** | A successful task turned into a repeatable routine. A text file in `.claude/commands/` (or a folder in `.claude/skills/` when it carries scripts) that tells Claude how to run a multi-step process. You type `/name` to run it. Your skills library grows over time from your actual work. |
 | **MCP server** | A direct connection between Claude and a tool (like ClickUp or Google Calendar). Once set up, Claude can use the tool without going through a browser. |
 | **API** | A way for software to talk to other software. When Claude "calls an API," it is asking another service for information or telling it to do something. |
 | **OAuth** | A secure login handshake. Instead of giving Claude your password, OAuth lets you approve access once and Claude gets a special key to use going forward. |

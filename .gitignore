@@ -10,6 +10,7 @@
 # Claude Code (ignore everything except commands/)
 .claude/*
 !.claude/commands/
+!.claude/skills/
 
 # Node
 node_modules/

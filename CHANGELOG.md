@@ -6,6 +6,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-06] - drive-screen skill: the agent can take the keyboard when a step must be clicked through
+
+Some steps have no API and no connector: an OAuth consent screen, an installer, a settings page in a desktop app. The template told the agent to never touch a browser and to stop, so those steps always fell back to the human. Installing a headless browser by default is the wrong fix (a blank browser with no logins, and a large dependency most vaults never need).
+
+### Added
+- **`.claude/skills/drive-screen/`** (MIT, from [coleam00/skills](https://github.com/coleam00/skills)). Window discovery, focus, typing, pasting, keys, clicks, scrolling and screenshots on Windows, macOS and Linux, plus steering a Claude Code session in another terminal. It tries a command or scripting surface before the screen, verifies focus before every send, and starts only after the user hands over the keyboard in the current session. Per-OS first-run setup is in its `references/driving-agents.md`.
+- **Onboarding Phase 6E step 3a** copies `.claude/skills/` into the vault, whole folder, same golden rule as the commands.
+
+### Changed
+- **Template CLAUDE.md, guideline 17**: the browser rule now forbids *installing* browser automation to work around a missing API, and tells the agent to offer the `drive-screen` skill when a step can only be clicked through.
+- `.gitignore` keeps `.claude/skills/` in the repo (everything else under `.claude/` stays ignored).
+
+---
+
 ## [2026-10-07] - System Journal per-call telemetry
 
 ### Added
