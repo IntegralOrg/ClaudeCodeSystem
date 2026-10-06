@@ -217,10 +217,13 @@ def call_claude(raw, model, prompt_text):
     env.pop("CLAUDECODE", None)  # allow running from inside a SessionEnd hook
     env.pop("CLAUDE_CODE_ENTRYPOINT", None)
     prompt = prompt_text + "\n" + json.dumps(raw, ensure_ascii=False)
-    cmd = ["claude", "-p", prompt, "--model", model, "--output-format", "json"]
+    # Pass the prompt on stdin, NOT as an argv element: the evidence record contains verbatim user
+    # turns, and process arguments are world-readable (and bounded by ARG_MAX). `claude -p` with no
+    # prompt argument reads the prompt from stdin.
+    cmd = ["claude", "-p", "--model", model, "--output-format", "json"]
     # cwd is the state dir so the headless run's own transcript lands under a project dir
     # that extract.py skips (otherwise the journal would journal itself).
-    p = subprocess.run(cmd, capture_output=True, text=True, timeout=240, env=env, cwd=STATE_DIR)
+    p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=240, env=env, cwd=STATE_DIR)
     if p.returncode != 0:
         raise RuntimeError(f"claude exit {p.returncode}: {p.stderr.strip()[:300]}")
     outer = json.loads(p.stdout)
