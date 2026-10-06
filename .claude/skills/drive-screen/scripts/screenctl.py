@@ -480,17 +480,37 @@ elif OS == "Darwin":
     out.join("\n");
     """
 
+    _NO_ACCESSIBILITY_HELP = [
+        "Grant Accessibility to the app that RUNS this command:",
+        "  System Settings > Privacy & Security > Accessibility",
+        "The grant attaches to the host app (Terminal, iTerm, VS Code, the",
+        "Claude desktop app's own 'claude' helper), never to python, and it is",
+        "dropped when that app updates.",
+        "Then re-run: screenctl.py doctor"]
+
+    def accessibility_denied() -> bool:
+        # A plain AppleScript probe. The JXA list below wraps every per-process
+        # call in try/catch, so a missing Accessibility grant comes back as an
+        # empty list with exit 0, which looks exactly like "no windows open".
+        # Measured live: doctor printed windows_visible: 0 on a machine whose
+        # only problem was this grant. Ask System Events directly instead.
+        # Process names are readable without the grant; window attributes are
+        # not, so the probe has to touch a window.
+        r = _osa('tell application "System Events" to get count of windows of '
+                 'first application process whose frontmost is true')
+        return r.returncode != 0 and ("-25211" in r.stderr or "-1728" in r.stderr
+                                      or "assistive" in r.stderr.lower())
+
     def list_windows() -> list[Win]:
         r = _osa(_LIST, "JavaScript")
         if r.returncode != 0:
             if "-25211" in r.stderr or "assistive" in r.stderr.lower():
                 die("NO_ACCESSIBILITY", "System Events is not allowed assistive access.",
-                    ["Grant Accessibility to the app that RUNS this command:",
-                     "  System Settings > Privacy & Security > Accessibility",
-                     "The grant attaches to the host app (Terminal, iTerm, VS Code),",
-                     "never to python, and it is dropped when that app updates.",
-                     "Then re-run: screenctl.py doctor"])
+                    _NO_ACCESSIBILITY_HELP)
             die("LIST_FAILED", r.stderr.strip()[:300] or "could not enumerate windows")
+        if not r.stdout.strip() and accessibility_denied():
+            die("NO_ACCESSIBILITY", "System Events is not allowed assistive access.",
+                _NO_ACCESSIBILITY_HELP)
         out = []
         for line in r.stdout.splitlines():
             parts = line.split("")
@@ -976,6 +996,12 @@ def act_doctor(a) -> None:
         cc = shutil.which("cliclick")
         print(f"cliclick: {cc or 'MISSING - brew install cliclick (needed for click)'}")
         ok &= bool(cc)
+        if accessibility_denied():
+            print("accessibility: DENIED - System Settings > Privacy & Security > "
+                  "Accessibility, enable the app that runs this command")
+            ok = False
+        else:
+            print("accessibility: ok")
     else:
         if _WAYLAND:
             print("session: WAYLAND - screen driving is not supported here")
