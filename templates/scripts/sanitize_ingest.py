@@ -7,7 +7,7 @@ import sys
 
 PATTERNS = [re.compile(p, re.IGNORECASE) for p in (
     r"ignore (all |the )?(previous|prior|above) instructions",
-    r"^\s*(\[\d\d:\d\d:\d\d\]\s*)?(\*\*)?(system|assistant|user)\s*(\*\*)?\s*:",
+    r"^\s*(\[\d\d:\d\d:\d\d\]\s*)?(\*\*)?(system|assistant|user|developer)(\s*\*\*)?\s*:",
     r"\byou are (now )?(a|an|the) ",
     r"\bdisregard\b",
     r"\bdo not tell\b",

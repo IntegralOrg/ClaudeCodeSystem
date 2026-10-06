@@ -16,7 +16,7 @@ ENV_TEMPLATE = re.compile(r"\.env\.(example|sample|template)\b", re.IGNORECASE)
 
 # Credential files. `.env`, `.env.local`, `.env.production` ... but not `.env.example`.
 SECRET_PATH = re.compile(
-    r"(^|[/\s'\"=])\.env(\.[A-Za-z0-9_-]+)?(?=$|[\s'\"|;&)*`$])"
+    r"(^|[/\s'\"=*{,])\.env(\.[A-Za-z0-9_-]+)?(?=$|[\s'\"|;&)*`$])"
     r"|\.pem\b|\.key\b|id_rsa|id_ed25519|(^|/)\.ssh(/|$)|\.aws/credentials|\.netrc"
     r"|credentials\.json|google_token\.json|token\.json|service[-_]account.*\.json",
     re.IGNORECASE,
