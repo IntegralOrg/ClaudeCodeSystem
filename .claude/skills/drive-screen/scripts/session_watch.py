@@ -280,6 +280,7 @@ def cmd_wait(a) -> int:
 
     last_count = len(records(p))
     last_change = time.time()
+    cur = p
 
     while time.time() < deadline:
         # Re-resolve every poll. /compact keeps the same file, but /branch and
@@ -287,6 +288,17 @@ def cmd_wait(a) -> int:
         # session nobody is driving.
         p = latest(a.repo)
         recs = records(p)
+        if p != cur:
+            # New transcript: counts from the old file mean nothing here. Reset
+            # the baseline, or a file that already holds more turn_duration
+            # records reports TURN_COMPLETE for a turn that never ended.
+            cur = p
+            base = len(turn_ends(recs))
+            last_count = len(recs)
+            last_change = time.time()
+            print(f"Transcript changed to {p.name} (baseline {base} turns)")
+            time.sleep(a.poll)
+            continue
 
         if len(turn_ends(recs)) > base:
             _print_final(recs, "turn_duration record")

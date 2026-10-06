@@ -67,7 +67,10 @@ for _s in (sys.stdout, sys.stderr):
         pass
 
 
-# Commands this will never approve on its own. The point is not to be a security
+# Commands this will never approve on its own WHEN IT CAN SEE THEM. Under
+# --approve-blind with no transcript hint there is nothing to match against
+# and Enter goes out unread; that is what the flag's per-task user consent in
+# SKILL.md is for. The point is not to be a security
 # boundary, because a determined mistake can be spelled around any regex. The
 # point is that the class of thing you most regret approving while away is small,
 # well known, and cheap to stop on. Anything matching hands control back with the
@@ -160,10 +163,21 @@ def main() -> int:
     last_count = len(sw.records(path))
     last_change = time.time()
     deadline = time.time() + a.timeout
+    cur = path
 
     while time.time() < deadline:
         path = sw.latest(a.repo)
         recs = sw.records(path)
+        if path != cur:
+            # Same reset as session_watch.wait: a new transcript file must not
+            # be compared against the old file's counts.
+            cur = path
+            base_turns = len(sw.turn_ends(recs))
+            last_count = len(recs)
+            last_change = time.time()
+            print(f"    transcript changed to {path.name} (baseline {base_turns} turns)")
+            time.sleep(a.poll)
+            continue
 
         if len(sw.turn_ends(recs)) > base_turns:
             print(f"TURN_COMPLETE after {approvals} approval(s)")

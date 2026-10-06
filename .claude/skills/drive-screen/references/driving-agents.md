@@ -18,8 +18,16 @@ the hard rules and the primitive reference.
 
 ## First run, per operating system
 
-Run `python scripts/screenctl.py doctor --out /tmp/probe.png` first. It fails
-loudly for the things that otherwise fail silently.
+Run the doctor first, with `--out` pointing at a temporary file so it also
+exercises a real capture (without `--out` the screenshot check is skipped):
+
+```bash
+python scripts/screenctl.py doctor --out /tmp/probe.png        # macOS, Linux
+py -3 scripts\screenctl.py doctor --out %TEMP%\probe.png       # Windows
+```
+
+It fails loudly for the things that otherwise fail silently. Delete the probe
+image afterwards.
 
 ### Windows
 
@@ -136,7 +144,13 @@ segments with an em dash; on Windows and Linux it is a plain hyphen. Match on th
 folder name alone rather than on a separator, or pin the format for everyone by
 setting `window.title` explicitly in settings.
 
-Re-resolve the window before each step. Do not cache a handle across a long run.
+**Selector lifecycle.** Pass `--title` by default and let every step re-resolve
+it; a title match is re-checked against the live window list on each call. Switch
+to `--id` (the handle from `list`) only when the title will not hold still, as a
+terminal's does once an agent session starts in it; `SKILL.md` covers that case.
+On macOS the id is the process name plus a stacking-order index, so it is only
+dependable for a process with one window. A handle dies with its window, so take
+it again after anything that closes or reopens the target.
 
 ---
 

@@ -144,8 +144,10 @@ each time. Paste into anything that is not a terminal.
 its own window mid-run: a terminal launched as `DRIVE-TEST` became `claude` the
 moment a session started in it, then `Claude Code`, then the session's own
 summary of what it was doing. Take the handle from `list` once and use it
-throughout. Handles do not survive the window closing, which is why titles remain
-the default.
+throughout that run. Handles do not survive the window closing, and on macOS the
+id is a stacking-order index that is only dependable for a process with one
+window, which is why titles remain the default. The full selector lifecycle is in
+`references/driving-agents.md`.
 
 **A long `type` is not atomic, and the tool now says so.** Focus is confirmed
 before every character on Windows, and every 20 characters on macOS and Linux. If

@@ -564,9 +564,18 @@ elif OS == "Darwin":
     def unlock_foreground() -> None:
         pass  # macOS has no foreground lock to defeat
 
+    def _send(script: str) -> None:
+        # A keystroke that System Events refuses (no Accessibility grant, or
+        # the app is not allowed to send keystrokes) exits non-zero. Reporting
+        # that as TYPED/SENT is the worst failure this tool can have.
+        r = _osa(script)
+        if r.returncode != 0:
+            die("SEND_FAILED", r.stderr.strip()[:300] or "System Events refused the keystroke",
+                _NO_ACCESSIBILITY_HELP)
+
     def type_text(text: str) -> None:
         safe = text.replace("\\", "\\\\").replace('"', '\\"')
-        _osa(f'tell application "System Events" to keystroke "{safe}"')
+        _send(f'tell application "System Events" to keystroke "{safe}"')
 
     KEYNAME = {"enter": "return", "return": "return", "esc": "escape",
                "escape": "escape", "tab": "tab", "space": "space",
@@ -592,10 +601,10 @@ elif OS == "Darwin":
         k = rest[0]
         using = f" using {{{', '.join(mods)}}}" if mods else ""
         if target := KEYNAME.get(k):
-            _osa(f'tell application "System Events" to keystroke {target}{using}')
+            _send(f'tell application "System Events" to keystroke {target}{using}')
         else:
             lit = LITERAL.get(k, k).replace("\\", "\\\\").replace('"', '\\"')
-            _osa(f'tell application "System Events" to keystroke "{lit}"{using}')
+            _send(f'tell application "System Events" to keystroke "{lit}"{using}')
 
     def move_click(x: int, y: int, button: str = "left", double: bool = False) -> None:
         cli = need("cliclick",
@@ -692,9 +701,13 @@ else:
     def unlock_foreground() -> None:
         pass  # GNOME/KDE focus-stealing prevention cannot be defeated from here
 
+    def _xdo_send(args: list[str]) -> None:
+        r = run([need("xdotool", "sudo apt install xdotool"), *args])
+        if r.returncode != 0:
+            die("SEND_FAILED", r.stderr.strip()[:300] or "xdotool failed")
+
     def type_text(text: str) -> None:
-        run([need("xdotool", "sudo apt install xdotool"),
-             "type", "--clearmodifiers", "--delay", "12", "--", text])
+        _xdo_send(["type", "--clearmodifiers", "--delay", "12", "--", text])
 
     XK = {"enter": "Return", "return": "Return", "esc": "Escape",
           "escape": "Escape", "tab": "Tab", "space": "space",
@@ -711,8 +724,7 @@ else:
     def send_chord(keys: str) -> None:
         parts = [XK.get(k.strip().lower(), k.strip())
                  for k in keys.split("+") if k.strip()]
-        run([need("xdotool", "sudo apt install xdotool"),
-             "key", "--clearmodifiers", "+".join(parts)])
+        _xdo_send(["key", "--clearmodifiers", "+".join(parts)])
 
     def move_click(x: int, y: int, button: str = "left", double: bool = False) -> None:
         xdo = need("xdotool", "sudo apt install xdotool")
