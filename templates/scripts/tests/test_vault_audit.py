@@ -496,6 +496,31 @@ class TestInlineComments(unittest.TestCase):
     def test_hash_inside_quotes_preserved(self):
         self.assertEqual(va.parse_yaml_subset('note: "a # b"\n')["note"], "a # b")
 
+    def test_hash_inside_quoted_list_member_preserved(self):
+        s = va.parse_yaml_subset('owners: ["Acme #1", plain]  # trailing\n')
+        self.assertEqual(s["owners"], ["Acme #1", "plain"])
+
+    def test_frontmatter_readers_strip_inline_comments(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            make_vault(tmp)
+            p = os.path.join(tmp, "Resources", "Reference", "C.md")
+            with open(p, "w") as f:
+                f.write("---\ntype: reference\ncanonical: true  # chosen\nstatus: active  # live\n---\nbody\n")
+            vals = va.read_frontmatter_values(p)
+            self.assertIs(vals.get("canonical"), True)
+            self.assertEqual(vals.get("status"), "active")
+
+    def test_invariant_sees_markers_with_inline_comments(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            w = make_vault(tmp)
+            w("Resources/Reference/Bad.md",
+              "---\ntype: reference\ncreated: 2026-01-01\ncanonical: true  # keep\n"
+              "status: superseded  # old\nsuperseded_by: \"[[Bad]]\"\n---\nbody")
+            schema = va.load_schema(tmp)
+            files = va.walk_vault(tmp, schema.get("protected", []))
+            v = va.invariant_check(tmp, files)
+            self.assertTrue(any(x.startswith("invariant:canonical_and_superseded:") for x in v))
+
 
 if __name__ == "__main__":
     unittest.main()

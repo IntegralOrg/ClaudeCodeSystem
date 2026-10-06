@@ -1326,6 +1326,26 @@ class TestLoserCanonicalClear(unittest.TestCase):
             acts = ve.plan_apply(tmp, schema, index, {"e" * 64: "confirm-keep"}, {}, files, "2026-10-06")
             self.assertNotIn("canonical:", acts[0]["loser_new"])
 
+    def test_inline_comment_canonical_loser_is_cleared(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            w = _mini_vault(tmp)
+            w("Resources/Reference/W.md", "---\ntype: reference\ncanonical: true\n---\nwinner\n")
+            w("Resources/Reference/L.md", "---\ntype: reference\ncanonical: true  # was chosen\n---\nloser\n")
+            hW = ve.va.sha256_file(os.path.join(tmp, "Resources/Reference/W.md"))
+            hL = ve.va.sha256_file(os.path.join(tmp, "Resources/Reference/L.md"))
+            pid = "a" * 64
+            index = {"meta": {}, "files": {}, "watched_clusters": [], "canonical_judgments": {
+                pid: {"relA": "Resources/Reference/W.md", "relB": "Resources/Reference/L.md",
+                      "hashA": hW, "hashB": hL, "verdict": "version-fork", "status": "proposed",
+                      "winner": "Resources/Reference/W.md", "loser": "Resources/Reference/L.md",
+                      "winner_rule": "tie", "confidence": 0.7, "reason": "r"}}}
+            ve.va.save_index(tmp, index)
+            schema = ve.va.load_schema(tmp)
+            files = ve.va.walk_vault(tmp, schema.get("protected", []))
+            acts = ve.plan_apply(tmp, schema, index, {pid: "confirm-keep"}, {}, files, "2026-10-06")
+            # read_fm_scalars strips the inline comment, so the clear still fires
+            self.assertIn("canonical: false", acts[0]["loser_new"])
+
 
 if __name__ == "__main__":
     unittest.main()

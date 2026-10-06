@@ -596,7 +596,9 @@ def read_fm_scalars(path, keys=FM_SCALAR_KEYS):
         k, _, v = ln.partition(":")
         k = k.strip()
         if k in keys:
-            out[k] = v.strip().strip("\"'")
+            # Strip an inline YAML comment (quote-aware) so `canonical: true # note`
+            # reads as "true", consistent with vault-audit's invariant reader.
+            out[k] = va._strip_inline_comment(v.strip()).strip("\"'")
     return out
 
 

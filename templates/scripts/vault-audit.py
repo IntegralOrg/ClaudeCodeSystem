@@ -48,17 +48,23 @@ def parse_yaml_subset(text):
 
 
 def _strip_inline_comment(s):
-    """Drop a trailing ' #...' inline comment (space before the hash) from an
-    unquoted value, so `gate_high: 0.86  # note` parses as 0.86, not a string.
-    Quoted values are left to the caller (a '#' inside quotes is preserved)."""
-    i = s.find(" #")
-    return s[:i].rstrip() if i != -1 else s
+    """Drop a trailing ' #...' inline comment (whitespace before the hash) from a
+    value, so `gate_high: 0.86  # note` parses as 0.86. Quote-aware: a '#' inside
+    single or double quotes is preserved, so `owners: ["Acme #1"]` stays intact."""
+    quote = None
+    for i, ch in enumerate(s):
+        if quote is not None:
+            if ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+        elif ch == "#" and i > 0 and s[i - 1] in " \t":
+            return s[:i].rstrip()
+    return s
 
 
 def _parse_scalar(s):
-    s = s.strip()
-    if not s or s[0] not in "\"'":
-        s = _strip_inline_comment(s)
+    s = _strip_inline_comment(s.strip())
     if s.startswith("[") and s.endswith("]"):
         inner = s[1:-1].strip()
         return [_parse_scalar(x) for x in inner.split(",")] if inner else []
@@ -293,9 +299,9 @@ def read_frontmatter_values(path):
             continue
         key, _, raw = ln.partition(":")
         key = key.strip()
-        val = raw.strip()
+        val = _strip_inline_comment(raw.strip())
         if key == "canonical":
-            vals["canonical"] = (val.lower() == "true")
+            vals["canonical"] = (val.strip("\"'").lower() == "true")
         elif key == "status":
             vals["status"] = val.strip("\"'")
         elif key == "superseded_by":
