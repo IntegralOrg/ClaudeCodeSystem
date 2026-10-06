@@ -19,6 +19,14 @@ Stdlib-only Python 3 (3.11+). Each hook reads the Claude Code JSON payload on st
 
 ## Proof commands
 
+These are for a human terminal. An agent running them is blocked, because the command text itself names the env file. An agent can prove the same thing with Python, which never writes the file name literally (expect `2`):
+
+```bash
+python3 -c "import subprocess,json,sys; p=subprocess.run([sys.executable,'scripts/hooks/guard_secrets.py'],input=json.dumps({'tool_name':'Read','tool_input':{'file_path':'.' + 'env'}}),capture_output=True,text=True); print(p.returncode)"
+```
+
+Human terminal:
+
 ```bash
 echo '{"tool_name":"Read","tool_input":{"file_path":".env"}}' | python3 scripts/hooks/guard_secrets.py; echo "exit=$?"   # expect 2
 echo '{"tool_name":"Read","tool_input":{"file_path":"README.md"}}' | python3 scripts/hooks/guard_secrets.py; echo "exit=$?" # expect 0

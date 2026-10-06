@@ -17,6 +17,8 @@ MASK = (
     re.compile(r"\b([A-Za-z][A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL)[A-Za-z0-9_]*=)[^\s'\"]+",
                re.IGNORECASE),
     re.compile(r"\b(token=|password=|secret=)[^\s'\"]+", re.IGNORECASE),
+    re.compile(r"(\bapikey\s*[:=]\s*)[A-Za-z0-9._\-]+", re.IGNORECASE),
+    re.compile(r"(\s(?:-u|--user)[\s=]+[^\s:'\"]*:)[^\s'\"]+"),
     re.compile(r"\b(xox[abpers]-)[A-Za-z0-9-]+"),
     re.compile(r"\b(sk_live_|sk_test_|pk_live_|pk_test_|pk_|sk-|key-|re_|ghp_|github_pat_)[A-Za-z0-9_\-]+"),
 )

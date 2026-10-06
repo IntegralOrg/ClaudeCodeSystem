@@ -165,10 +165,11 @@ def _last_change(path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("file")
-    ap.add_argument("--engagement", choices=["active", "maintenance", "ending", "retired", "prospect"])
+    ap.add_argument("--engagement", choices=["active", "maintenance", "paused", "ending", "retired", "prospect"])
     ap.add_argument("--skip-engagement-seed", action="store_true")
     ap.add_argument("--apply", action="store_true")
-    ap.add_argument("--trash-root", default="_generated/vault-hygiene/audit-trash")
+    ap.add_argument("--trash-root", default=None,
+                    help="default: <repo root of the file>/_generated/vault-hygiene/audit-trash")
     a = ap.parse_args()
     path = Path(a.file)
     text = path.read_text(encoding="utf-8")
@@ -182,7 +183,12 @@ def main():
         sys.stdout.writelines(difflib.unified_diff(text.splitlines(True), new.splitlines(True), str(path), str(path) + " (converted)"))
         print(f"\n# dry-run: {rep}")
         return
-    trash = Path(a.trash_root) / today
+    if a.trash_root:
+        trash_root = Path(a.trash_root)
+    else:
+        import envload
+        trash_root = envload.find_root(path) / "_generated" / "vault-hygiene" / "audit-trash"
+    trash = trash_root / today
     trash.mkdir(parents=True, exist_ok=True)
     tag = hashlib.sha1(str(path.resolve()).encode()).hexdigest()[:8]
     (trash / (path.parent.name + "." + tag + "." + path.name)).write_text(text, encoding="utf-8")

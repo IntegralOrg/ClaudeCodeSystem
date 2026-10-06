@@ -23,13 +23,26 @@ SECRET_PATH = re.compile(
 )
 
 _PRINT_ENV = "print" + "env"
+_ENVIRON = "en" + "viron"
+
+# A word is "in command position" at line start, after a control operator, after
+# `--` / `-c`, or after a launcher (exec, sudo, xargs, time, nice); flags allowed.
+_CMD = r"(?:(?:^|[;&|(`])\s*|(?:\s-c|\s--|\b(?:exec|sudo|xargs|time|nice))\s+)(?:-\S+\s+)*"
+_END = r"\s*(?:$|[|;&<>)`])"
+_CRED_VAR = r"\$\{?[A-Za-z_]*(KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|API)[A-Za-z_]*\}?"
+
 ENV_DUMP = (
     re.compile(r"\b" + _PRINT_ENV + r"\b", re.IGNORECASE),
-    re.compile(r"(^|[;&|(]\s*)env\s*(\||>|$)", re.IGNORECASE),
-    re.compile(r"\b(export\s+-p|declare\s+-x|set\s*\|)", re.IGNORECASE),
-    re.compile(r"\becho\b[^|;&]*\$\{?[A-Za-z_]*(KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|API)[A-Za-z_]*\}?",
-               re.IGNORECASE),
-    re.compile(r"os\.environ|process\.env|ENV\[", re.IGNORECASE),
+    # env with no command and no assignment (flags such as -0 allowed); `env VAR=x cmd` stays legal.
+    re.compile(_CMD + r"(?:/usr/bin/)?env(?:\s+-\S+)*" + _END, re.IGNORECASE | re.MULTILINE),
+    # bare set / export / declare / typeset list every variable; `set -e` and `export X=1` stay legal.
+    re.compile(_CMD + r"(?:set|export|declare|typeset)" + _END, re.IGNORECASE | re.MULTILINE),
+    re.compile(r"\b(export\s+-p|set\s*\|)", re.IGNORECASE),
+    re.compile(r"\b(?:declare|typeset)\s+-[a-zA-Z]*[px]", re.IGNORECASE),
+    re.compile(r"/proc/[^\s]*/" + _ENVIRON, re.IGNORECASE),
+    re.compile(r"\b(?:echo|printf)\b[^|;&]*" + _CRED_VAR, re.IGNORECASE),
+    re.compile(r"os\." + _ENVIRON + r"|process\.env|ENV\[|\bgetenv\s*\(|GetEnvironmentVariable", re.IGNORECASE),
+    re.compile(r"\$env:|\b(?:get-childitem|gci|ls|dir|get-item|gi)\s+(?:-path\s+)?env:", re.IGNORECASE),
 )
 
 TMP_PREFIXES = ("/tmp/", "/private/tmp/", "/private/var/folders/", "/var/folders/", "$TMPDIR", "${TMPDIR")
@@ -98,12 +111,15 @@ def _rm_invocations(command):
 
 def _is_secret_access(tool_name, tool_input):
     if tool_name in ("Read", "Edit", "MultiEdit", "Write", "NotebookEdit"):
-        path = str(tool_input.get("file_path", "")).replace("\\", "/")
-        return bool(SECRET_PATH.search(path)) and not ENV_TEMPLATE.search(path)
+        for key in ("file_path", "notebook_path"):
+            path = str(tool_input.get(key, "") or "").replace("\\", "/")
+            if SECRET_PATH.search(ENV_TEMPLATE.sub("", path)):
+                return True
+        return False
     if tool_name in ("Grep", "Glob"):
         for key in ("pattern", "path", "glob", "type"):
             target = str(tool_input.get(key, "") or "").replace("\\", "/")
-            if SECRET_PATH.search(target) and not ENV_TEMPLATE.search(target):
+            if SECRET_PATH.search(ENV_TEMPLATE.sub("", target)):
                 return True
         return False
     if tool_name in ("Bash", "PowerShell"):
@@ -138,7 +154,7 @@ def decide(tool_name, tool_input):
 def main(payload):
     msg = decide(payload.get("tool_name", ""), payload.get("tool_input") or {})
     if msg:
-        block(msg)
+        block(msg, payload)
     allow()
 
 

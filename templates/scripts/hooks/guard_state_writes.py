@@ -16,6 +16,13 @@ from _common import allow, block, run  # noqa: E402
 IN_SCOPE_BASENAMES = {"Company Profile.md", "CLAUDE.md", "MEMORY.md", "Client Note.md"}
 HEADING = re.compile(r"^## (.+?)\s*$", re.MULTILINE)
 STATE_LINE = re.compile(r"^- \*\*(?P<key>[^*]+)\*\* \((?P<date>\d{4}-\d{2}-\d{2})\): \S")
+TEMPLATE_STATE_LINE = re.compile(r"^- \*\*(?P<key>[^*]+)\*\* \((?P<date>\d{4}-\d{2}-\d{2}|YYYY-MM-DD)\): \S")
+FENCE = re.compile(r"^(```|~~~).*?(?:^\1[^\n]*$|\Z)", re.MULTILINE | re.DOTALL)
+
+
+def is_template(path):
+    p = str(path).replace("\\", "/")
+    return "/Templates/" in p or p.startswith("Templates/") or Path(p).name == "Client Note.md"
 
 
 def in_scope(path):
@@ -33,6 +40,8 @@ def _section(content, title):
 def check_content(path, content):
     if not in_scope(path):
         return None
+    content = FENCE.sub("", content)
+    state_re = TEMPLATE_STATE_LINE if is_template(path) else STATE_LINE
     headings = [h.strip() for h in HEADING.findall(content)]
     n_state = sum(1 for h in headings if h.lower() == "current state")
     n_log = sum(1 for h in headings if h.lower() == "log")
@@ -51,7 +60,7 @@ def check_content(path, content):
     for line in body.splitlines():
         if not line.startswith("- "):
             continue
-        m = STATE_LINE.match(line)
+        m = state_re.match(line)
         if not m:
             return ("BLOCKED: every Current State line must be '- **Key** (YYYY-MM-DD): value' with the date "
                     "the value was verified. Offending line: " + line[:120])
@@ -88,7 +97,7 @@ def main(payload):
     path, content = res
     msg = check_content(path, content)
     if msg:
-        block(msg)
+        block(msg, payload)
     allow()
 
 

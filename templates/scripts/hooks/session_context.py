@@ -15,18 +15,30 @@ MAX_HANDOFF_BYTES = 64 * 1024
 
 
 def _git(root, *args):
-    p = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True, timeout=2)
+    try:
+        p = subprocess.run(["git", "--no-optional-locks", "-C", str(root), *args],
+                           capture_output=True, text=True, timeout=2)
+    except Exception:
+        return None
     return p.stdout.strip() if p.returncode == 0 else None
+
+
+def _safe(root, *args):
+    """One failing git call (timeout, missing git) must not lose the others."""
+    try:
+        return _git(root, *args)
+    except Exception:
+        return None
 
 
 def main(payload):
     root = Path(project_dir(payload))
-    branch = _git(root, "rev-parse", "--abbrev-ref", "HEAD")
+    branch = _safe(root, "rev-parse", "--abbrev-ref", "HEAD")
     if branch is None:
         return
-    status = _git(root, "status", "--porcelain", "--untracked-files=no") or ""
+    status = _safe(root, "status", "--porcelain", "--untracked-files=no") or ""
     uncommitted = len([l for l in status.splitlines() if l.strip()])
-    log = _git(root, "log", "--oneline", "-3") or ""
+    log = _safe(root, "log", "--oneline", "-3") or ""
     parts = [f"Branch: {branch} | uncommitted: {uncommitted} files",
              "Last commits:\n" + log if log else ""]
     handoffs = root / ".handoffs"

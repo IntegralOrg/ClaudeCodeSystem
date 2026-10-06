@@ -86,8 +86,8 @@ def test_with_env_falls_back_to_script_repo(tmp_path):
 
 def test_fathom_env_file_does_not_override_exported(tmp_path, monkeypatch):
     import importlib.util
-    import pytest
     if not (SCRIPTS / "fathom-fetch.py").exists():
+        import pytest
         pytest.skip("fathom-fetch.py is not part of the template")
     spec = importlib.util.spec_from_file_location("ff", SCRIPTS / "fathom-fetch.py")
     ff = importlib.util.module_from_spec(spec); spec.loader.exec_module(ff)
