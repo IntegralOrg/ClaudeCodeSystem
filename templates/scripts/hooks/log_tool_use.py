@@ -10,8 +10,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import project_dir, run  # noqa: E402
 
-# An assignment value: a double- or single-quoted string (spaces allowed) or a bare word.
-_VALUE = r"(?:\"[^\"]*\"|'[^']*'|[\"']?[^\s'\"]+)"
+# An assignment value: a double-quoted string (spaces and backslash-escaped quotes allowed), a
+# single-quoted string, or a bare word.
+_VALUE = r"(?:\"(?:[^\"\\]|\\.)*\"|'[^']*'|[\"']?[^\s'\"]+)"
 
 MASK = (
     re.compile(r"(\bAuthorization\s*:\s*(?:Basic|Bearer|Token)\s+)[^\s'\"]+", re.IGNORECASE),

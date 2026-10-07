@@ -398,3 +398,13 @@ def test_summary_withholds_verb_first_secret_tools(tool):
 def test_summary_does_not_withhold_ordinary_tools():
     for tool in ("Bash", "mcp__fly__fly-status", "get_secret_name_list_docs", "Read"):
         assert log_tool_use._summary(tool, {"command": "ls"}) != log_tool_use.WITHHELD_TOOL
+
+
+@pytest.mark.parametrize("text,leaks", [
+    ('TOKEN="alpha\\"beta" echo ok', ["alpha", "beta"]),
+    ('TOKEN="alpha \\"beta gamma" echo ok', ["alpha", "beta", "gamma"]),
+])
+def test_mask_quoted_assignment_with_escaped_quote(text, leaks):
+    out = log_tool_use._mask(text)
+    assert out == "TOKEN=*** echo ok"
+    assert not any(x in out for x in leaks)

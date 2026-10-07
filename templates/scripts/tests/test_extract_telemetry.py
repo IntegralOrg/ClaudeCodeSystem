@@ -237,3 +237,13 @@ def test_quoted_inline_credential_is_masked_in_evidence(tmp_path):
     ]))
     (t1,) = tools_of(rec)
     assert "alpha" not in t1["input"] and "beta" not in t1["input"]
+
+
+def test_escaped_quote_in_inline_credential_is_masked_in_evidence(tmp_path):
+    rec = extract.extract_session(write(tmp_path, [
+        assistant("2026-10-07T15:00:01.000Z", "m1",
+                  [("t1", "Bash", {"command": 'TOKEN="alpha \\"beta gamma" echo ok'})], text="ok"),
+        result("2026-10-07T15:00:02.000Z", "t1"),
+    ]))
+    (t1,) = tools_of(rec)
+    assert t1["input"] == "TOKEN=*** echo ok"

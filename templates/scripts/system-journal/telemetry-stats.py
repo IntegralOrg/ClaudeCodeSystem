@@ -69,13 +69,22 @@ def _well_formed(rec):
             tools = t.get("tools")
             if tools is not None and (not isinstance(tools, list) or not all(isinstance(x, dict) for x in tools)):
                 return False
+            for x in tools or []:
+                if not all(x.get(k) is None or isinstance(x.get(k), str) for k in ("name", "error_class")):
+                    return False
     for field in ("models", "tokens_by_model"):
         v = rec.get(field)
         if v is not None and not isinstance(v, dict):
             return False
     tbm = rec.get("tokens_by_model")
-    if tbm and not all(isinstance(v, dict) for v in tbm.values()):
-        return False
+    if tbm:
+        for v in tbm.values():
+            if not isinstance(v, dict):
+                return False
+            for k in ("input", "output", "cache_read", "cache_creation"):
+                n = v.get(k)
+                if n is not None and (isinstance(n, bool) or not isinstance(n, (int, float))):
+                    return False
     return True
 
 

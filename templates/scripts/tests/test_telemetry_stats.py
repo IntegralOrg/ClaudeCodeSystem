@@ -208,6 +208,21 @@ def test_malformed_record_structure_is_skipped_not_fatal(tmp_path, capsys):
     ts.summarize(got, "tool")   # does not raise
 
 
+def test_non_numeric_token_values_and_bad_names_are_skipped(tmp_path, capsys):
+    v = write_vault(tmp_path, RECORDS)
+    d = tmp_path / "_generated" / "system-journal" / "evidence" / "2026-10"
+    base = {"schema": "evidence/2", "ended": "2026-10-07T15:00:00.000Z"}
+    (d / "bad_n.json").write_text(json.dumps(dict(base, session_id="n1", tokens_by_model={"m": {"input": "n/a"}})))
+    (d / "bad_bool.json").write_text(json.dumps(dict(base, session_id="n2", tokens_by_model={"m": {"output": True}})))
+    (d / "bad_name.json").write_text(json.dumps(dict(base, session_id="n3", turns=[{"role": "assistant", "tools": [{"name": ["x"]}]}])))
+    (d / "bad_class.json").write_text(json.dumps(dict(base, session_id="n4", turns=[{"role": "assistant", "tools": [{"name": "Bash", "ok": False, "error_class": {"a": 1}}]}])))
+    got = ts.load_records(v, 7, NOW)
+    assert sorted(r["session_id"] for r in got) == ["s1", "s2", "s9"]
+    assert "skipped 4 unreadable or malformed" in capsys.readouterr().err
+    for group_by in ("tool", "repo", "model", "day"):
+        ts.summarize(got, group_by, "America/New_York")   # does not raise
+
+
 def test_default_zone_is_local_per_timestamp_across_dst(tmp_path, monkeypatch):
     import time
     monkeypatch.setenv("TZ", "America/New_York")
@@ -221,5 +236,5 @@ def test_default_zone_is_local_per_timestamp_across_dst(tmp_path, monkeypatch):
         assert ts._tz(None) is None
         assert [g["key"] for g in ts.summarize(recs, "day", None)] == ["2026-11-01"]
     finally:
-        monkeypatch.delenv("TZ")
-        time.tzset()
+        monkeypatch.undo()   # put TZ back to its original value (or unset) first,
+        time.tzset()         # then make the process zone match it
