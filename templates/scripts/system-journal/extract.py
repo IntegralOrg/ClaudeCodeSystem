@@ -182,13 +182,19 @@ def load_masker(candidates):
     return None
 
 
+WITHHELD = "[input withheld: secret masker not found]"
+
+
+def withhold_input(text):
+    """Fail-closed stand-in when the masker is missing: never persist an unmasked input."""
+    return WITHHELD
+
+
 mask_input = load_masker(HOOKS_CANDIDATES)
 if mask_input is None:
-    print("extract: secret masker not found (looked in %s); tool inputs stored unmasked"
+    print("extract: secret masker not found (looked in %s); tool inputs withheld from evidence"
           % ", ".join(HOOKS_CANDIDATES), file=sys.stderr)
-
-    def mask_input(text):
-        return text
+    mask_input = withhold_input
 
 
 def tool_input_summary(name, inp):
@@ -211,8 +217,10 @@ def error_class(text):
     text = text or ""
     if "hook error" in text and "BLOCKED" in text:
         return "hook_blocked"
-    if ("Permission for this action was denied" in text or "doesn't want to proceed" in text
-            or "permission to use" in text.lower()):
+    head = text.lstrip()
+    if (head.startswith("Permission for this action was denied")
+            or head.startswith("The user doesn't want to proceed")
+            or re.match(r"Claude requested permissions? to use\b", head)):
         return "permission_denied"
     m = EXIT_CODE_RE.search(text)
     if m:
@@ -301,9 +309,9 @@ def extract_session(path):
                                     entry["ms"] = ms
                                 if is_err:
                                     entry["error_class"] = error_class(body)
-                            if is_err and body:
+                            if is_err:
                                 error_count += 1
-                                if last_assistant is not None:
+                                if body and last_assistant is not None:
                                     last_assistant.setdefault("errors", []).append(cap(body, MAX_ERROR_CHARS)[0])
                 for raw in texts:
                     cmd = slash_command(raw)

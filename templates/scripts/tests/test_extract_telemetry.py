@@ -109,6 +109,8 @@ def test_error_classes():
     assert ec("PreToolUse:Bash hook error: [python3 x]: BLOCKED: access to credentials") == "hook_blocked"
     assert ec("Permission for this action was denied by the Claude Code auto mode classifier") == "permission_denied"
     assert ec("The user doesn't want to proceed with this tool use.") == "permission_denied"
+    assert ec("Claude requested permissions to use Write, but you haven't granted it yet.") == "permission_denied"
+    assert ec("Exit code 1\ngrep: the user doesn't want to proceed here") == "exit_1"
     assert ec("Exit code 129\nerror: unknown option") == "exit_129"
     assert ec("FileNotFoundError: no such file") == "FileNotFoundError"
     assert ec("request failed HTTP 500") == "HTTP 500"
@@ -145,3 +147,18 @@ def test_masking_happens_before_the_cap(monkeypatch):
     monkeypatch.setattr(extract, "mask_input", lambda t: t.replace("Q" * 100, ""))
     out = extract.tool_input_summary("Bash", {"command": "A" * 150 + "Q" * 100 + "TAILMARK"})
     assert out.endswith("TAILMARK")
+
+
+def test_empty_body_failure_still_counts_as_an_error(tmp_path):
+    rec = extract.extract_session(write(tmp_path, [
+        assistant("2026-10-07T15:00:01.000Z", "m1", [("t1", "Bash", {"command": "x"})], text="ok"),
+        result("2026-10-07T15:00:02.000Z", "t1", is_error=True, text=""),
+    ]))
+    (t1,) = tools_of(rec)
+    assert t1["ok"] is False and t1["error_class"] == "tool_error"
+    assert rec["tool_error_count"] == 1
+
+
+def test_withhold_input_is_fail_closed():
+    assert "S3CR3T" not in extract.withhold_input("token S3CR3T")
+    assert extract.withhold_input("anything") == extract.WITHHELD
