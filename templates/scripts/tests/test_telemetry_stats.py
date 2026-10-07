@@ -191,5 +191,35 @@ def test_tz_accepts_name_or_tzinfo_object(tmp_path):
 
 
 def test_default_tz_is_local_unless_env_names_one():
-    from datetime import tzinfo
-    assert isinstance(ts.DEFAULT_TZ, (str, tzinfo))
+    assert ts.DEFAULT_TZ is None or isinstance(ts.DEFAULT_TZ, str)
+
+
+def test_malformed_record_structure_is_skipped_not_fatal(tmp_path, capsys):
+    v = write_vault(tmp_path, RECORDS)
+    d = tmp_path / "_generated" / "system-journal" / "evidence" / "2026-10"
+    base = {"schema": "evidence/2", "ended": "2026-10-07T15:00:00.000Z"}
+    (d / "bad_turns.json").write_text(json.dumps(dict(base, session_id="b1", turns=["bad"])))
+    (d / "bad_tools.json").write_text(json.dumps(dict(base, session_id="b2", turns=[{"role": "assistant", "tools": ["x"]}])))
+    (d / "bad_tokens.json").write_text(json.dumps(dict(base, session_id="b3", tokens_by_model={"m": 5})))
+    (d / "bad_models.json").write_text(json.dumps(dict(base, session_id="b4", models=["m"])))
+    got = ts.load_records(v, 7, NOW)
+    assert sorted(r["session_id"] for r in got) == ["s1", "s2", "s9"]
+    assert "skipped 4 unreadable or malformed" in capsys.readouterr().err
+    ts.summarize(got, "tool")   # does not raise
+
+
+def test_default_zone_is_local_per_timestamp_across_dst(tmp_path, monkeypatch):
+    import time
+    monkeypatch.setenv("TZ", "America/New_York")
+    time.tzset()
+    try:
+        # 04:30Z on Nov 1 2026 is 00:30 EDT on Nov 1 (before the 06:00Z fall-back). A fixed current
+        # offset (EST, -5) would call it 23:30 on Oct 31.
+        r = rec("s_dst", "2026-11-01T04:30:00.000Z", [{"name": "Bash", "input": "x", "ok": True}])
+        now = "2026-11-03T00:00:00+00:00"
+        recs = ts.load_records(write_vault(tmp_path, [r]), 7, now)
+        assert ts._tz(None) is None
+        assert [g["key"] for g in ts.summarize(recs, "day", None)] == ["2026-11-01"]
+    finally:
+        monkeypatch.delenv("TZ")
+        time.tzset()

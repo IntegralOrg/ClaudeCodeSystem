@@ -22,8 +22,10 @@ from extract import resolve_vault  # noqa: E402
 
 GROUPS = ("tool", "repo", "session", "model", "day")
 SESSION_KEYED = ("repo", "session", "day")
-# The machine's local zone unless SYSTEM_JOURNAL_TZ names one; --tz NAME overrides either.
-DEFAULT_TZ = os.environ.get("SYSTEM_JOURNAL_TZ") or datetime.now().astimezone().tzinfo
+# None means the machine's local zone, applied per timestamp (so a daylight-saving change inside the
+# window still lands each call on the right local day). SYSTEM_JOURNAL_TZ names a zone instead;
+# --tz NAME overrides either.
+DEFAULT_TZ = os.environ.get("SYSTEM_JOURNAL_TZ") or None
 
 
 def _parse_ts(s):
@@ -37,8 +39,9 @@ def _parse_ts(s):
 
 
 def _tz(name):
-    """Accept an IANA zone name or a ready tzinfo object; fall back to UTC on an unknown name."""
-    if isinstance(name, tzinfo):
+    """Accept an IANA zone name, a ready tzinfo object, or None (the machine's local zone, resolved
+    per timestamp by datetime.astimezone). An unknown name falls back to UTC."""
+    if name is None or isinstance(name, tzinfo):
         return name
     try:
         from zoneinfo import ZoneInfo
@@ -52,6 +55,28 @@ def repo_of(rec):
     if cwd:
         return os.path.basename(cwd.rstrip("/")) or cwd
     return rec.get("project") or "unknown"
+
+
+def _well_formed(rec):
+    """True when the record's consumed fields have the shape the report code expects."""
+    if not isinstance(rec, dict) or not rec.get("session_id"):
+        return False
+    turns = rec.get("turns")
+    if turns is not None:
+        if not isinstance(turns, list) or not all(isinstance(t, dict) for t in turns):
+            return False
+        for t in turns:
+            tools = t.get("tools")
+            if tools is not None and (not isinstance(tools, list) or not all(isinstance(x, dict) for x in tools)):
+                return False
+    for field in ("models", "tokens_by_model"):
+        v = rec.get(field)
+        if v is not None and not isinstance(v, dict):
+            return False
+    tbm = rec.get("tokens_by_model")
+    if tbm and not all(isinstance(v, dict) for v in tbm.values()):
+        return False
+    return True
 
 
 def calls_of(rec):
@@ -74,7 +99,7 @@ def load_records(vault, since_days, now=None):
         except (OSError, ValueError):
             skipped += 1
             continue
-        if not isinstance(rec, dict) or not rec.get("session_id"):
+        if not _well_formed(rec):
             skipped += 1
             continue
         ended = _parse_ts(rec.get("ended") or rec.get("started") or "")
@@ -238,7 +263,7 @@ def main(argv=None):
     ap.add_argument("--group-by", choices=GROUPS, default="tool")
     ap.add_argument("--session", default="")
     ap.add_argument("--json", action="store_true")
-    ap.add_argument("--tz", default=DEFAULT_TZ)
+    ap.add_argument("--tz", default=DEFAULT_TZ, help="zone name (default: this machine's local zone)")
     ap.add_argument("--now", default="", help="TEST ONLY: ISO timestamp standing in for now")
     args = ap.parse_args(argv)
 

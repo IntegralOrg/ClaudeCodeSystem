@@ -193,7 +193,8 @@ def load_masker(candidates):
 
 
 WITHHELD = "[input withheld: secret masker not found]"
-_SECRET_TOOLS_FALLBACK = re.compile(r"secrets?[-_]set|project_env|_env$", re.IGNORECASE)
+_SECRET_TOOLS_FALLBACK = re.compile(r"secrets?[-_](?:set|put|create|update|add|write|upsert)"
+                                    r"|(?:set|put|create|update|add|write|upsert)[-_]secrets?|project_env|_env$", re.IGNORECASE)
 _WITHHELD_TOOL_FALLBACK = "[input withheld: secret-bearing tool]"
 
 _masker_state = {"loaded": False, "masker": None, "secret_tools": _SECRET_TOOLS_FALLBACK,

@@ -10,13 +10,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import project_dir, run  # noqa: E402
 
+# An assignment value: a double- or single-quoted string (spaces allowed) or a bare word.
+_VALUE = r"(?:\"[^\"]*\"|'[^']*'|[\"']?[^\s'\"]+)"
+
 MASK = (
     re.compile(r"(\bAuthorization\s*:\s*(?:Basic|Bearer|Token)\s+)[^\s'\"]+", re.IGNORECASE),
     re.compile(r"(Bearer\s+)[A-Za-z0-9._\-]+", re.IGNORECASE),
     re.compile(r"(\bX-Api-Key\s*:\s*)[^\s'\"]+", re.IGNORECASE),
-    re.compile(r"\b([A-Za-z][A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL)[A-Za-z0-9_]*=)[^\s'\"]+",
+    re.compile(r"\b([A-Za-z][A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL)[A-Za-z0-9_]*=)" + _VALUE,
                re.IGNORECASE),
-    re.compile(r"\b(token=|password=|secret=)[^\s'\"]+", re.IGNORECASE),
+    re.compile(r"\b(token=|password=|secret=)" + _VALUE, re.IGNORECASE),
     re.compile(r"(\bapikey\s*[:=]\s*)[A-Za-z0-9._\-]+", re.IGNORECASE),
     re.compile(r"(\s(?:-u|--user)[\s=]+[^\s:'\"]*:)[^\s'\"]+"),
     re.compile(r"\b(xox[abpers]-)[A-Za-z0-9-]+"),
@@ -26,13 +29,14 @@ MASK = (
     # URL query secrets: ?key=... &token=... and similar
     re.compile(r"([?&](?:key|token|api_key|apikey|access_token|secret|password)=)[^\s&'\"]+", re.IGNORECASE),
     # JSON string values under secret-looking keys: "STRIPE_KEY": "..." and {"key": "K", "value": "..."}
-    re.compile(r'("(?:value|password|passwd|token|secret|api_key|apikey|access_token|[A-Za-z0-9_\-]*_(?:KEY|TOKEN|SECRET|PASSWORD))"\s*:\s*")(?:[^"\\]|\\.)*(?=")',
+    re.compile(r'("(?:value|[A-Za-z0-9_\-]*(?:secret|password|passwd|token|api_?key|credential)[A-Za-z0-9_\-]*|[A-Za-z0-9_\-]*_key)"\s*:\s*")(?:[^"\\]|\\.)*(?=")',
                re.IGNORECASE),
     # a token piped into a login command: echo TOKEN | gh auth login --with-token
     re.compile(r"()[A-Za-z0-9._\-]{16,}(?=['\"]?\s*\|\s*(?:gh\s+auth\s+login|docker\s+login|vercel\s+login"
                r"|npx\b[^|]*?\blogin\b))"),
 )
-SECRET_TOOLS = re.compile(r"secrets?[-_]set|project_env|_env$", re.IGNORECASE)
+SECRET_TOOLS = re.compile(r"secrets?[-_](?:set|put|create|update|add|write|upsert)"
+                          r"|(?:set|put|create|update|add|write|upsert)[-_]secrets?|project_env|_env$", re.IGNORECASE)
 WITHHELD_TOOL = "[input withheld: secret-bearing tool]"
 ERROR_CLASS = re.compile(r"\b([A-Z][A-Za-z]+(?:Error|Exception)|E[A-Z]{3,}|HTTP\s?\d{3}|\d{3}\s+[A-Z][a-z]+)\b")
 

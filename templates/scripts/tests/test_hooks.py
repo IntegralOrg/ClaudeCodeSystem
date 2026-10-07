@@ -376,3 +376,25 @@ def test_rm_home_with_redirect_still_blocked():
 
 def test_rm_background_amp_second_rm_blocked():
     assert guard_secrets.decide("Bash", {"command": "rm -rf /tmp/a & rm -rf ~/b"})
+
+
+@pytest.mark.parametrize("text,secret", [
+    ('TOKEN="alpha beta" echo ok', "alpha beta"),
+    ("API_KEY='alpha beta' ./run.sh", "alpha beta"),
+    ('password="p w" ssh x', "p w"),
+    ('{"secret_value": "hunter2"}', "hunter2"),
+    ('{"client_credentials": "hunter2"}', "hunter2"),
+])
+def test_mask_quoted_assignments_and_secret_json_keys(text, secret):
+    out = log_tool_use._mask(text)
+    assert secret not in out and "***" in out
+
+
+@pytest.mark.parametrize("tool", ["mcp__vault__set_secret", "mcp__x__create-secret", "put_secrets", "mcp__fly__fly-secrets-set"])
+def test_summary_withholds_verb_first_secret_tools(tool):
+    assert log_tool_use._summary(tool, {"secret_value": "hunter2"}) == log_tool_use.WITHHELD_TOOL
+
+
+def test_summary_does_not_withhold_ordinary_tools():
+    for tool in ("Bash", "mcp__fly__fly-status", "get_secret_name_list_docs", "Read"):
+        assert log_tool_use._summary(tool, {"command": "ls"}) != log_tool_use.WITHHELD_TOOL
