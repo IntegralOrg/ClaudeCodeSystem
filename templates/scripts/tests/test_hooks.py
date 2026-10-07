@@ -292,6 +292,41 @@ def test_log_reads_error_field(tmp_path, monkeypatch):
     assert row["ok"] is False and row["error_class"] == "TimeoutError"
 
 
+# --- final-wave masker shapes (log_tool_use._mask / _summary are the single source of masking) ---
+import log_tool_use  # noqa: E402
+
+
+@pytest.mark.parametrize("text,secret,expected", [
+    ("postgresql://postgres:hunter2@db.example.com/x", "hunter2", "postgresql://postgres:***@db.example.com/x"),
+    ("redis://:hunter2@cache.example.com:6379", "hunter2", None),
+    ("curl 'https://api.x.com/v1?key=abc123def'", "abc123def", None),
+    ("curl 'https://api.x.com/v1?a=1&access_token=abc123def&b=2'", "abc123def", None),
+    ('{"secrets": {"STRIPE_KEY": "sk_live_abc"}}', "sk_live_abc", '{"secrets": {"STRIPE_KEY": "***"}}'),
+    ('{"key": "FOO", "value": "s3cret"}', "s3cret", '{"key": "FOO", "value": "***"}'),
+    ('{"password": "p@ss w0rd"}', "p@ss w0rd", '{"password": "***"}'),
+    ("echo ghp_abcdefghijklmnop1234 | gh auth login --with-token", "abcdefghijklmnop1234", None),
+    ("echo abcdefghijklmnop1234xyz | docker login -u me --password-stdin", "abcdefghijklmnop1234xyz", None),
+    ("echo abcdefghijklmnop1234xyz | npx some-cli login --stdin", "abcdefghijklmnop1234xyz", None),
+])
+def test_mask_final_wave_shapes(text, secret, expected):
+    out = log_tool_use._mask(text)
+    assert secret not in out and "***" in out
+    if expected is not None:
+        assert out == expected
+
+
+def test_mask_leaves_plain_commands_unchanged():
+    for text in ("git status", "echo hello | gh auth login", "ls -la https://example.com/a?page=2"):
+        assert log_tool_use._mask(text) == text
+
+
+@pytest.mark.parametrize("tool", ["mcp__fly__fly-secrets-set", "create_project_env", "mcp__x__edit_project_env"])
+def test_summary_withholds_secret_bearing_tools(tool):
+    assert log_tool_use._summary(tool, {"command": "x", "pattern": "p", "file_path": "/a",
+                                        "secrets": {"K": "v"}}) == log_tool_use.WITHHELD_TOOL
+    assert log_tool_use._summary("Bash", {"command": "git status"}) == "git status"
+
+
 # --- guard_secrets additions ---
 def test_grep_glob_param_blocked():
     assert guard_secrets.decide("Grep", {"pattern": "KEY", "glob": ".env"})
@@ -341,3 +376,35 @@ def test_rm_home_with_redirect_still_blocked():
 
 def test_rm_background_amp_second_rm_blocked():
     assert guard_secrets.decide("Bash", {"command": "rm -rf /tmp/a & rm -rf ~/b"})
+
+
+@pytest.mark.parametrize("text,secret", [
+    ('TOKEN="alpha beta" echo ok', "alpha beta"),
+    ("API_KEY='alpha beta' ./run.sh", "alpha beta"),
+    ('password="p w" ssh x', "p w"),
+    ('{"secret_value": "hunter2"}', "hunter2"),
+    ('{"client_credentials": "hunter2"}', "hunter2"),
+])
+def test_mask_quoted_assignments_and_secret_json_keys(text, secret):
+    out = log_tool_use._mask(text)
+    assert secret not in out and "***" in out
+
+
+@pytest.mark.parametrize("tool", ["mcp__vault__set_secret", "mcp__x__create-secret", "put_secrets", "mcp__fly__fly-secrets-set"])
+def test_summary_withholds_verb_first_secret_tools(tool):
+    assert log_tool_use._summary(tool, {"secret_value": "hunter2"}) == log_tool_use.WITHHELD_TOOL
+
+
+def test_summary_does_not_withhold_ordinary_tools():
+    for tool in ("Bash", "mcp__fly__fly-status", "get_secret_name_list_docs", "Read"):
+        assert log_tool_use._summary(tool, {"command": "ls"}) != log_tool_use.WITHHELD_TOOL
+
+
+@pytest.mark.parametrize("text,leaks", [
+    ('TOKEN="alpha\\"beta" echo ok', ["alpha", "beta"]),
+    ('TOKEN="alpha \\"beta gamma" echo ok', ["alpha", "beta", "gamma"]),
+])
+def test_mask_quoted_assignment_with_escaped_quote(text, leaks):
+    out = log_tool_use._mask(text)
+    assert out == "TOKEN=*** echo ok"
+    assert not any(x in out for x in leaks)

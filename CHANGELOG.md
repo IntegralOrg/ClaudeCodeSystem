@@ -6,6 +6,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-07] - System Journal per-call telemetry
+
+### Added
+- **System Journal** -- evidence/2 adds per-call `ok` / `ms` / `error_class` and per-session `tokens_by_model` (additive; evidence/1 files are read as `unknown`). `templates/scripts/system-journal/telemetry-stats.py` aggregates them (stdlib only, no network). `/opportunity-scan` reads one session and names the one durable change that would have prevented its friction. Stored tool inputs now pass through the guard hooks' secret masker.
+
+---
+
 ## [2026-10-07] - Guard hooks, credential isolation, Current State / Log profile shape
 
 ### Added

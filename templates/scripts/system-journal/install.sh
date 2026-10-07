@@ -28,8 +28,8 @@ while [ $# -gt 0 ]; do
 done
 
 mkdir -p "$DST"
-cp "$SRC/extract.py" "$SRC/distill.py" "$SRC/run.sh" "$SRC/themes-inject.py" "$DST/"
-chmod +x "$DST/run.sh" "$DST/extract.py" "$DST/distill.py" "$DST/themes-inject.py"
+cp "$SRC/extract.py" "$SRC/distill.py" "$SRC/run.sh" "$SRC/themes-inject.py" "$SRC/telemetry-stats.py" "$DST/"
+chmod +x "$DST/run.sh" "$DST/extract.py" "$DST/distill.py" "$DST/themes-inject.py" "$DST/telemetry-stats.py"
 xattr -d com.apple.provenance "$DST"/* 2>/dev/null || true
 echo "installed to $DST"
 

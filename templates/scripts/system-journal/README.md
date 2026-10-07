@@ -164,7 +164,7 @@ A cloud-only person therefore needs only the hook block and the scripts in their
 access from their cloud environment, nothing on any machine. Sessions started outside a repo
 that carries the hook block are not captured. Cloud files carry `project: "cloud:<repo dir>"`.
 
-## Evidence record schema (`evidence/1`)
+## Evidence record schema (`evidence/2`; `evidence/1` files are kept as written)
 
 Deterministic; no extraction timestamp inside the file, so an unchanged transcript never dirties
 git.
@@ -180,6 +180,7 @@ git.
     (`name`, `input` capped 200 chars: the command, file path, pattern, query or URL; `file` for
     edits and writes), `errors[]` (tool errors that came back, capped 400 chars each). No tool
     outputs.
+  - evidence/2 (2026-10-07) adds to each `tools[]` entry: `ok` (the result came back; absent while a call is still pending), `ms` (assistant entry to result entry), and `error_class` on failure (`hook_blocked`, `permission_denied`, `exit_<n>`, `<Name>Error`, `HTTP <nnn>`, else `tool_error`; never the error text). `input` is passed through the guard hooks' secret masker. Per record: `tokens_by_model` (model id -> input / output / cache_read / cache_creation, summed once per model message).
 - `final`: the last assistant message, capped 3,000 chars.
 
 ## Journal line schema
@@ -192,6 +193,10 @@ words), `shipped[]`, `decisions[]`, `open_loop`, `systems[]` (**controlled vocab
 `vocab.json`, plus `client:<slug>`; off-list tags move to `topics`), `topics[]` (free-form),
 `why`. Plus `distilled_at` and `model` (the **distiller**, never the session's model, which is
 `session_models`).
+
+## Telemetry (`telemetry-stats.py`)
+
+Aggregates the evidence files; no transcript, no network, same script in every vault built from the template. `python3 scripts/system-journal/telemetry-stats.py --since-days 7 --group-by tool|repo|session|model|day [--json]` or `--session <id>` for one session (errors, ten slowest calls, tokens). `evidence/1` calls count as `unknown`; a call whose result has not arrived is `pending` and excluded from the error rate. Growth is sized, not archived: git history keeps every blob, so the fields were kept to about 25 to 45 bytes per call and 200 bytes per session, and old files are never re-extracted. The extractor loads its secret masker from `scripts/hooks/log_tool_use.py` (the vault path first, then script-relative); when none loads, every stored tool input becomes `[input withheld: secret masker not found]` with one warning in `run.log`. Evidence bytes therefore depend on the masker version, which qualifies "deterministic": the same transcript plus the same masker gives the same bytes. `ms` runs from the tool call to its result and includes any time a human spent approving the call. Reader: `/opportunity-scan`.
 
 ## Audit tier
 
