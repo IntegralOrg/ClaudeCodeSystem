@@ -162,3 +162,59 @@ def test_empty_body_failure_still_counts_as_an_error(tmp_path):
 def test_withhold_input_is_fail_closed():
     assert "S3CR3T" not in extract.withhold_input("token S3CR3T")
     assert extract.withhold_input("anything") == extract.WITHHELD
+
+
+def test_error_class_real_permission_phrase_and_anchored_hook_block():
+    ec = extract.error_class
+    assert ec("Permission for this command was denied by a built-in Claude Code safety check") == "permission_denied"
+    assert ec("Permission for this tool was denied") == "permission_denied"
+    # a pytest run whose output merely contains both words is not a hook block
+    assert ec("Exit code 1\nFAILED test_x: hook error BLOCKED") == "exit_1"
+    assert ec("hook error: something BLOCKED") == "tool_error"
+    # HTTP spelling is normalized
+    assert ec("request failed HTTP500") == "HTTP 500"
+    assert ec("request failed HTTP 500") == "HTTP 500"
+
+
+def test_secret_bearing_tool_input_is_withheld(tmp_path):
+    rec = extract.extract_session(write(tmp_path, [
+        assistant("2026-10-07T15:00:01.000Z", "m1",
+                  [("t1", "mcp__fly__fly-secrets-set", {"app": "a", "secrets": {"STRIPE_KEY": "sk_live_abc"}})], text="ok"),
+        result("2026-10-07T15:00:02.000Z", "t1"),
+    ]))
+    (t1,) = tools_of(rec)
+    assert t1["input"] == "[input withheld: secret-bearing tool]"
+
+
+def test_secret_tool_fallback_when_masker_lacks_the_regex(tmp_path, monkeypatch):
+    d = tmp_path / "hooks"
+    d.mkdir()
+    (d / "log_tool_use.py").write_text("def _mask(t):\n    return t\n")
+    monkeypatch.setattr(extract, "HOOKS_CANDIDATES", [str(d)])
+    extract.reset_masker()
+    try:
+        assert extract.tool_input_summary("create_project_env", {"x": "y"}) == "[input withheld: secret-bearing tool]"
+    finally:
+        extract.reset_masker()
+
+
+def test_masker_loads_lazily_and_warns_once(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(extract, "HOOKS_CANDIDATES", [str(tmp_path / "nope")])
+    extract.reset_masker()
+    try:
+        assert capsys.readouterr().err == ""          # nothing at reset or import time
+        assert extract.mask_input("S3CR3T") == extract.WITHHELD
+        assert extract.mask_input("S3CR3T again") == extract.WITHHELD
+        err = capsys.readouterr().err
+        assert err.count("secret masker not found") == 1
+    finally:
+        extract.reset_masker()
+
+
+def test_importing_extract_and_telemetry_stats_prints_nothing():
+    import subprocess
+    code = ("import sys, importlib.util; sys.path.insert(0, %r); import extract; "
+            "spec = importlib.util.spec_from_file_location('ts', %r); m = importlib.util.module_from_spec(spec); "
+            "spec.loader.exec_module(m)" % (str(SJ), str(SJ / "telemetry-stats.py")))
+    p = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert p.returncode == 0 and p.stdout == "" and p.stderr == ""

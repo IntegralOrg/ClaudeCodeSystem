@@ -152,3 +152,44 @@ def test_error_without_error_class_defaults_to_tool_error(tmp_path, capsys):
     assert ts.main(["--vault", v, "--now", NOW, "--session", "s_noclass"]) == 0
     out = capsys.readouterr().out
     assert "tool_error" in out and "?" in out
+
+
+def test_load_records_counts_and_reports_skipped_files(tmp_path, capsys):
+    v = write_vault(tmp_path, RECORDS)
+    d = tmp_path / "_generated" / "system-journal" / "evidence" / "2026-10"
+    (d / "corrupt.json").write_text('{"schema": "evidence/2", "session_id": "bad", "ended": ')
+    (d / "nosid.json").write_text(json.dumps({"schema": "evidence/2"}))
+    (d / "list.json").write_text("[1, 2]")
+    got = ts.load_records(v, 7, NOW)
+    assert sorted(r["session_id"] for r in got) == ["s1", "s2", "s9"]
+    assert capsys.readouterr().err.strip() == "telemetry-stats: skipped 3 unreadable or malformed evidence file(s)"
+
+
+def test_load_records_is_silent_when_nothing_is_skipped(tmp_path, capsys):
+    ts.load_records(write_vault(tmp_path, RECORDS), 7, NOW)
+    assert capsys.readouterr().err == ""
+
+
+def test_model_without_v2_data_reports_no_tokens(tmp_path):
+    old = rec("s_old", "2026-10-07T15:00:00.000Z", [{"name": "Read", "input": "/a"}], schema="evidence/1", model="legacy-model")
+    groups = ts.summarize(ts.load_records(write_vault(tmp_path, RECORDS + [old]), 7, NOW), "model", "America/New_York")
+    legacy = next(g for g in groups if g["key"] == "legacy-model")
+    assert legacy["tokens"] is None and legacy["calls"] == 1
+    assert next(g for g in groups if g["key"] == "m")["tokens"]["input"] == 2
+
+
+def test_tz_accepts_name_or_tzinfo_object(tmp_path):
+    from datetime import timedelta, timezone
+    recs = ts.load_records(write_vault(tmp_path, RECORDS), 7, NOW)
+    by_name = sorted(g["key"] for g in ts.summarize(recs, "day", "America/New_York"))
+    assert by_name == ["2026-10-06", "2026-10-07"]
+    utc = sorted(g["key"] for g in ts.summarize(recs, "day", timezone.utc))
+    assert utc == ["2026-10-06", "2026-10-07"] and utc == by_name
+    far_east = sorted(g["key"] for g in ts.summarize(recs, "day", timezone(timedelta(hours=14))))
+    assert far_east == ["2026-10-07", "2026-10-08"]   # s1 15:00Z is 05:00 on the 8th; s2 and s9 land on the 7th
+    assert ts._tz(timezone.utc) is timezone.utc
+
+
+def test_default_tz_is_local_unless_env_names_one():
+    from datetime import tzinfo
+    assert isinstance(ts.DEFAULT_TZ, (str, tzinfo))

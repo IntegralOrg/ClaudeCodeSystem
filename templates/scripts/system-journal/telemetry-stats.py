@@ -15,14 +15,15 @@ import json
 import math
 import os
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from extract import resolve_vault  # noqa: E402
 
 GROUPS = ("tool", "repo", "session", "model", "day")
 SESSION_KEYED = ("repo", "session", "day")
-DEFAULT_TZ = os.environ.get("SYSTEM_JOURNAL_TZ", "America/New_York")
+# The machine's local zone unless SYSTEM_JOURNAL_TZ names one; --tz NAME overrides either.
+DEFAULT_TZ = os.environ.get("SYSTEM_JOURNAL_TZ") or datetime.now().astimezone().tzinfo
 
 
 def _parse_ts(s):
@@ -36,6 +37,9 @@ def _parse_ts(s):
 
 
 def _tz(name):
+    """Accept an IANA zone name or a ready tzinfo object; fall back to UTC on an unknown name."""
+    if isinstance(name, tzinfo):
+        return name
     try:
         from zoneinfo import ZoneInfo
         return ZoneInfo(name)
@@ -62,16 +66,23 @@ def load_records(vault, since_days, now=None):
     now_dt = _parse_ts(now) if now else datetime.now(timezone.utc)
     cutoff = now_dt - timedelta(days=since_days)
     out = []
+    skipped = 0
     for path in sorted(glob.glob(os.path.join(vault, "_generated", "system-journal", "evidence", "*", "*.json"))):
         try:
             with open(path) as f:
                 rec = json.load(f)
         except (OSError, ValueError):
+            skipped += 1
+            continue
+        if not isinstance(rec, dict) or not rec.get("session_id"):
+            skipped += 1
             continue
         ended = _parse_ts(rec.get("ended") or rec.get("started") or "")
         if ended is None or ended < cutoff:
             continue
         out.append(rec)
+    if skipped:
+        print(f"telemetry-stats: skipped {skipped} unreadable or malformed evidence file(s)", file=sys.stderr)
     return out
 
 
@@ -150,6 +161,8 @@ def summarize(records, group_by, tz_name=DEFAULT_TZ):
             for model_id, tok in (rec.get("tokens_by_model") or {}).items():
                 b = bucket(model_id)
                 b["sessions"].add(sid)
+                if is_v2[sid]:
+                    b["v2_sessions"].add(sid)
                 _add_tokens(b["model_tokens"], tok)
 
     out = []
@@ -164,9 +177,9 @@ def summarize(records, group_by, tz_name=DEFAULT_TZ):
         durations = sorted(t["ms"] for t in answered if isinstance(t.get("ms"), int))
         tokens = None
         if group_by in SESSION_KEYED:
-            tokens = b["model_tokens"] if any(b["v2_sessions"]) else None
+            tokens = b["model_tokens"] if bool(b["v2_sessions"]) else None
         elif group_by == "model":
-            tokens = b["model_tokens"]
+            tokens = b["model_tokens"] if bool(b["v2_sessions"]) else None
         out.append({
             "key": key, "calls": len(b["calls"]), "answered": len(answered), "errors": len(errors),
             "pending": pending, "unknown": unknown,

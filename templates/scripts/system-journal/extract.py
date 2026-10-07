@@ -157,16 +157,19 @@ def slash_command(text):
 
 # Secret masking for stored tool inputs. The guard hooks' masker (log_tool_use._mask) is the one
 # source of truth. The installed copy (~/scripts/system-journal/) has no sibling ../hooks, so the
-# vault's hooks directory is tried first, then the script-relative one. Loaded by file path so the
-# import never shadows or pollutes sys.path.
+# vault's hooks directory is tried first, then the script-relative one. The module is loaded by
+# file path, so the import itself never shadows a module by name; note that log_tool_use.py
+# inserts its own directory into sys.path (to import its sibling _common) when it executes.
+# Loading is lazy (first mask_input call), so importing this module from another script
+# (telemetry-stats.py) stays silent and cheap.
 HOOKS_CANDIDATES = [
     os.path.join(DEFAULT_VAULT, "scripts", "hooks"),
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "hooks"),
 ]
 
 
-def load_masker(candidates):
-    """Return log_tool_use._mask from the first candidate dir that has it, else None."""
+def _load_module(candidates):
+    """Return the log_tool_use module from the first candidate dir that has a usable one, else None."""
     import importlib.util
     for d in candidates:
         f = os.path.join(d, "log_tool_use.py")
@@ -176,13 +179,25 @@ def load_masker(candidates):
             spec = importlib.util.spec_from_file_location("sj_log_tool_use", f)
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)
-            return mod._mask
+            if callable(getattr(mod, "_mask", None)):
+                return mod
         except Exception:
             continue
     return None
 
 
+def load_masker(candidates):
+    """Return log_tool_use._mask from the first candidate dir that has it, else None."""
+    mod = _load_module(candidates)
+    return mod._mask if mod is not None else None
+
+
 WITHHELD = "[input withheld: secret masker not found]"
+_SECRET_TOOLS_FALLBACK = re.compile(r"secrets?[-_]set|project_env|_env$", re.IGNORECASE)
+_WITHHELD_TOOL_FALLBACK = "[input withheld: secret-bearing tool]"
+
+_masker_state = {"loaded": False, "masker": None, "secret_tools": _SECRET_TOOLS_FALLBACK,
+                 "withheld_tool": _WITHHELD_TOOL_FALLBACK}
 
 
 def withhold_input(text):
@@ -190,15 +205,39 @@ def withhold_input(text):
     return WITHHELD
 
 
-mask_input = load_masker(HOOKS_CANDIDATES)
-if mask_input is None:
-    print("extract: secret masker not found (looked in %s); tool inputs withheld from evidence"
-          % ", ".join(HOOKS_CANDIDATES), file=sys.stderr)
-    mask_input = withhold_input
+def reset_masker():
+    """Forget the cached masker so the next mask_input call loads again (tests)."""
+    _masker_state.update(loaded=False, masker=None, secret_tools=_SECRET_TOOLS_FALLBACK,
+                         withheld_tool=_WITHHELD_TOOL_FALLBACK)
+
+
+def _ensure_masker():
+    st = _masker_state
+    if st["loaded"]:
+        return st
+    mod = _load_module(HOOKS_CANDIDATES)
+    st["loaded"] = True
+    if mod is None:
+        print("extract: secret masker not found (looked in %s); tool inputs withheld from evidence"
+              % ", ".join(HOOKS_CANDIDATES), file=sys.stderr)
+        return st
+    st["masker"] = mod._mask
+    st["secret_tools"] = getattr(mod, "SECRET_TOOLS", None) or _SECRET_TOOLS_FALLBACK
+    st["withheld_tool"] = getattr(mod, "WITHHELD_TOOL", None) or _WITHHELD_TOOL_FALLBACK
+    return st
+
+
+def mask_input(text):
+    """Mask secrets in a tool input, loading the masker on first use. Fails closed (withholds)."""
+    masker = _ensure_masker()["masker"]
+    return masker(text) if masker is not None else withhold_input(text)
 
 
 def tool_input_summary(name, inp):
     """A capped, deterministic one-liner of what the agent asked the tool to do."""
+    st = _ensure_masker()
+    if st["secret_tools"].search(name or ""):
+        return st["withheld_tool"]
     if not isinstance(inp, dict):
         return cap(mask_input(json.dumps(inp, ensure_ascii=False, sort_keys=True)), MAX_TOOL_INPUT_CHARS)[0]
     for key in ("command", "file_path", "notebook_path", "pattern", "query", "url", "prompt", "description"):
@@ -215,10 +254,10 @@ EXIT_CODE_RE = re.compile(r"^Exit code (\d+)")
 def error_class(text):
     """A short class for a failed tool call. Never the error text itself."""
     text = text or ""
-    if "hook error" in text and "BLOCKED" in text:
-        return "hook_blocked"
     head = text.lstrip()
-    if (head.startswith("Permission for this action was denied")
+    if re.match(r"PreToolUse:\S+ hook error", head) and "BLOCKED" in text:
+        return "hook_blocked"
+    if (re.match(r"Permission for this \w+ was denied", head)
             or head.startswith("The user doesn't want to proceed")
             or re.match(r"Claude requested permissions? to use\b", head)):
         return "permission_denied"
@@ -226,7 +265,9 @@ def error_class(text):
     if m:
         return "exit_" + m.group(1)
     m = ERROR_CLASS_RE.search(text)
-    return m.group(1) if m else "tool_error"
+    if not m:
+        return "tool_error"
+    return re.sub(r"^HTTP\s?(\d{3})$", r"HTTP \1", m.group(1))
 
 
 def millis_between(start, end):
