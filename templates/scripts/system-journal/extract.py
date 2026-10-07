@@ -42,6 +42,7 @@ import os
 import re
 import sys
 import time
+from datetime import datetime
 
 HOME = os.path.expanduser("~")
 STATE_DIR = os.path.join(HOME, ".system-journal")
@@ -76,7 +77,7 @@ def resolve_vault():
 DEFAULT_VAULT = resolve_vault()
 PROJECTS_GLOB = os.path.join(HOME, ".claude", "projects", "*", "*.jsonl")
 
-SCHEMA = "evidence/1"
+SCHEMA = "evidence/2"   # evidence/1 plus per-call ok / ms / error_class and tokens_by_model (2026-10-07)
 
 # Caps (agreed 2026-09-21). Measured on 439 sessions: median 9 KB, p95 62 KB, max ~400 KB.
 MAX_USER_CHARS = 8000        # a pasted document is capped; the document exists elsewhere
@@ -154,15 +155,79 @@ def slash_command(text):
     return m.group(1) if m else None
 
 
+# Secret masking for stored tool inputs. The guard hooks' masker (log_tool_use._mask) is the one
+# source of truth. The installed copy (~/scripts/system-journal/) has no sibling ../hooks, so the
+# vault's hooks directory is tried first, then the script-relative one. Loaded by file path so the
+# import never shadows or pollutes sys.path.
+HOOKS_CANDIDATES = [
+    os.path.join(DEFAULT_VAULT, "scripts", "hooks"),
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "hooks"),
+]
+
+
+def load_masker(candidates):
+    """Return log_tool_use._mask from the first candidate dir that has it, else None."""
+    import importlib.util
+    for d in candidates:
+        f = os.path.join(d, "log_tool_use.py")
+        if not os.path.isfile(f):
+            continue
+        try:
+            spec = importlib.util.spec_from_file_location("sj_log_tool_use", f)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            return mod._mask
+        except Exception:
+            continue
+    return None
+
+
+mask_input = load_masker(HOOKS_CANDIDATES)
+if mask_input is None:
+    print("extract: secret masker not found (looked in %s); tool inputs stored unmasked"
+          % ", ".join(HOOKS_CANDIDATES), file=sys.stderr)
+
+    def mask_input(text):
+        return text
+
+
 def tool_input_summary(name, inp):
     """A capped, deterministic one-liner of what the agent asked the tool to do."""
     if not isinstance(inp, dict):
-        return cap(json.dumps(inp, ensure_ascii=False, sort_keys=True), MAX_TOOL_INPUT_CHARS)[0]
+        return cap(mask_input(json.dumps(inp, ensure_ascii=False, sort_keys=True)), MAX_TOOL_INPUT_CHARS)[0]
     for key in ("command", "file_path", "notebook_path", "pattern", "query", "url", "prompt", "description"):
         v = inp.get(key)
         if isinstance(v, str) and v.strip():
-            return cap(re.sub(r"\s+", " ", v).strip(), MAX_TOOL_INPUT_CHARS)[0]
-    return cap(json.dumps(inp, ensure_ascii=False, sort_keys=True), MAX_TOOL_INPUT_CHARS)[0]
+            return cap(mask_input(re.sub(r"\s+", " ", v).strip()), MAX_TOOL_INPUT_CHARS)[0]
+    return cap(mask_input(json.dumps(inp, ensure_ascii=False, sort_keys=True)), MAX_TOOL_INPUT_CHARS)[0]
+
+
+ERROR_CLASS_RE = re.compile(r"\b([A-Z][A-Za-z]+(?:Error|Exception)|HTTP\s?\d{3})\b")
+EXIT_CODE_RE = re.compile(r"^Exit code (\d+)")
+
+
+def error_class(text):
+    """A short class for a failed tool call. Never the error text itself."""
+    text = text or ""
+    if "hook error" in text and "BLOCKED" in text:
+        return "hook_blocked"
+    if ("Permission for this action was denied" in text or "doesn't want to proceed" in text
+            or "permission to use" in text.lower()):
+        return "permission_denied"
+    m = EXIT_CODE_RE.search(text)
+    if m:
+        return "exit_" + m.group(1)
+    m = ERROR_CLASS_RE.search(text)
+    return m.group(1) if m else "tool_error"
+
+
+def millis_between(start, end):
+    try:
+        a = datetime.fromisoformat(start.replace("Z", "+00:00"))
+        b = datetime.fromisoformat(end.replace("Z", "+00:00"))
+        return max(0, int((b - a).total_seconds() * 1000))
+    except Exception:
+        return None
 
 
 def session_id_of(path):
@@ -183,6 +248,8 @@ def extract_session(path):
     final_text = ""
     prs = set()
     last_assistant = None  # the turn dict tool errors attach to
+    pending = {}           # tool_use_id -> the tools[] entry awaiting its result (evidence/2)
+    usage_by_msg = {}      # message id -> (model, usage); one model message can span several entries
 
     with open(path, errors="replace") as f:
         for line in f:
@@ -218,12 +285,23 @@ def extract_session(path):
                             continue
                         if c.get("type") == "text" and isinstance(c.get("text"), str):
                             texts.append(c["text"])
-                        elif c.get("type") == "tool_result" and c.get("is_error"):
-                            body = c.get("content")
-                            if isinstance(body, list):
-                                body = " ".join(x.get("text", "") for x in body if isinstance(x, dict))
-                            body = re.sub(r"\s+", " ", str(body or "")).strip()
-                            if body:
+                        elif c.get("type") == "tool_result":
+                            is_err = bool(c.get("is_error"))
+                            body = ""
+                            if is_err:   # only failures need the text; successful output can be huge
+                                body = c.get("content")
+                                if isinstance(body, list):
+                                    body = " ".join(x.get("text", "") for x in body if isinstance(x, dict))
+                                body = re.sub(r"\s+", " ", str(body or "")).strip()
+                            entry = pending.pop(c.get("tool_use_id"), None)
+                            if entry is not None:
+                                entry["ok"] = not c.get("is_error")
+                                ms = millis_between(entry.pop("_ts", None) or "", ts or "")
+                                if ms is not None:
+                                    entry["ms"] = ms
+                                if is_err:
+                                    entry["error_class"] = error_class(body)
+                            if is_err and body:
                                 error_count += 1
                                 if last_assistant is not None:
                                     last_assistant.setdefault("errors", []).append(cap(body, MAX_ERROR_CHARS)[0])
@@ -247,6 +325,9 @@ def extract_session(path):
                 m = msg.get("model")
                 if m:
                     models[m] = models.get(m, 0) + 1
+                mid = msg.get("id")
+                if mid and m and isinstance(msg.get("usage"), dict):
+                    usage_by_msg[mid] = (m, msg["usage"])
                 texts, tools = [], []
                 if isinstance(content, list):
                     for c in content:
@@ -259,6 +340,9 @@ def extract_session(path):
                             tool_counts[name] = tool_counts.get(name, 0) + 1
                             inp = c.get("input") or {}
                             entry = {"name": name, "input": tool_input_summary(name, inp)}
+                            if c.get("id"):
+                                entry["_ts"] = ts
+                                pending[c["id"]] = entry
                             fp = None
                             if isinstance(inp, dict):
                                 fp = inp.get("file_path") or inp.get("notebook_path")
@@ -292,6 +376,16 @@ def extract_session(path):
             seen.add(rel)
             uniq.append(rel)
 
+    for entry in pending.values():      # results never arrived (live session, or killed)
+        entry.pop("_ts", None)
+    tokens_by_model = {}
+    for model_id, u in usage_by_msg.values():
+        t = tokens_by_model.setdefault(model_id, {"input": 0, "output": 0, "cache_read": 0, "cache_creation": 0})
+        t["input"] += int(u.get("input_tokens") or 0)
+        t["output"] += int(u.get("output_tokens") or 0)
+        t["cache_read"] += int(u.get("cache_read_input_tokens") or 0)
+        t["cache_creation"] += int(u.get("cache_creation_input_tokens") or 0)
+
     return {
         "schema": SCHEMA,
         "session_id": sid,
@@ -302,6 +396,7 @@ def extract_session(path):
         "started": first_ts,
         "ended": last_ts,
         "models": dict(sorted(models.items(), key=lambda kv: (-kv[1], kv[0]))),
+        "tokens_by_model": dict(sorted(tokens_by_model.items())),
         "user_turns": user_turns,
         "assistant_turns": assistant_turns,
         "subagent_runs": subagent_runs,
