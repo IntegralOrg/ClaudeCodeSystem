@@ -48,7 +48,7 @@ VAULT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 SKIP_DIRS = {".git", ".obsidian", ".claude", "Attachments", "Templates", "Graph",
              "node_modules", "scripts", "docs", "_generated", "Inbox", ".handoffs",
-             ".superpowers", ".playwright-mcp"}
+             ".superpowers", ".playwright-mcp", "cowork-commands", ".github"}
 # Top-level folders that never appear in Graph/ (so a private folder stays out of an exported
 # or shared copy of Graph/). Default is {"Personal"}; override per vault with a
 # `graph_private_top:` inline list in the vault schema YAML (see load_graph_config).

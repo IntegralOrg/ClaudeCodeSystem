@@ -200,7 +200,7 @@ If they want a practice `/morning` run, do it right now with real data. This is 
 1. Create the archive folder: `Archive/ClaudeCodeSystem-Original/`
 2. Copy the entire contents of the setup repo into it:
    - `docs/` (all reference documentation)
-   - `templates/` (original CLAUDE.md template and .env.example)
+   - `Templates/`, `scripts/` and the root `CLAUDE.md` (the original template files)
    - `examples/` (automation scripts and settings)
    - `README.md`
    - `LICENSE`

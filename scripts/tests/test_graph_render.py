@@ -6,7 +6,7 @@ Builds a throwaway vault in a temp dir, runs the renderer twice, and checks:
   - A private top-level folder (Personal/) never appears in Graph/.
   - A second run is idempotent (it reports "changed: none" and rewrites nothing).
 
-Stdlib only. Run: python3 templates/scripts/test_graph_render.py
+Stdlib only. Run: python3 scripts/tests/test_graph_render.py
 """
 import os
 import subprocess
@@ -15,7 +15,7 @@ import tempfile
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-RENDER = os.path.join(HERE, "graph-render.py")
+RENDER = os.path.join(HERE, "..", "graph-render.py")
 
 
 def write(path, text):

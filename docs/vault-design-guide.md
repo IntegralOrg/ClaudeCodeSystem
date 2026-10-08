@@ -188,7 +188,7 @@ The entire review can complete with just 3 taps if the plan looks good: "All goo
 
 ## State and events
 
-Every fact a profile or reference note holds is one of two things. **State** is one current value that changes (a rate, a status, an owner, the next call date): it lives as a single dated line per key under `## Current State` near the top of the file, and a new value replaces the old line. **Events** are things that happened (a call, a decision, a delivery): they append to `## Log` at the bottom, newest first, and are never edited. The client profile skeleton is `templates/Client Note.md`: frontmatter with `engagement: prospect`, the five Current State keys (Engagement status, Engagement, Owner, Next call, Open unblocks), then `## Log`. When unsure whether something is state or an event, append it to the Log and say so. A hook enforces the shape, and `scripts/profile-convert.py` converts an older profile (with a `Recent Activity` section) in one step.
+Every fact a profile or reference note holds is one of two things. **State** is one current value that changes (a rate, a status, an owner, the next call date): it lives as a single dated line per key under `## Current State` near the top of the file, and a new value replaces the old line. **Events** are things that happened (a call, a decision, a delivery): they append to `## Log` at the bottom, newest first, and are never edited. The client profile skeleton is `Templates/Client Note.md`: frontmatter with `engagement: prospect`, the five Current State keys (Engagement status, Engagement, Owner, Next call, Open unblocks), then `## Log`. When unsure whether something is state or an event, append it to the Log and say so. A hook enforces the shape, and `scripts/profile-convert.py` converts an older profile (with a `Recent Activity` section) in one step.
 
 ---
 
@@ -377,7 +377,7 @@ The instruction manual (a file called `CLAUDE.md`) tells Claude how your system 
 - Your timezone and daily schedule
 - Any tools you have connected
 
-See `templates/CLAUDE.md` in this repository for a complete starting point. Copy it to your notes folder root and customize the parts in brackets.
+See `CLAUDE.md` at the root of this repository for a complete starting point. Copy it to your notes folder root and customize the parts in brackets.
 
 ### Step 3: Connect Your First Tools
 

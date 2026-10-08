@@ -13,7 +13,7 @@
 # the user never has to look at a PR.
 #
 # Runs on every side-branch push, when a PR is opened, and as an hourly sweep.
-# Installed by /onboard at: .github/workflows/vault-autosync.yml
+# Installed with the template at: .github/workflows/vault-autosync.yml
 
 name: Vault Autosync
 
@@ -37,6 +37,8 @@ concurrency:
 jobs:
   autosync:
     runs-on: ubuntu-latest
+    # Never run on the template itself: it would merge every open branch into the public main.
+    if: github.repository != 'IntegralOrg/ClaudeCodeSystem' && github.repository != 'IntegralOrg/ClaudeCodeSystem-Cloud'
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4

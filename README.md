@@ -84,7 +84,10 @@ By the end of all 4 steps, you will have (see the [Onboarding Guide](docs/onboar
 
 ```
 ClaudeCodeSystem/
-├── CLAUDE.md                           # Bootstrap file (tells Claude how to start setup)
+├── CLAUDE.md                           # The client's vault CLAUDE.md skeleton (customized by /onboard)
+├── .env.example                        # All env var names with descriptions
+├── .gitattributes                      # Markdown union-merge so parallel sessions never conflict
+├── .gitignore                          # Allow-list for .claude/, secrets and local state ignored
 ├── README.md                           # This file
 ├── .claude/commands/                   # ALL Claude Code slash commands (auto-discovered; every one installs during /onboard)
 │   ├── onboard.md                      # Part 1: Permissions, interview, build vault
@@ -111,17 +114,21 @@ ClaudeCodeSystem/
 ├── cowork-commands/                    # CoWork versions (YAML frontmatter, manual upload)
 │   └── *.md                            # Mirror of all commands with YAML frontmatter
 ├── docs/
+│   ├── DEVELOPING.md                   # Maintainer notes for this template (not part of a client vault's behavior)
 │   ├── onboarding-guide.md             # Reference for what /onboard sets up
 │   ├── vault-design-guide.md           # How to build the vault (folder structure, inbox, templates)
 │   ├── integration-architecture.md     # How Claude connects to your tools
 │   └── daily-workflow.md               # Today.md + /morning + EOD pipeline
-├── templates/
-│   ├── CLAUDE.md                       # Starting CLAUDE.md template (customized by /onboard)
-│   └── .env.example                    # All env var names with descriptions
-├── examples/                           # Example settings + optional scripts (NOT commands)
-│   ├── settings.json                   # Example: baseline vault permissions (installed as the vault's .claude/settings.json)
-│   └── scripts/
-│       └── md-to-gdoc.py               # Markdown to Google Doc converter
+├── .claude/settings.json               # Committed vault permissions and the guardrail + cloud-landing hooks
+├── .github/workflows/                  # vault-autosync.yml (skipped on the template itself)
+├── Templates/Client Note.md            # Client profile skeleton
+├── Resources/Reference/                # Local Routines Registry, How We Think About AI Agents
+├── scripts/                            # Hooks, credential helpers, vault audit, graph renderer, system journal
+│   ├── hooks/                          # guard_secrets, log_tool_use, guard_state_writes, session_context
+│   ├── system-journal/                 # Session capture pipeline
+│   └── tests/                          # Unit tests (python -m pytest scripts/tests -q)
+├── _generated/                         # Machine-written output (action log, audit state)
+├── examples/scripts/                   # Optional scripts (NOT commands), e.g. md-to-gdoc.py
 ├── .gitignore
 └── LICENSE                             # CC BY-NC-ND 4.0
 ```
@@ -187,7 +194,7 @@ The default `/eod` flow should run as one command in one Claude session. Claude 
 
 ## Guardrails
 
-Four hooks in `templates/scripts/hooks/` (installed into your vault's `.claude/settings.json` from `examples/settings.json`) keep the assistant honest: `guard_secrets.py` blocks any attempt to read, print, or search the credentials file or the environment; `log_tool_use.py` writes one masked line per tool call to `_generated/agent-actions/`; `guard_state_writes.py` keeps client profiles to one `## Current State` plus an append-only `## Log`; and `session_context.py` starts each session with the branch, uncommitted work, and the newest handoff. Scripts load credentials themselves through `scripts/envload.py`, and a one-off call goes through `python3 scripts/with-env.py -- <command>`.
+Four hooks in `scripts/hooks/` (wired in the committed `.claude/settings.json`) keep the assistant honest: `guard_secrets.py` blocks any attempt to read, print, or search the credentials file or the environment; `log_tool_use.py` writes one masked line per tool call to `_generated/agent-actions/`; `guard_state_writes.py` keeps client profiles to one `## Current State` plus an append-only `## Log`; and `session_context.py` starts each session with the branch, uncommitted work, and the newest handoff. Scripts load credentials themselves through `scripts/envload.py`, and a one-off call goes through `python3 scripts/with-env.py -- <command>`.
 
 Two proof commands, run from the vault root (expect `exit=2`, then `exit=0`):
 
@@ -199,16 +206,15 @@ echo '{"tool_name":"Read","tool_input":{"file_path":"README.md"}}' | python3 scr
 ## Install the System Journal (optional)
 
 The System Journal turns every Claude Code session into a durable, checkable record so a later
-review can spot what keeps coming back. It ships in `templates/scripts/system-journal/` (full
+review can spot what keeps coming back. It ships in `scripts/system-journal/` (full
 reference: that folder's `README.md`). This template ships **capture** only: there is no weekly
 reflection command and no Themes writer yet.
 
 In the cloud edition, capture happens through **repo-level hooks** that ship with your vault to
 every container:
 
-1. **Wire the hooks.** The hook block is already in `examples/settings.json`, which `/onboard`
-   installs as your vault's committed `.claude/settings.json` (a standalone copy is in
-   `examples/cloud-hooks.settings.json` if you need to merge it into an existing file by hand).
+1. **Wire the hooks.** The hook block is already in the committed `.claude/settings.json`
+   that ships at the root of the template.
    The hooks run `scripts/cloud-land.sh` (lands the session's file edits on `main` without the
    agent running git) and `scripts/system-journal/cloud-journal.sh` (writes the evidence record
    and distills one journal line).

@@ -102,7 +102,7 @@ Claude Code documentation also mentions `~/.claude/settings.json` (in the worksp
 
 ### Guardrail hooks
 
-`/onboard` installs four small hooks with `examples/settings.json` (merged into your vault's `.claude/settings.json`). They guarantee that Claude cannot open or print your credentials file or the environment (your scripts still use the logins through `scripts/envload.py` and `scripts/with-env.py`), that every tool call is logged with secrets masked, that a client profile keeps exactly one `## Current State` plus an append-only `## Log`, and that each session starts with the branch, uncommitted work, and latest handoff. To prove they are on, run the two commands in the README "Guardrails" section from the vault root: the first must exit 2 (blocked) and the second exit 0.
+`/onboard` installs four small hooks with the committed `.claude/settings.json` (merged into your vault's settings). They guarantee that Claude cannot open or print your credentials file or the environment (your scripts still use the logins through `scripts/envload.py` and `scripts/with-env.py`), that every tool call is logged with secrets masked, that a client profile keeps exactly one `## Current State` plus an append-only `## Log`, and that each session starts with the branch, uncommitted work, and latest handoff. To prove they are on, run the two commands in the README "Guardrails" section from the vault root: the first must exit 2 (blocked) and the second exit 0.
 
 ## Step 3: Create Your Notes Folder (Vault)
 
@@ -131,7 +131,7 @@ For a detailed guide on folder structure and how everything fits together, see t
 
 The instruction manual (called `CLAUDE.md`) is the most important file in the system. Claude reads it every session to know how you want things done.
 
-1. Copy the template from `templates/CLAUDE.md` in this repository
+1. Copy the template from `CLAUDE.md` at the root of this repository
 2. Paste it into a new file called `CLAUDE.md` at the root of your notes folder
 3. Customize it:
    - Replace `[Your Name]` with your name

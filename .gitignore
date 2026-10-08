@@ -1,42 +1,22 @@
-# Environment and secrets
 .env
 .env.*
 !.env.example
-
-# macOS
+*.pem
+*.key
+*.p8
 .DS_Store
-._*
-
-# Claude Code (ignore everything except commands/)
-.claude/*
-!.claude/commands/
-!.claude/skills/
-
-# Node
-node_modules/
-
-# Python
 __pycache__/
 *.pyc
-*.pyo
+node_modules/
 .venv/
-
-# Logs
-*.log
-/tmp/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# PUBLIC REPO SAFETY BACKSTOP
-# This repo is public and ships to clients. `brainstorming` and `writing-plans`
-# write client-specific specs and plans into docs/superpowers/ by default.
-# Internal process/SOP work belongs in the Brain vault (Integral/SOPs/), not here.
-docs/superpowers/
-.handoffs/
-
-# Hook action log (local, masked, per machine)
+venv/
+.pytest_cache/
+.claude/*
+!.claude/settings.json
+!.claude/commands/
+!.claude/skills/
+.playwright-mcp/
 _generated/agent-actions/
+_generated/landing.log
+.handoffs/
+docs/superpowers/

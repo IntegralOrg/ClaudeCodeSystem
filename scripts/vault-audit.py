@@ -17,7 +17,7 @@ import time
 from datetime import date, datetime, timedelta
 
 ALWAYS_PROTECTED = [".git", ".git-cloud", ".claude", ".obsidian", "Attachments",
-                    "node_modules", "cowork-commands", "_generated"]
+                    "node_modules", "cowork-commands", "_generated", "docs", "scripts", ".github"]
 
 # The audit's own operational files (schema, index, staged trash) live here,
 # deliberately OUT of .claude/. Cloud `acceptEdits` auto-approves Edit/Write

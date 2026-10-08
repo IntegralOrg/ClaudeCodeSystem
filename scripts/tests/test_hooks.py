@@ -72,7 +72,7 @@ def test_bash_with_env_wrapper_allowed():
     assert guard_secrets.decide("Bash", {"command": "python3 scripts/with-env.py -- curl -s https://api.example.com"}) is None
 
 def test_bash_env_example_allowed():
-    assert guard_secrets.decide("Bash", {"command": "cat templates/.env.example"}) is None
+    assert guard_secrets.decide("Bash", {"command": "cat .env.example"}) is None
 
 def test_bash_env_var_usage_allowed():
     # Using a variable is fine; printing it is not.

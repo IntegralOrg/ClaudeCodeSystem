@@ -85,7 +85,7 @@ RIZE_API_KEY=...
 # SERVICE_API_KEY=...
 ```
 
-See `templates/.env.example` for a full list of supported variables with descriptions.
+See `.env.example` for a full list of supported variables with descriptions.
 
 ### How the AI Uses It
 
