@@ -25,6 +25,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Repository renamed** -- `IntegralOrg/ClaudeCodeSystem-Cloud` is now `IntegralOrg/ClaudeCodeSystem`; the separate Mac edition is being archived.
 - **Monthly Review** -- writes `Work/Monthly/YYYY-MM-DD Monthly Review.md`, which the health hook reads.
 
+### Fixed
+- Setup step 3 attaches the repository to each routine and verifies it with `get_trigger`; connectors are attached by hand (the `connectors` parameter is refused for some organizations).
+
 ### Removed
 - **`/onboard`, `/train`, `/connect`, `/finish`** (both command folders), `docs/onboarding-guide.md`, Wispr Flow from setup, every reference to the previous note editor, `examples/settings.json` and `examples/cloud-hooks.settings.json` (now `.claude/settings.json`).
 
