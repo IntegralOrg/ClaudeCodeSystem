@@ -74,7 +74,7 @@ def test_unknown_routine_is_usage_error(tmp_path):
 
 def test_documented_invocations_never_name_the_credentials_file():
     root = SCRIPT.parents[1]
-    for doc in ["System/Setup Procedure.md", ".claude/commands/eod.md", ".claude/commands/vault-audit.md", ".claude/commands/monthly-review.md"]:
+    for doc in ["System/Setup Procedure.md", ".claude/commands/eod.md", ".claude/commands/vault-audit.md"]:
         p = root / doc
         if p.exists():
             for line in p.read_text().splitlines():

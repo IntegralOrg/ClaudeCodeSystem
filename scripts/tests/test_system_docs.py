@@ -82,17 +82,17 @@ def test_adding_your_computer_order_and_content():
 def test_how_this_works_states_the_brakes_and_gaps():
     text = read("How This Works")
     has(text, "Bash", "guard", "merge=union", "fetch `System/` from the template", "landing.log")
-    has(text, "landing_health", "routine_health", "on branch", "Work/Monthly/YYYY-MM-DD Monthly Review.md")
+    has(text, "landing_health", "routine_health", "on branch")
 
 
 def test_routines_doc_has_the_manual_path():
     text = read("Routines")
     has(text, "Create a routine by hand", "environment", "GitHub app", "not live")
-    has(text, "create_trigger", "persist_session", "Work/Monthly/YYYY-MM-DD Monthly Review.md")
+    has(text, "create_trigger", "persist_session")
     by_hand = text[text.index("## Create a routine by hand"):text.index("## If a routine is stale")]
     has(by_hand, "Repository: choose `brain`")
     has(text, "get_trigger", "connectors")
-    for title in ("End of Day", "Vault Hygiene", "Monthly Review"):
+    for title in ("End of Day", "Vault Hygiene"):
         assert f"## {title}\n- live_since: not live" in text, title
 
 
@@ -108,7 +108,7 @@ def test_public_repo_clean_of_internal_names():
 
 def test_go_live_flip_edits_the_first_bullet_never_adds_one():
     for folder in (".claude/commands", "cowork-commands"):
-        for name in ("eod", "vault-audit", "monthly-review"):
+        for name in ("eod", "vault-audit"):
             text = (ROOT / folder / f"{name}.md").read_text(encoding="utf-8")
             assert "has no `live_since`" not in text, (folder, name)
             has(text, "change that same bullet", "never add a second live_since bullet")

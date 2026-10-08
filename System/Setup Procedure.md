@@ -21,9 +21,9 @@ Fields: owner name, role, company, company one-liner, tools, week shape, first t
 ## 2. Build the vault
 
 - Write `CLAUDE.md` from the skeleton: fill the `## Owner` section (name, role, company, time zone as an IANA name, and `email: <owner email>` on its own line), then replace the placeholder line under each of `## Company`, `## Tools I live in`, `## The shape of my week`, and `## First jobs for this system`; keep every rule and the `System/` reference intact.
-- Create folders: `Work/Clients/`, `Work/Projects/`, `Work/Daily/`, `Work/Monthly/`, `Personal/`, `Resources/Reference/`, `Inbox/`.
+- Create folders: `Work/Clients/`, `Work/Projects/`, `Work/Daily/`, `Personal/`, `Resources/Reference/`, `Inbox/`.
 - For each client or project the user named, create a page from `Templates/Client Note.md`.
-- Set `timezone:` in every file under `System/routines/` to the user's zone as an IANA name (for example `America/New_York`), then edit the three routine sections of `System/Routines.md` in place (the `## End of Day`, `## Vault Hygiene`, `## Monthly Review` sections) to match those files; keep every other section of the file, including "Create a routine by hand" and "If a routine is stale or not live".
+- Set `timezone:` in every file under `System/routines/` to the user's zone as an IANA name (for example `America/New_York`), then edit the two routine sections of `System/Routines.md` in place (the `## End of Day` and `## Vault Hygiene` sections) to match those files; keep every other section of the file, including "Create a routine by hand" and "If a routine is stale or not live".
 
 ## 3. Create the routines
 
@@ -40,7 +40,7 @@ Call `mcp__Claude_Code_Remote__list_triggers` first. For each file in `System/ro
 
 If these tools are not available in this session (a local session usually has no `Claude_Code_Remote` server), follow "Create a routine by hand" in `System/Routines.md` and tell the user you will verify on the next run. Mark every routine "not live" until its first run reports its keys present.
 
-`System/Routines.md` is read by the vault's health hooks, so keep its shape exactly: one `## <title>` heading per routine using the `title:` from its file in `System/routines/` (`End of Day`, `Vault Hygiene`, `Monthly Review`), and the **first** bullet under each heading is `- live_since: not live` (or `- live_since: YYYY-MM-DD` once the first run has reported its keys present). Then bullets for the schedule, what it needs (keys, connectors), the routine id, and the environment id:
+`System/Routines.md` is read by the vault's health hooks, so keep its shape exactly: one `## <title>` heading per routine using the `title:` from its file in `System/routines/` (`End of Day`, `Vault Hygiene`), and the **first** bullet under each heading is `- live_since: not live` (or `- live_since: YYYY-MM-DD` once the first run has reported its keys present). Then bullets for the schedule, what it needs (keys, connectors), the routine id, and the environment id:
 
 ```markdown
 ## End of Day
@@ -51,7 +51,7 @@ If these tools are not available in this session (a local session usually has no
 - environment id: <environment id, or "not created yet">
 ```
 
-Write the same shape for `## Vault Hygiene` and `## Monthly Review`, in that order after End of Day.
+Write the same shape for `## Vault Hygiene`, after End of Day.
 
 ## 4. Keys
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """SessionStart: the connector-free push channel for routine health. Reads repo state only:
-the newest daily note (End of Day's output), the newest heading in the Vault Hygiene audit log, the
-newest Monthly Review output, and `live_since:` values in System/Routines.md. Prints one line per
+the newest daily note (End of Day's output), the newest heading in the Vault Hygiene audit log, and
+`live_since:` values in System/Routines.md (a section whose heading matches no known routine and no file in
+System/routines/, such as a retired routine, is ignored). Prints one line per
 stale routine, prefixed "Tell the user first:". A routine that never produced output and has no
 live_since is "not yet run" (End of Day's job) and is never reported. Also reports any
 line of the newest daily note's `## Routine health` section that says a key or connector is missing.
@@ -18,14 +19,12 @@ from _common import is_template_repo, project_dir, run  # noqa: E402
 
 EOD_MAX_WEEKDAYS = 3
 HYGIENE_MAX_DAYS = 2
-MONTHLY_MAX_DAYS = 35
 NOT_LIVE_AFTER_DAYS = 2
 
 # slug -> (display name, aliases matched in System/Routines.md)
 KNOWN = {
     "eod": ("EOD", ("eod", "end of day", "end-of-day")),
     "vault-hygiene": ("Vault Hygiene", ("vault hygiene", "vault-hygiene")),
-    "monthly-review": ("Monthly Review", ("monthly review", "monthly-review")),
 }
 DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
 SETUP_DONE_RE = re.compile(r"setup\b.{0,20}\b(complete|completed|finished|done)\b|\b(completed|finished)\b.{0,20}\bsetup\b", re.I)
@@ -73,28 +72,6 @@ def newest_audit_heading(root):
     dates = [to_date(m.group(1)) for m in re.finditer(r"^##\s+(\d{4}-\d{2}-\d{2})", f.read_text(encoding="utf-8", errors="replace"), re.M)]
     dates = [d for d in dates if d]
     return max(dates) if dates else None
-
-
-def newest_monthly_output(root):
-    """Newest Monthly Review output date. Convention: Work/Monthly/YYYY-MM-DD Monthly Review.md; a month-only
-    name such as 2026-09.md counts as the last day of that month."""
-    files = list((root / "Work" / "Monthly").glob("*.md")) + list((root / "Work").glob("Monthly Review*")) \
-        + list((root / "Work").glob("*/Monthly Review*"))
-    best = None
-    for f in files:
-        d = None
-        m = re.search(r"(\d{4})-(\d{2})-(\d{2})", f.name)
-        if m:
-            d = to_date(m.group(0))
-        else:
-            m = re.search(r"(\d{4})-(\d{2})(?!\d)", f.name)
-            if m:
-                y, mo = int(m.group(1)), int(m.group(2))
-                if 1 <= mo <= 12:
-                    d = (date(y + (mo == 12), mo % 12 + 1, 1) - timedelta(days=1))
-        if d and (best is None or d > best):
-            best = d
-    return best
 
 
 def norm_heading(text):
@@ -162,7 +139,7 @@ def setup_date(notes):
 
 def schedule_dom(root, slug):
     """Day-of-month field of the routine's cron `schedule:` in System/routines/<slug>.md, or "*" when unknown
-    (a missing file counts as daily, except the known monthly routine)."""
+    (a missing file counts as daily)."""
     try:
         text = (root / "System" / "routines" / f"{slug}.md").read_text(encoding="utf-8", errors="replace")
         m = re.search(r"^schedule:\s*[\"']?([^\"'\n]+)", text, re.M)
@@ -171,7 +148,7 @@ def schedule_dom(root, slug):
             return fields[2]
     except Exception:
         pass
-    return "1" if slug == "monthly-review" else "*"
+    return "*"
 
 
 def first_run_after(setup, dom):
@@ -241,10 +218,6 @@ def problems(root, today):
     hyg_ref = newest_audit_heading(root) or listed.get("vault-hygiene")
     if hyg_ref and (today - hyg_ref).days > HYGIENE_MAX_DAYS:
         out.append(f"Routine Vault Hygiene has not run since {hyg_ref.isoformat()}")
-
-    mon_ref = newest_monthly_output(root) or listed.get("monthly-review")
-    if mon_ref and (today - mon_ref).days > MONTHLY_MAX_DAYS:
-        out.append(f"Routine Monthly Review has not run since {mon_ref.isoformat()}")
 
     done = setup_date(notes) if listed else None
     if done and (today - done).days >= NOT_LIVE_AFTER_DAYS:

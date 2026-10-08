@@ -13,7 +13,7 @@ updated: 2026-10-08
 2. **Files change.** A task goes into `Inbox/`, a client page gets a new line, the daily note grows.
 3. **The landing hook saves the work.** When Claude finishes a turn, a hook commits the changes and puts them on `main`, the one branch that counts. In a cloud session the cloud landing script does it; on a computer, `scripts/land-local.sh` does it. You never see Git.
 4. **Routines read the repository on a schedule** (below) and write their results back as files.
-5. **The record is files too:** the daily note in `Work/Daily/`, the hygiene report in `_generated/vault-hygiene/`, and the monthly review in `Work/Monthly/`.
+5. **The record is files too:** the daily note in `Work/Daily/`, and the hygiene report in `_generated/vault-hygiene/`.
 
 ## What runs when
 
@@ -21,13 +21,12 @@ updated: 2026-10-08
 |---|---|---|
 | End of Day | Weeknights, 11 PM your time | Reads your calendar and email (and calls and Slack when connected), writes `Work/Daily/<date>.md`, updates client pages, checks that the other routines ran, and reaches you outside the vault when something needs you |
 | Vault Hygiene | Every night, 1 AM your time | Backfills missing frontmatter, reports repeated frontmatter keys, finds duplicate subjects, marks canonical files, writes `_generated/vault-hygiene/audit-log.md` |
-| Monthly Review | The 1st of the month, 8 AM your time | Repairs the vault, rebuilds the knowledge graph, writes a coaching note to `Work/Monthly/YYYY-MM-DD Monthly Review.md` |
 
 Their definitions are in `System/routines/`; whether each is live is in `System/Routines.md`.
 
 ## Where things live
 
-- `Work/`: clients, projects, daily notes, monthly reviews.
+- `Work/`: clients, projects, and daily notes.
 - `Personal/`: anything private to you.
 - `Resources/`: reference material, how-tos, notes worth keeping.
 - `System/`: these guidance files and the routine definitions. Claude answers questions about the system from here.
@@ -52,7 +51,7 @@ Markdown files use `merge=union`, which means that when two sessions change the 
 Two small hooks run at the start of every session (cloud or local) and speak first, without needing Gmail or a calendar:
 
 - `landing_health.py` reads `_generated/landing.log` and says so when saves have been failing, or when landing appears to be switched off (several `on branch` or `locked` lines in a row).
-- `routine_health.py` says when a routine has not run when it should (End of Day, Vault Hygiene, or Monthly Review), using the daily notes, the hygiene log, and the `live_since` lines in `System/Routines.md`.
+- `routine_health.py` says when a routine has not run when it should (End of Day or Vault Hygiene), using the daily notes, the hygiene log, and the `live_since` lines in `System/Routines.md`.
 
 When Gmail or Google Calendar is connected, End of Day adds a push outside the vault: an email to the address in the `## Owner` section of `CLAUDE.md`, or, if it cannot send, an all-day calendar event titled "Brain needs you: <reason>". It sends a given reason at most once a week.
 

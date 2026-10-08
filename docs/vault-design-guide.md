@@ -198,7 +198,7 @@ This is the most important file in the system. It's a markdown file at the vault
 
 ### What Goes in CLAUDE.md
 
-1. **Startup checklist** -- What the AI should do first every session (verify date, check for monthly reviews, check inbox for pending items).
+1. **Startup checklist** -- What the AI should do first every session (verify date, check inbox for pending items).
 2. **Quick reference table** -- Where to find key things (inbox, credentials, client profiles, Today.md, transcripts).
 3. **Folder structure** -- So the AI knows where everything lives.
 4. **Available integrations** -- What APIs and tools are connected, with brief descriptions. Including local tools like transcript classifiers and API fetcher scripts.
@@ -254,13 +254,6 @@ Interactive 3-5 minute review (see "Daily Workflow System" above for details). K
 - Stale goal detection with non-blocking refresh prompts
 - Calendar time block creation on Google Calendar
 - Overcommitment guard (forces prioritization if work exceeds capacity)
-
-### Monthly Review (`/monthly-review`)
-
-Triggered by a non-blocking nudge at the start of a new month (not auto-triggered). Covers:
-- System feedback (what's working, what's clunky)
-- Vault cleanup (stuck inbox items, notes to archive, misplaced files)
-- Testimonial scan (searches Slack and transcripts for positive client feedback)
 
 ### Other Skills
 
@@ -333,20 +326,6 @@ Templates use `{{date}}` and `{{title}}` placeholders that Claude fills in when 
 
 ---
 
-## Monthly Reviews
-
-CLAUDE.md includes a "Last Monthly Review" date. Every session, the AI checks if a new month has started. If so, it gives you a **one-line nudge** ("the monthly review is due, run `/monthly-review` whenever you're ready") and proceeds with whatever you asked for. It does not block work or auto-trigger the review.
-
-When you do run `/monthly-review`, it covers:
-
-- **System feedback** -- What's working, what's clunky, what's missing
-- **Vault cleanup** -- Stuck inbox items, notes to archive, outdated info, misplaced files
-- **Testimonial scan** -- Searches Slack and call transcripts for positive client feedback (appreciation, praise, results) and adds approved quotes to a testimonials file
-
-After the review, improvement ideas go to a dedicated `System Improvements.md` file, workflow changes update CLAUDE.md, and the review date gets bumped.
-
----
-
 ## Putting It Together: How a Typical Day Works
 
 1. **End of day**: Run `/eod` before wrapping up. Claude processes your calls, emails, Slack messages, and tasks. It extracts action items, routes them to the right client files, syncs with your task manager, generates a daily summary, and creates tomorrow's `Today.md` with schedule, priorities, and meeting prep. You can walk away while it runs.
@@ -408,7 +387,7 @@ The system gets better every time you use it:
 - When Claude makes a mistake, add a guideline to CLAUDE.md
 - When you repeat something manually, turn it into a skill
 - When you learn a quirk about a tool, save it to Claude's memory files
-- Run a monthly review to clean up and improve the system
+- Let the nightly `/vault-audit` (Vault Hygiene) keep the vault clean, and keep improvement ideas in a dedicated `System Improvements.md` file
 
 The goal is not to build the perfect system on day one. It is to build a system that improves itself every day.
 
@@ -423,7 +402,7 @@ A normal notes vault is a passive knowledge base. You write notes, you read note
 - The EOD routine ensures nothing falls through the cracks, even on busy days with 5+ calls.
 - Tomorrow's plan is built before you close the laptop. Morning review takes 3-5 minutes, not 30.
 - Transcripts auto-route to the right client folder. Time tracking auto-classifies if configured.
-- The monthly review cycle keeps the system itself from getting stale.
+- The nightly Vault Hygiene routine keeps the system itself from getting stale.
 - The AI remembers what it learned last session and applies it next session.
 
 The vault isn't just where information lives. It's the operating system for your work.

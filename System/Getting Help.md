@@ -18,7 +18,7 @@ The agent answers anything covered in `System/`: how the system works, how to co
 Eva is the assistant you spoke with during your interview, and she can also help you after setup. Ask your onboarding contact for the Eva link. Bring:
 
 - the last error line you saw (copy it as text),
-- the routine name involved (`End of Day`, `Vault Hygiene`, or `Monthly Review`),
+- the routine name involved (`End of Day` or `Vault Hygiene`),
 - the **Routine health** section of the newest note in `Work/Daily/`.
 
 ## 3. Dean, for white-glove sessions
