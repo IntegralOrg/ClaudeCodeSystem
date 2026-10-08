@@ -3,7 +3,7 @@
 > ## THIS REPOSITORY IS PUBLIC AND SHIPS TO CLIENTS
 >
 > Everything committed here is world-readable and lands in client hands. Verify with
-> `gh repo view IntegralOrg/ClaudeCodeSystem-Cloud --json visibility` before doubting it.
+> `gh repo view IntegralOrg/ClaudeCodeSystem --json visibility` before doubting it.
 >
 > **Never write into this repo:** client names paired with their systems or security posture, PR
 > numbers or their findings, vulnerabilities, credentials, plan or billing state, developer names,
