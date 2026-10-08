@@ -2,17 +2,18 @@
 
 An AI-powered personal assistant built on [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and a Git-backed Markdown vault. The vault is the operating system; Claude Code is the brain. Together they handle task management, meeting processing, email triage, time tracking, client work, and daily planning -- replacing a human executive assistant.
 
-This is the **cloud edition**: it runs in [Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web), in your browser. Your vault is a Git repository of Markdown files that Claude reads and writes directly in a cloud workspace -- nothing to install on your own computer.
+This is the **cloud edition**: it starts in [Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web), in your browser, and can be added to your own computer later. Your vault is a private Git repository of Markdown files that Claude reads and writes directly. Nothing has to be installed to start.
 
-> **You do not need to be technical.** Claude will walk you through everything step by step.
+> **You do not need to be technical.** Claude walks you through everything step by step.
 >
-> **What you will need:** A GitHub account (for your vault repository) and a [Claude subscription](https://claude.ai) that includes Claude Code on the web.
+> **What you will need:** a GitHub account and a Claude Max plan (routines and cloud sessions need it). The front door for non-technical readers is [the one-page guide](https://integralorg.github.io/ClaudeCodeSystem/).
 
 ## Get Started
-
-1. On GitHub, click **Use this template** to create your own private vault repository from this one.
-2. Open your new repository in [Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web).
-3. Tell Claude what you do and what you want help with. The vault's `CLAUDE.md` is the instruction manual Claude reads at the start of every session.
+You need a GitHub account and a Claude Max plan.
+1. Click **Use this template** (private, name it `brain`).
+2. Open the new repository at claude.ai/code and install the Claude GitHub app on it when asked. Setup starts by itself in that first session.
+3. Put it on your computer: `System/Adding Your Computer.md` (Claude Desktop, GitHub Desktop, clone to `~/Brain`).
+Questions: ask your agent. It answers from `System/`.
 
 Connection steps for each tool (calendar, email, tasks, calls, chat) are in [Connecting Tools](System/Connecting%20Tools.md).
 
@@ -45,77 +46,88 @@ Connection steps for each tool (calendar, email, tasks, calls, chat) are in [Con
 
 ## How It Works
 
+**Setup runs itself.** A new vault carries a `SETUP_PENDING` marker. A session-start hook sees it and tells Claude to follow `System/Setup Procedure.md`: it asks for the transcript of your discovery interview (or five short questions), builds your `CLAUDE.md`, folders, and client pages, creates your routines, checks your keys, and then deletes the marker so setup never runs twice.
+
 **The daily loop:**
-1. **End of day** -- Run `/eod` before wrapping up. Claude processes your calls, emails, Slack, and tasks, then builds tomorrow's plan. You can walk away while it runs.
-2. **Morning** -- Read `Inbox/Today.md` (pre-built schedule, priorities, meeting prep)
-3. **Morning** -- Run `/morning` (3-5 min interactive review: confirm plan, adjust, create calendar blocks)
-4. **All day** -- Work with Claude Code as needed (drafting, research, task management, document creation)
-5. **End of day** -- Cycle repeats
+1. **You work with Claude** (in Claude Desktop, or in a cloud session on the web or your phone): drafting, research, tasks, notes.
+2. **Your work is saved for you.** When Claude finishes a turn, a Stop hook lands the changes on `main`: `scripts/cloud-land.sh` in the cloud, `scripts/land-local.sh` on your computer. You never run Git.
+3. **Routines run on a schedule** from the definitions in `System/routines/`: End of Day (weeknights), Vault Hygiene (nightly), Monthly Review (the 1st). Which are live is recorded in `System/Routines.md`.
+4. **You are told when something is wrong**, even with no connectors: at the start of every session two hooks speak first. `landing_health.py` says when saves have been failing; `routine_health.py` says when a routine has not run when it should.
 
-## What You Get
+**Keys are one human step.** Routines name the keys they need; `python3 scripts/check-keys.py` reports which names are missing and never prints a value.
 
-A vault created from this template comes with:
+## What the Setup Creates
 
-- **Permissions** configured so Claude can work without interrupting you
-- **Notes folder** (a Git-backed Markdown vault) with organized folders for clients, projects, and tasks
-- **Instruction manual** (CLAUDE.md) that Claude reads every session, and that you fill in with your name, schedule, clients, and preferences
-- **Connection steps** for your calendar, email, task manager, and other services
-- **Commands** for morning review, end-of-day processing, and other workflows
+A vault created from this template ends up with:
+
+- **A `CLAUDE.md` filled in for you** (name, role, company, time zone, tools, week shape, first jobs) that Claude reads every session.
+- **Folders** for clients, projects, daily notes, monthly reviews, personal notes, and reference, plus a client page for each client or project you named.
+- **Three scheduled routines** (End of Day, Vault Hygiene, Monthly Review) defined in `System/routines/` and recorded in `System/Routines.md`.
+- **Guard hooks and an action log** wired in the committed `.claude/settings.json`, the same in the cloud and on your computer.
+- **The System Journal** capturing every session, and **session telemetry** showing where the system wastes effort.
+- **A guidance library** in `System/` that your agent answers questions from.
+- **Slash commands** for morning review, end-of-day processing, handoffs, and other workflows.
 
 ## Repository Structure
 
 ```
 ClaudeCodeSystem/
-├── CLAUDE.md                           # The client's vault CLAUDE.md skeleton
-├── .env.example                        # All env var names with descriptions
+├── CLAUDE.md                           # The vault's instruction manual (filled in by setup)
+├── SETUP_PENDING                       # Marker: setup runs from System/Setup Procedure.md until it is deleted
+├── CHANGELOG.md                        # Template change history
+├── LICENSE                             # CC BY-NC-ND 4.0
+├── README.md                           # This file
+├── .env.example                        # Key names with descriptions (never values)
 ├── .gitattributes                      # Markdown union-merge so parallel sessions never conflict
 ├── .gitignore                          # Allow-list for .claude/, secrets and local state ignored
-├── README.md                           # This file
-├── .claude/commands/                   # ALL Claude Code slash commands (auto-discovered by Claude Code)
-│   ├── handoff.md                      # Save current work state to a named briefing file
-│   ├── pickup.md                       # Resume from a named handoff in a fresh session
-│   ├── strategy.md / optimize.md       # Decision-making + tool/process improvement
-│   ├── build-skill.md / learn.md       # Turn tasks into skills · capture knowledge
-│   ├── graph-sync.md / graph-daily.md  # Knowledge graph maintenance
-│   ├── morning.md                      # Interactive morning review command
-│   ├── eod.md                          # End of day: monolithic (all phases in one)
-│   ├── eod-gather.md                   # EOD Phase 1: data gathering
-│   ├── eod-sync.md                     # EOD Phase 2: dedup, sync, hygiene
-│   ├── eod-time.md                     # EOD Phase 3: time tracking (if configured)
-│   ├── eod-note.md                     # EOD Phase 4: daily note generation
-│   ├── eod-today.md                    # EOD Phase 5: tomorrow's plan generation
-│   ├── monthly-review.md               # Monthly system review
-│   ├── brain-dump.md                   # Manual brain dump capture
-│   └── daily-note.md                   # Simplified daily note (lightweight EOD)
-├── .claude/skills/                     # Skills with scripts/references (folder per skill)
-│   └── drive-screen/                   # Take control of the desktop (Windows/macOS/Linux) when a step must be clicked through
-├── cowork-commands/                    # CoWork versions (YAML frontmatter, manual upload)
-│   └── *.md                            # Mirror of all commands with YAML frontmatter
+├── .claude/
+│   ├── settings.json                   # Committed permissions and the guard, landing and session hooks
+│   ├── commands/                       # Slash commands (auto-discovered): morning, eod and phases, handoff, pickup, vault-audit, ...
+│   └── skills/drive-screen/            # Take control of the desktop when a step must be clicked through
+├── .github/workflows/                  # vault-autosync.yml (skipped on the template itself)
+├── System/
+│   ├── Setup Procedure.md              # What the first session runs, step by step
+│   ├── How This Works.md               # The loop, the brakes, what to check when something seems off
+│   ├── Connecting Tools.md             # Per-tool connection click paths
+│   ├── Routines.md                     # Which routines are live, ids, schedules, how to create one by hand
+│   ├── Adding Your Computer.md         # Claude Desktop, GitHub Desktop, clone to ~/Brain
+│   ├── Getting Help.md                 # Where to ask, what to send
+│   └── routines/                       # Definitions: eod.md, vault-hygiene.md, monthly-review.md
+├── Templates/Client Note.md            # Client profile skeleton
+├── Resources/Reference/                # Local Routines Registry, How We Think About AI Agents
+├── cowork-commands/                    # CoWork versions of the commands (YAML frontmatter, manual upload)
 ├── docs/
-│   ├── DEVELOPING.md                   # Maintainer notes for this template (not part of a client vault's behavior)
+│   ├── index.html                      # The one-page front door (GitHub Pages)
+│   ├── DEVELOPING.md                   # Maintainer notes for this template
 │   ├── vault-design-guide.md           # How to build the vault (folder structure, inbox, templates)
 │   ├── integration-architecture.md     # How Claude connects to your tools
 │   └── daily-workflow.md               # Today.md + /morning + EOD pipeline
-├── System/                             # Setup procedure, guidance the agent answers from, routine definitions
-├── .claude/settings.json               # Committed vault permissions and the guardrail + cloud-landing hooks
-├── .github/workflows/                  # vault-autosync.yml (skipped on the template itself)
-├── Templates/Client Note.md            # Client profile skeleton
-├── Resources/Reference/                # Local Routines Registry, How We Think About AI Agents
-├── scripts/                            # Hooks, credential helpers, vault audit, graph renderer, system journal
-│   ├── hooks/                          # guard_secrets, log_tool_use, guard_state_writes, session_context
-│   ├── system-journal/                 # Session capture pipeline
+├── scripts/
+│   ├── hooks/                          # guard_secrets, guard_state_writes, guard_vault_path, log_tool_use,
+│   │                                   #   setup_pending, landing_health, routine_health, session_context
+│   ├── cloud-land.sh                   # Cloud sessions: land edits on main (Stop hook)
+│   ├── land-local.sh                   # Local sessions: land edits on main (Stop hook)
+│   ├── check-keys.py                   # Which key names each routine needs and which are missing
+│   ├── envload.py / with-env.py        # Load credentials for scripts, or for a one-off command
+│   ├── vault-audit.py / vault-embed.py # Nightly hygiene and same-subject detection
+│   ├── graph-render.py                 # Render the knowledge graph from frontmatter
+│   ├── profile-convert.py              # Convert profiles to the Current State / Log shape
+│   ├── sanitize_ingest.py              # Clean text before it is written into the vault
+│   ├── local-routines-backup.sh        # Mirror local desktop routines into the vault
+│   ├── system-journal/                 # Session capture, distill, telemetry
 │   └── tests/                          # Unit tests (python -m pytest scripts/tests -q)
-├── _generated/                         # Machine-written output (action log, audit state)
-├── examples/scripts/                   # Optional scripts (NOT commands), e.g. md-to-gdoc.py
-├── .gitignore
-└── LICENSE                             # CC BY-NC-ND 4.0
+├── _generated/                         # Machine-written output (action log, audit state, landing log)
+└── examples/scripts/                   # Optional scripts (NOT commands), e.g. md-to-gdoc.py
 ```
 
 ## Documentation
 
 | Document | What It Covers |
 |----------|---------------|
+| [How This Works](System/How%20This%20Works.md) | The loop, what runs when, the brakes, what to check when something seems off |
+| [Routines](System/Routines.md) | Which routines are live, their schedules and ids, how to create one by hand, what to do when one is stale |
 | [Connecting Tools](System/Connecting%20Tools.md) | Per-tool connection click paths: Gmail, Google Calendar, Slack, Fathom, ClickUp, and Claude plugins |
+| [Adding Your Computer](System/Adding%20Your%20Computer.md) | Claude Desktop, GitHub Desktop, and cloning the vault to `~/Brain` |
 | [Vault Design Guide](docs/vault-design-guide.md) | Folder structure, inbox system, CLAUDE.md design, skills, integrations, monthly reviews, step-by-step build guide |
 | [Integration Architecture](docs/integration-architecture.md) | How Claude connects to your tools: direct connections, tool credentials, custom scripts, scheduled automation |
 | [Daily Workflow](docs/daily-workflow.md) | Today.md structure, /morning interactive review, EOD 5-phase pipeline, scheduled automation, tracking list pattern, carry-forward system |
@@ -172,7 +184,7 @@ The default `/eod` flow should run as one command in one Claude session. Claude 
 
 ## Guardrails
 
-Four hooks in `scripts/hooks/` (wired in the committed `.claude/settings.json`) keep the assistant honest: `guard_secrets.py` blocks any attempt to read, print, or search the credentials file or the environment; `log_tool_use.py` writes one masked line per tool call to `_generated/agent-actions/`; `guard_state_writes.py` keeps client profiles to one `## Current State` plus an append-only `## Log`; and `session_context.py` starts each session with the branch, uncommitted work, and the newest handoff. Scripts load credentials themselves through `scripts/envload.py`, and a one-off call goes through `python3 scripts/with-env.py -- <command>`.
+Hooks in `scripts/hooks/` (wired in the committed `.claude/settings.json`) keep the assistant honest: `guard_secrets.py` blocks any attempt to read, print, or search the credentials file or the environment; `log_tool_use.py` writes one masked line per tool call to `_generated/agent-actions/`; `guard_state_writes.py` keeps client profiles to one `## Current State` plus an append-only `## Log`; `session_context.py` starts each session with the branch, uncommitted work, and the newest handoff; and `landing_health.py` and `routine_health.py` say so at session start when saves are failing or a routine has not run. Scripts load credentials themselves through `scripts/envload.py`, and a one-off call goes through `python3 scripts/with-env.py -- <command>`. The full table is in `scripts/hooks/README.md`.
 
 Two proof commands, run from the vault root (expect `exit=2`, then `exit=0`):
 
@@ -181,45 +193,9 @@ echo '{"tool_name":"Read","tool_input":{"file_path":".env"}}' | python3 scripts/
 echo '{"tool_name":"Read","tool_input":{"file_path":"README.md"}}' | python3 scripts/hooks/guard_secrets.py; echo "exit=$?"
 ```
 
-## Install the System Journal (optional)
+## Knowledge Graph
 
-The System Journal turns every Claude Code session into a durable, checkable record so a later
-review can spot what keeps coming back. It ships in `scripts/system-journal/` (full
-reference: that folder's `README.md`). This template ships **capture** only: there is no weekly
-reflection command and no Themes writer yet.
-
-In the cloud edition, capture happens through **repo-level hooks** that ship with your vault to
-every container:
-
-1. **Wire the hooks.** The hook block is already in the committed `.claude/settings.json`
-   that ships at the root of the template.
-   The hooks run `scripts/cloud-land.sh` (lands the session's file edits on `main` without the
-   agent running git) and `scripts/system-journal/cloud-journal.sh` (writes the evidence record
-   and distills one journal line).
-2. **Why hooks, not a command.** Hooks bypass the permission classifier, so an unattended cloud
-   run never stalls on a prompt. A container keeps its transcript only while it lives, so capture
-   has to happen while alive: the `Stop` hook extracts every ~60 s and distills at most every 15
-   minutes; `SessionEnd --final` does a last pass.
-3. **Push access.** The cloud environment needs push access to your vault's `origin` (main); the
-   hooks fast-forward their file onto `main` from a throwaway worktree, never your working branch.
-4. **Per-session cost.** The journal line is produced by your own `claude -p` call with the
-   default Sonnet distiller: about **nine cents per finished session**. Set `SYSTEM_JOURNAL_MODEL`
-   to change the model.
-5. **What is kept.** Your words verbatim, the agent's visible words capped, the tool calls it
-   made and the errors that came back. **No tool outputs**, no thinking, no attachments. Full
-   transcripts are never stored (and a torn-down container keeps none).
-6. **Where the files land.** `_generated/system-journal/` in your vault repo: `evidence/<YYYY-MM>/`
-   (deterministic, kept forever) and `cloud/<date>.<sid8>.json` (one journal line per session).
-7. **Cost guard and privacy.** Before any bulk re-run, read the pending count first
-   (`python3 scripts/system-journal/distill.py --dry-run | tail -1`). Everything stays in your own
-   vault repo; the audit tier (a work-only projection with personal lines dropped) is **generated
-   locally only and shipped nowhere**.
-
-**Also run your vault locally?** Then also install the Mac-side hooks so local sessions are
-captured too: `bash scripts/system-journal/install.sh --vault "$VAULT" --write-hooks` (it merges
-three hooks into your user-level `~/.claude/settings.json`). See the system-journal README.
-
-**Knowledge graph.** `scripts/graph-render.py` renders `Graph/index.md` and the MOCs from
+`scripts/graph-render.py` renders `Graph/index.md` and the MOCs from
 frontmatter and, when present, the concept index (`_generated/vault-hygiene/vault-index.json`, written by `/vault-audit`); `/graph-daily` and `/graph-sync` drive it. Graph files are
 generated, not hand-edited, and links are structural edges only (no inline wiki-link pass).
 
@@ -229,19 +205,19 @@ generated, not hand-edited, and links are structural edges only (no inline wiki-
 No. Start with Calendar + Email + your meeting transcript service. Add connections as you need them.
 
 **Do I need to install anything?**
-No. This is the cloud edition -- it runs in Claude Code on the web, in your browser. There is nothing to install on your own computer; you only need a GitHub account for your vault repository. It works from any Mac, Windows, or Linux machine with a browser.
+Not to start: setup runs in Claude Code on the web, in your browser, from any Mac, Windows, or Linux machine. To also work from your own computer, follow `System/Adding Your Computer.md` (Claude Desktop, GitHub Desktop, Git, and on Windows Python 3).
 
 **How much does this cost?**
-Claude Code on the web requires a [Claude subscription](https://claude.ai). Connections to Google, Slack, and similar services are within their free tiers for personal use. Some tools (like meeting transcript services or time trackers) have their own pricing.
+You need a [Claude Max plan](https://claude.ai) (routines and cloud sessions need it) and a free GitHub account. Connections to Google, Slack, and similar services are within their free tiers for personal use. Some tools (like meeting transcript services or time trackers) have their own pricing.
 
 **Can I use this for a team?**
 The system is designed for one person. You could adapt it for a small team, but it would need significant customization.
 
-**What if the EOD routine fails partway through?**
-If you are using the default one-command `/eod`, just run it again after fixing the issue. If you later adopt the advanced phased version, you can re-run only the failed phase.
+**What if the End of Day routine fails partway through?**
+Its next run starts fresh, and `Work/Daily/<date>.md` records which routines ran. See "If a routine is stale or not live" in `System/Routines.md`.
 
-**Can I automate the EOD to run on a schedule?**
-Yes. Create a scheduled [Routine](https://code.claude.com/docs/en/routines) in Claude Code on the web: point it at your vault repository with the prompt `/eod` and a schedule like 11:30 PM on weekdays. It runs in the cloud and pushes the results, so tomorrow's plan is ready when you sit down -- no computer left on, no cron jobs, no terminal setup. Most users still just run `/eod` manually before wrapping up for the day.
+**Can I run the routines on a schedule?**
+They already are: setup creates End of Day, Vault Hygiene, and Monthly Review as scheduled routines in your Claude account (definitions in `System/routines/`, status in `System/Routines.md`). They run in the cloud and push their results, so nothing on your computer has to be on. To create or repair one by hand, follow "Create a routine by hand" in `System/Routines.md`.
 
 ## License
 
