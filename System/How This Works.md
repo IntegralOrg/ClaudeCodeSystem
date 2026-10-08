@@ -55,6 +55,6 @@ Two small hooks run at the start of every session (cloud or local) and speak fir
 
 When Gmail or Google Calendar is connected, End of Day adds a push outside the vault: an email to the address in the `## Owner` section of `CLAUDE.md`, or, if it cannot send, an all-day calendar event titled "Brain needs you: <reason>". It sends a given reason at most once a week.
 
-## The update gap
+## Getting a new version
 
-The guidance in `System/` does not update itself yet; to refresh guidance, ask the agent to fetch `System/` from the template. Your own notes are never part of that refresh.
+Type `/update` (or paste the prompt in the template's README). The agent takes the newest version of the system in full, keeps what you have built, and reports in a few lines. Details: `System/Updating.md`.

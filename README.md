@@ -15,6 +15,12 @@ You need a GitHub account and a Claude Max plan.
 3. Put it on your computer: `System/Adding Your Computer.md` (Claude Desktop, GitHub Desktop, clone to `~/Brain`).
 Questions: ask your agent. It answers from `System/`.
 
+**Updating an existing vault.** In a session on your vault, type `/update`. If your vault is older than that command, paste this instead:
+
+> Update my system from https://github.com/IntegralOrg/ClaudeCodeSystem. Clone it to a temporary folder, then follow `System/Updating.md` from that clone.
+
+The agent takes the new version in full, keeps everything you have built or changed that is ahead of it, and reports what changed in a few lines.
+
 Connection steps for each tool (calendar, email, tasks, calls, chat) are in [Connecting Tools](System/Connecting%20Tools.md).
 
 ## Architecture
@@ -92,6 +98,7 @@ ClaudeCodeSystem/
 │   ├── Routines.md                     # Which routines are live, ids, schedules, how to create one by hand
 │   ├── Adding Your Computer.md         # Claude Desktop, GitHub Desktop, clone to ~/Brain
 │   ├── Getting Help.md                 # Where to ask, what to send
+│   ├── Updating.md                     # How the vault takes a new version of the system
 │   └── routines/                       # Definitions: eod.md, vault-hygiene.md
 ├── Templates/Client Note.md            # Client profile skeleton
 ├── Resources/Reference/                # Local Routines Registry, How We Think About AI Agents
@@ -108,6 +115,7 @@ ClaudeCodeSystem/
 │   ├── cloud-land.sh                   # Cloud sessions: land edits on main (Stop hook)
 │   ├── land-local.sh                   # Local sessions: land edits on main (Stop hook)
 │   ├── check-keys.py                   # Which key names each routine needs and which are missing
+│   ├── template-diff.py                # Sorts vault files against the template for an update
 │   ├── envload.py / with-env.py        # Load credentials for scripts, or for a one-off command
 │   ├── vault-audit.py / vault-embed.py # Nightly hygiene and same-subject detection
 │   ├── graph-render.py                 # Render the knowledge graph from frontmatter
@@ -128,6 +136,7 @@ ClaudeCodeSystem/
 | [Routines](System/Routines.md) | Which routines are live, their schedules and ids, how to create one by hand, what to do when one is stale |
 | [Connecting Tools](System/Connecting%20Tools.md) | Per-tool connection click paths: Gmail, Google Calendar, Slack, Fathom, ClickUp, and Claude plugins |
 | [Adding Your Computer](System/Adding%20Your%20Computer.md) | Claude Desktop, GitHub Desktop, and cloning the vault to `~/Brain` |
+| [Updating](System/Updating.md) | Taking a new version of the system without losing what you built |
 | [Vault Design Guide](docs/vault-design-guide.md) | Folder structure, inbox system, CLAUDE.md design, skills, integrations, step-by-step build guide |
 | [Integration Architecture](docs/integration-architecture.md) | How Claude connects to your tools: direct connections, tool credentials, custom scripts, scheduled automation |
 | [Daily Workflow](docs/daily-workflow.md) | Today.md structure, /morning interactive review, EOD 5-phase pipeline, scheduled automation, tracking list pattern, carry-forward system |

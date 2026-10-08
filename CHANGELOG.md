@@ -6,6 +6,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-08] - Updating: take the new version without losing your work
+
+### Added
+- **`/update`** (both command folders) and **`System/Updating.md`** -- an existing vault takes the newest version of the system in one pass: clone the template, read the CHANGELOG entries since the vault's own, sort the files, apply, one commit, a short report. Adopt by default; keep the vault's version only when it is ahead or the change would break something the owner relies on, and say which in one line. Never stops to ask the owner which parts to take.
+- **`scripts/template-diff.py`** -- sorts every file against the template's whole history: unedited older template files are taken without judgment, so the agent only deliberates on files the owner actually changed. Never lists or touches the owner's own files, never re-adds `SETUP_PENDING`.
+- **README** -- the copy-paste update prompt for vaults older than `/update`.
+
+### Changed
+- **CHANGELOG convention** -- an entry that removes or renames something a vault already has, or changes a file the owner fills in, carries a `### In an existing vault` list; updates follow it.
+
+### In an existing vault
+1. In `CLAUDE.md`, add "updating the system" to the topics answered from `System/` (the support-rule row and Guideline "Answering questions about this system").
+
+---
+
 ## [2026-10-08] - Monthly Review retired
 
 ### Removed
