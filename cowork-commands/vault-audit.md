@@ -3,11 +3,6 @@ name: vault-audit
 description: Nightly self-healing vault hygiene -- fixes misfiled files, backfills frontmatter, self-amends its own schema, embeds docs to detect same-subject forks, and proposes merges to a human review queue. Never asks for approval mid-run.
 ---
 
-# Vault Audit: Daily Self-Healing Hygiene
-
-Keeps the vault matching its own design contract (`_generated/vault-hygiene/vault-schema.md`) and keeps the canonical/superseded convention honest. Fully autonomous: it fixes what it finds, stages removals into `_generated/vault-hygiene/audit-trash/` (never deletes), proposes same-subject merges to a human review queue (never merges on its own judgment), and never asks for approval mid-run.
-
-**Why this exists:** vaults drift. Files land in the wrong folder, near-duplicate notes pile up, frontmatter goes missing, half-written stubs sit untouched for weeks, and two documents about the same thing quietly fork so a search returns the stale one. A monthly cleanup only catches this after months of decay have already made the vault harder to search and the agent's answers less reliable. This command catches the same drift every night, in minutes, by splitting the work two ways: a small deterministic script handles structure (walking the tree, hashing files, staging removals, embedding docs, generating candidate pairs, the invariant check) and Claude handles judgment (does this file's content match its folder, are these two files versions of one document, is the schema itself wrong). Neither one is safe alone: the script has no idea what a file means, and free-form judgment without a script drifts just as fast as the vault it's supposed to fix.
 
 Modes:
 - **Default (nightly)**: the steps below. Run standalone anytime, or as EOD Phase 5.5.
@@ -26,10 +21,11 @@ Hard rules:
 
 ## Setup
 
-0. If `scripts/vault-audit.py` or `scripts/vault-embed.py` is missing in this vault, stop and tell the user: this vault is the repository they created from the template, and both scripts ship with it, so something removed them (restoring them from the template repository fixes it). They live side by side; `vault-embed.py` imports `vault-audit.py`.
-1. `date` for today (`TODAY`).
-2. `VAULT` = vault root (directory containing CLAUDE.md). `AUDIT="python3 \"$VAULT/scripts/vault-audit.py\""`, `EMBED="python3 \"$VAULT/scripts/vault-embed.py\""`.
-3. If `_generated/vault-hygiene/vault-schema.md` is missing, stop and run Init instead.
+0. Run `python3 scripts/check-keys.py --routine vault-hygiene`. If the script exits 1, write the missing keys under `## Routine health` in the daily note and continue. If this run's keys check exits 0 and `System/Routines.md` has no `live_since` for this routine, add `live_since: <today>` there.
+1. If `scripts/vault-audit.py` or `scripts/vault-embed.py` is missing in this vault, stop and tell the user: this vault is the repository they created from the template, and both scripts ship with it, so something removed them (restoring them from the template repository fixes it). They live side by side; `vault-embed.py` imports `vault-audit.py`.
+2. `date` for today (`TODAY`).
+3. `VAULT` = vault root (directory containing CLAUDE.md). `AUDIT="python3 \"$VAULT/scripts/vault-audit.py\""`, `EMBED="python3 \"$VAULT/scripts/vault-embed.py\""`.
+4. If `_generated/vault-hygiene/vault-schema.md` is missing, stop and run Init instead.
 
 ## Step 1: Script pass
 

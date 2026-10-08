@@ -3,11 +3,6 @@ name: monthly-review
 description: Full monthly tune-up: audits and repairs the vault automatically, rebuilds the knowledge graph, then coaches you on the habits that caused the drift.
 ---
 
-# Monthly Review
-
-A full tune-up of the user's vault and agent. You audit, you **repair**, you rebuild the
-knowledge graph, and only at the very end do you talk to the user.
-
 **Run this on the last workday of each month.**
 
 ## How this command works
@@ -134,6 +129,10 @@ a remote exists but the backup was declined, failed, or could not be verified.
 
 Gather everything before reporting anything. **Produce no user-facing output during this
 phase.** Later phases consume this findings list.
+
+### 1-Precheck: Keys Check
+
+Run `python3 scripts/check-keys.py --routine monthly-review`. If the script exits 1, record the missing keys in the findings. If this run's keys check exits 0 and `System/Routines.md` has no `live_since` for this routine, add `live_since: <today>` there.
 
 ### 1a: Integrations
 

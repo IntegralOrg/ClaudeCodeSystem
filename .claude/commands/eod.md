@@ -25,14 +25,15 @@ Advanced fallback:
 
 ## Setup
 
-1. Run `date` to get today's date and current time ([Your Timezone])
-2. Do not read or source the credentials file. Scripts load credentials themselves (`scripts/envload.py`); for a one-off external call use `python3 scripts/with-env.py -- <command>`
-3. Set variables:
+1. Run `python3 scripts/check-keys.py --routine eod` and list the connectors available in this session (name each; note any of Gmail, Google Calendar that is absent). If the script exits 1 or a required connector is absent, write the names under `## Routine health` in today's daily note and continue with what is available. If this run's keys check exits 0 and `System/Routines.md` has no `live_since` for this routine, add `live_since: <today>` there.
+2. Run `date` to get today's date and current time ([Your Timezone])
+3. Do not read or source the credentials file. Scripts load credentials themselves (`scripts/envload.py`); for a one-off external call use `python3 scripts/with-env.py -- <command>`
+4. Set variables:
    - `TODAY` = current date in YYYY-MM-DD format
    - `TOMORROW` = next calendar day in YYYY-MM-DD format
    - `VAULT` = absolute path to the vault root
    - `MANIFEST` = `/tmp/eod-manifest-TODAY.md`
-4. Create the manifest file at `$MANIFEST`:
+5. Create the manifest file at `$MANIFEST`:
    ```markdown
    # EOD Manifest -- TODAY
 
@@ -41,7 +42,8 @@ Advanced fallback:
    | # | Item | Client | Type | Source | Routed To | Status |
    |---|------|--------|------|--------|-----------|--------|
    ```
-5. Check CLAUDE.md for a time tracking integration (look for an uncommented entry mentioning time tracking, Rize, Toggl, or similar). Set `HAS_TIME_TRACKING` = true or false.
+6. Check CLAUDE.md for a time tracking integration (look for an uncommented entry mentioning time tracking, Rize, Toggl, or similar). Set `HAS_TIME_TRACKING` = true or false.
+7. Read `_generated/vault-hygiene/audit-log.md` to find the newest date of the form `## YYYY-MM-DD` (Vault Hygiene's last run). If it is more than 2 days old, flag it as `STALE` for the push channel later.
 
 Cloud-workspace note: in an ephemeral cloud container, credentials usually arrive as exported environment variables rather than a logins file. Scripts read them through `scripts/envload.py`, and a one-off call goes through `python3 scripts/with-env.py -- <command>`; never read or source a logins file, and never create a stub one to satisfy a script. Also expect that some raw third-party APIs return 503s when called from datacenter IPs -- prefer an MCP connector for those services in the cloud, and do not retry the raw endpoint in a loop.
 
@@ -193,7 +195,13 @@ After all sections complete, print the final summary:
 
 ---
 
-## Final Step: Persist to Git
+## Final Step: Status and Push Channel
+
+End with one status line in the daily note: `Routine status: <ok | needs you: reason>`. If Vault Hygiene is stale (marked STALE in Setup step 7), or a key or a required connector is missing, reach the owner outside the vault: send a short email through the Gmail connector (subject `Brain needs you: <reason>`); if the connector cannot send, create an all-day Google Calendar event for tomorrow titled `Brain needs you: <reason>` with the fix in its description. Record which channel was used. Before sending, check `_generated/routine-alerts.json` (create if missing); send only if the reason is new or was last sent 7 or more days ago. After sending, record `{"<reason>": "<YYYY-MM-DD sent>"}` in `_generated/routine-alerts.json`.
+
+---
+
+## Persist to Git
 
 The vault runs in a temporary cloud workspace -- anything not committed and pushed is lost when the session ends. After printing the summary:
 

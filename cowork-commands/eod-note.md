@@ -3,11 +3,6 @@ name: eod-note
 description: EOD Phase 4: Generate the permanent daily note from the manifest, calendar, and inbox files.
 ---
 
-# EOD Phase 4: Daily Note
-
-Generates the permanent daily note at `Work/Daily/YYYY-MM-DD.md`. Pulls from the manifest, calendar cache, client inbox files, and optional Rize time data. Writes one file and confirms.
-
-**This is a short, non-interactive phase.** No user input needed. Read from disk, generate, write, done.
 
 ---
 
@@ -51,6 +46,12 @@ Build the daily note with these sections, in order. Omit any section that has no
 - Total tracked: [X hrs Y min]
 - Top categories: [Category1] [time], [Category2] [time], ...
 
+## Routine health
+- Vault Hygiene: last ran <date>; <OK if within 2 days, else STALE>
+- Keys: <missing key names only, or "none">
+- Connectors: <connected / missing, by name>
+- Landing: <last line of _generated/landing.log if the file exists; otherwise "cloud session, landing by hook">
+
 ## Summary
 [2-3 sentence narrative: what the day looked like, what moved forward,
 what carries into tomorrow. Write in first person, plain language.]
@@ -63,6 +64,7 @@ what carries into tomorrow. Write in first person, plain language.]
 - **Tasks Completed**: Scan each `Inbox/<Client>.md` for items marked `- [x]` that were completed today. Include the client name in parentheses.
 - **Tasks Added**: Pull manifest rows where Type is `action-owner`, `action-other`, or `followup`. Show the source so future-you knows where it came from.
 - **Time Tracking**: Parse `/tmp/rize-summary-TODAY.md` for total time and category breakdown. Keep it to one or two lines.
+- **Routine health**: Vault Hygiene's freshness (check for `## YYYY-MM-DD` in `_generated/vault-hygiene/audit-log.md`), missing keys from `check-keys.py --routine eod`, available/missing connectors from the session, and the landing log (read `_generated/landing.log`'s last line or note if the file doesn't exist).
 - **Summary**: Write a brief narrative based on everything above. Mention the biggest win, any blockers, and what's queued for tomorrow.
 
 ---

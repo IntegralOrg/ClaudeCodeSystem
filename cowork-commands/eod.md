@@ -3,11 +3,6 @@ name: eod
 description: End of day processing: gather data from all sources, process transcripts, sync tasks, and build tomorrow's plan.
 ---
 
-# End of Day
-
-Run this before wrapping up for the day. It processes everything that happened today and builds tomorrow's plan.
-
-Default mode: run the full EOD in this one command. Claude Code can handle long sessions, so do not split this into sub-agents unless this specific vault proves too large in practice.
 
 ---
 
@@ -30,14 +25,15 @@ Advanced fallback:
 
 ## Setup
 
-1. Run `date` to get today's date and current time ([Your Timezone])
-2. Do not read or source the credentials file. Scripts load credentials themselves (`scripts/envload.py`); for a one-off external call use `python3 scripts/with-env.py -- <command>`
-3. Set variables:
+1. Run `python3 scripts/check-keys.py --routine eod` and list the connectors available in this session (name each; note any of Gmail, Google Calendar that is absent). If the script exits 1 or a required connector is absent, write the names under `## Routine health` in today's daily note and continue with what is available. If this run's keys check exits 0 and `System/Routines.md` has no `live_since` for this routine, add `live_since: <today>` there.
+2. Run `date` to get today's date and current time ([Your Timezone])
+3. Do not read or source the credentials file. Scripts load credentials themselves (`scripts/envload.py`); for a one-off external call use `python3 scripts/with-env.py -- <command>`
+4. Set variables:
    - `TODAY` = current date in YYYY-MM-DD format
    - `TOMORROW` = next calendar day in YYYY-MM-DD format
    - `VAULT` = absolute path to the vault root
    - `MANIFEST` = `/tmp/eod-manifest-TODAY.md`
-4. Create the manifest file at `$MANIFEST`:
+5. Create the manifest file at `$MANIFEST`:
    ```markdown
    # EOD Manifest -- TODAY
 
@@ -46,13 +42,18 @@ Advanced fallback:
    | # | Item | Client | Type | Source | Routed To | Status |
    |---|------|--------|------|--------|-----------|--------|
    ```
-5. Check CLAUDE.md for a time tracking integration (look for an uncommented entry mentioning time tracking, Rize, Toggl, or similar). Set `HAS_TIME_TRACKING` = true or false.
+6. Check CLAUDE.md for a time tracking integration (look for an uncommented entry mentioning time tracking, Rize, Toggl, or similar). Set `HAS_TIME_TRACKING` = true or false.
+7. Read `_generated/vault-hygiene/audit-log.md` to find the newest date of the form `## YYYY-MM-DD` (Vault Hygiene's last run). If it is more than 2 days old, flag it as `STALE` for the push channel later.
+
+Cloud-workspace note: in an ephemeral cloud container, credentials usually arrive as exported environment variables rather than a logins file. Scripts read them through `scripts/envload.py`, and a one-off call goes through `python3 scripts/with-env.py -- <command>`; never read or source a logins file, and never create a stub one to satisfy a script. Also expect that some raw third-party APIs return 503s when called from datacenter IPs -- prefer an MCP connector for those services in the cloud, and do not retry the raw endpoint in a loop.
 
 ---
 
 ## 1. Gather
 
 Credentials are loaded inside scripts (`scripts/envload.py`); for a one-off call use `python3 scripts/with-env.py -- <command>`. Never read or source the credentials file. The manifest is at $MANIFEST.
+
+Continuity check first: look at the newest note in `Work/Daily/` and the date on the current `Inbox/Today.md`. If the newest daily note is not from the previous calendar day, one or more days have no note. Say so explicitly at the top of the run and name the missing dates before proceeding. Date-scoped API fetches only cover the day you run for, so a silent gap means those days are never captured. Do not backfill mid-run; just surface it.
 
 Critical rules:
 - Route-as-you-go: route every item and log it to the manifest immediately.
@@ -194,12 +195,23 @@ After all sections complete, print the final summary:
 
 ---
 
-## Final Step: Persist to Git
+## Final Step: Status and Push Channel
 
-The vault runs in a temporary cloud workspace -- anything not pushed is lost when the session ends. After printing the summary:
+End with one status line in the daily note: `Routine status: <ok | needs you: reason>`. If Vault Hygiene is stale (marked STALE in Setup step 7), or a key or a required connector is missing, reach the owner outside the vault: send a short email through the Gmail connector (subject `Brain needs you: <reason>`); if the connector cannot send, create an all-day Google Calendar event for tomorrow titled `Brain needs you: <reason>` with the fix in its description. Record which channel was used. Before sending, check `_generated/routine-alerts.json` (create if missing); send only if the reason is new or was last sent 7 or more days ago. After sending, record `{"<reason>": "<YYYY-MM-DD sent>"}` in `_generated/routine-alerts.json`.
 
-1. `git add -A`
-2. `git commit -m "EOD close-out $TODAY"`
-3. `git push` -- if the push is rejected because the remote moved, run `git pull --rebase`, then push again
+---
 
-If the working tree is clean, say so and skip the commit. If the push still fails after a retry, tell the user plainly: tonight's close-out exists only in this workspace until a push succeeds.
+## Persist to Git
+
+The vault runs in a temporary cloud workspace -- anything not committed and pushed is lost when the session ends. After printing the summary:
+
+1. **Final render check.** If any task state changed after you generated tomorrow's plan (a late correction, a task marked done), re-run the render so the file you commit reflects the final state, not a stale mid-run snapshot.
+2. **Set the commit identity first.** An ephemeral container has no configured author, so an unset identity produces malformed or misattributed commits: `git config user.name "<your name>"` and `git config user.email "<your git email>"`.
+3. **Stage everything you wrote -- and verify it.** Run `git add -A`, then diff the staged list against the files you actually created this session. A `.gitignore` rule can silently exclude a new file; because the container is ephemeral, any written-but-unstaged file is lost permanently, not "synced some other way." Force-add (`git add -f <path>`) anything you intentionally created that the ignore rules block. Never stage secrets (`.env`, `*.pem`/`*.key`), large binaries, or backup directories.
+4. `git commit -m "EOD close-out $TODAY"`. If the tree is clean, say so and skip.
+5. **Rebase, then push.** `git fetch`, `git rebase origin/<base>`, then push.
+   - Scoped conflict resolution: if the rebase conflicts *only* in regenerated files (the tomorrow's-plan render, `Graph/index.md`, `Graph/entity-registry.md`), keep this session's version and continue -- those always differ between machines and are safe to overwrite with the current run's output. If it conflicts in *authored* content (daily notes, transcripts, docs), `git rebase --abort` and stop; never auto-resolve authored content.
+6. **If the harness restricts direct pushes to a `claude/...` branch** (common in cloud sessions), do not fight it with git. Push that branch, then land the base branch with a server-side PR merge: the GitHub MCP tools (create a PR base `<base>` head `<branch>`, then merge it), or `gh pr create --fill && gh pr merge --merge` where the CLI is available. A server-side merge honors the push restriction.
+7. **A stranded branch is a loud failure, not "done."** If the work cannot reach the base branch (no PR tool available, merge rejected, or an authored-content conflict), leave it on the branch and report that at the TOP of the summary with the one-line command to land it locally. Never force-push.
+
+If the working tree is clean, say so and skip the commit. If the push still fails, tell the user plainly: tonight's close-out exists only in this workspace until it lands.
