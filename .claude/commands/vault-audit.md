@@ -21,10 +21,11 @@ Hard rules:
 
 ## Setup
 
-0. If `scripts/vault-audit.py` or `scripts/vault-embed.py` is missing in this vault, copy both from the setup repo's `templates/scripts/` folder first: `cp REPO_PATH/templates/scripts/vault-audit.py REPO_PATH/templates/scripts/vault-embed.py VAULT_PATH/scripts/` (locate `REPO_PATH` the same way `/onboard` does; ask the user if you can't find a local clone of the setup repo). They live side by side; `vault-embed.py` imports `vault-audit.py`.
-1. `date` for today (`TODAY`).
-2. `VAULT` = vault root (directory containing CLAUDE.md). `AUDIT="python3 \"$VAULT/scripts/vault-audit.py\""`, `EMBED="python3 \"$VAULT/scripts/vault-embed.py\""`.
-3. If `_generated/vault-hygiene/vault-schema.md` is missing, stop and run Init instead.
+0. Run `python3 scripts/check-keys.py --routine vault-hygiene`. Record the result (missing key names, or "none"). If this run's keys check exits 0, then in `System/Routines.md`, under this routine's `## <title>` heading, if the first bullet reads `- live_since: not live` (or is missing), change that same bullet to `- live_since: <today's date>`; never add a second live_since bullet. In Step 6 (receipt), append the keys result to `_generated/vault-hygiene/audit-log.md` as a note (it will be read by End of Day for the daily note's Routine health section).
+1. If `scripts/vault-audit.py` or `scripts/vault-embed.py` is missing in this vault, stop and tell the user: this vault is the repository they created from the template, and both scripts ship with it, so something removed them (restoring them from the template repository fixes it). They live side by side; `vault-embed.py` imports `vault-audit.py`.
+2. `date` for today (`TODAY`).
+3. `VAULT` = vault root (directory containing CLAUDE.md). `AUDIT="python3 \"$VAULT/scripts/vault-audit.py\""`, `EMBED="python3 \"$VAULT/scripts/vault-embed.py\""`.
+4. If `_generated/vault-hygiene/vault-schema.md` is missing, stop and run Init instead.
 
 ## Step 1: Script pass
 
@@ -44,6 +45,7 @@ Collision rule for EVERY `mv` (moves from `root_clutter`/`unknown_folder`/`belon
 - `exact_duplicates`: keep the copy whose folder the schema endorses (tie-break: most recently modified); `stage` the rest. When both copies sit in the SAME folder, mtime lies (the stray copy is usually newer): keep the one whose name the index or inbound links already know, falling back to git creation date. Repoint links from staged copies to the keeper. The script already excludes `no_merge` records from duplicate candidates (a record is never staged, merged, or repointed), so nothing under a `no_merge` folder appears here.
 - `empty_stubs`: read each before acting. `stage` only the genuinely contentless (template header only, no information). A tiny body that carries real information (an ID, a number, a link) is content, not a stub: keep the file and expand it minimally (frontmatter plus a one-line context sentence) so it stops flagging. The script already excludes `no_merge` records from this list.
 - `missing_frontmatter`: add minimal frontmatter (`type` per the folder's content, `created` from the file's git or mtime date). Follow CLAUDE.md's frontmatter schema if one is documented; otherwise use `type`/`created` at minimum. The script already excludes `no_merge` records from this list.
+- `duplicate_frontmatter_keys`: a file whose frontmatter repeats a key (typically two `updated:` lines left by a local rebase; the autosync workflow repairs the ones a branch merge leaves). Report only: name each file and key in the run summary and in the report to the owner, and never rewrite it. It is fixed by hand.
 - `naming_violations`: rename to satisfy the pattern (derive the date from frontmatter/content), repoint links.
 
 ## Step 3: Semantic re-index
@@ -111,7 +113,7 @@ Then report ONE line: `Vault audit: N moved, N merged, N staged, N amendments, N
 
 ## Init (one time per vault)
 
-1. `mkdir -p "$VAULT/_generated/vault-hygiene"` first (the schema, index, log, and trash state all live under it; keep them OUT of `.claude/` so a scheduled cloud routine never stalls on a permission prompt). Then draft `_generated/vault-hygiene/vault-schema.md` from CLAUDE.md's folder-structure block plus the real tree (`ls` root and one level down). Include `root_whitelist`, `protected`, `folders` with purposes, `naming` for dated records, `no_merge: true` for records, `frontmatter_required`, and an `embedding:` config block (below). Also create an empty `_generated/vault-hygiene/audit-log.md` so Step 5/6 have a file to read and append to.
+1. `mkdir -p "$VAULT/_generated/vault-hygiene"` first (the schema, index, log, and trash state all live under it; keep them OUT of `.claude/` so a scheduled cloud routine never stalls on a permission prompt). Then draft `_generated/vault-hygiene/vault-schema.md` from CLAUDE.md's folder-structure block plus the real tree (`ls` root and one level down). Include `root_whitelist` (always `README.md`, `CHANGELOG.md`, `LICENSE`, `SETUP_PENDING`, `.env.example`, `.gitattributes`, `docs`, `System`, `Templates`, plus whatever else sits at the root), `protected`, `folders` with purposes, `naming` for dated records, `no_merge: true` for records, `frontmatter_required`, and an `embedding:` config block (below). Also create an empty `_generated/vault-hygiene/audit-log.md` so Step 5/6 have a file to read and append to.
 
 2. **Derive `protected` by convention, do not ask for it.** Default protected paths: generated-output folders (always include `_generated/`, which holds this audit's own state), `Archive/`, `Attachments/`, `Templates/`, `.claude/` and any other dot-folder, `.handoffs/`. This is a non-technical user's vault; a raw "which paths should I protect" question is a technical question they can't answer well. Instead, ask **at most one** plain-language question:
 

@@ -40,6 +40,12 @@ loop, not to schedule another cleanup.
 
 ---
 
+## Pre-Flight: Keys Check
+
+Run `python3 scripts/check-keys.py --routine monthly-review`. Record the result (missing key names, or "none"). If the script exits 1, note it in the findings. If this run's keys check exits 0, then in `System/Routines.md`, under this routine's `## <title>` heading, if the first bullet reads `- live_since: not live` (or is missing), change that same bullet to `- live_since: <today's date>`; never add a second live_since bullet. Proceed to Phase 0.
+
+---
+
 ## Phase 0: Safety Gate (BLOCKING)
 
 **Nothing gets deleted, merged, or moved until the vault is confirmed saved to a remote
@@ -89,8 +95,8 @@ If they say yes:
    `credentials` or `secrets`, or any other file that plausibly holds a password or API key,
    **unstage it** (`git restore --staged <file>`) and add it to `.gitignore` before
    continuing. This push uploads to a remote server, and **a secret pushed once must be
-   treated as leaked even if it is deleted afterward.** `/onboard` puts `.env` in
-   `.gitignore` for exactly this reason, but never assume that ran correctly.
+   treated as leaked even if it is deleted afterward.** The vault's
+   `.gitignore` lists `.env` for exactly this reason, but never assume it is still intact.
 3. `git commit -m "Backup before monthly review <today's date>"`
 4. `git push`
 5. **Re-run check 6 from Phase 0a.** A push can report success and still leave commits
@@ -473,7 +479,8 @@ set up a backup now.
 
 1. Update the "Last Monthly Review" date in CLAUDE.md to today.
 2. Log the run in `CHANGELOG.md`.
-3. Close with the one number that matters:
+3. Write the findings and the coaching note to `Work/Monthly/YYYY-MM-DD Monthly Review.md` (today's full date). Vault health checks read that file to see that this review ran.
+4. Close with the one number that matters:
 
 > "Your vault is more connected than it was last month: 12 orphaned notes, down from 47."
 

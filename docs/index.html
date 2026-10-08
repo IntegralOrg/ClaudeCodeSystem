@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your Claude System</title>
+<meta name="description" content="A private, self-maintaining assistant built on Claude.">
+<style>
+  :root {
+    --bg: #fbfaf8; --card: #ffffff; --text: #1d1c1a; --muted: #5f5b55; --line: #e4e0d9;
+    --accent: #b4532a; --accent-text: #ffffff; --accent-soft: #f6e9e1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161513; --card: #1f1d1a; --text: #f1eee8; --muted: #a8a299; --line: #342f2a;
+      --accent: #e08a5c; --accent-text: #1a1209; --accent-soft: #2b2018;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 48px 16px 32px; }
+  h1 { font-size: 2.2rem; line-height: 1.15; margin: 0 0 16px; letter-spacing: -0.02em; }
+  h2 { font-size: 1.3rem; margin: 40px 0 12px; letter-spacing: -0.01em; }
+  p { margin: 0 0 14px; }
+  .lede { font-size: 1.15rem; color: var(--muted); }
+  ul, ol { margin: 0; padding-left: 1.2rem; }
+  li { margin: 0 0 10px; overflow-wrap: anywhere; }
+  li strong { color: var(--text); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 20px 12px; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0 8px; }
+  .btn {
+    display: inline-block; padding: 14px 22px; border-radius: 10px; font-weight: 600;
+    text-decoration: none; text-align: center; border: 2px solid var(--accent);
+    flex: 1 1 220px;
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-text); }
+  .btn.secondary { background: transparent; color: var(--accent); }
+  .btn:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .later { margin-top: 14px; }
+  .intro { background: var(--accent-soft); border-left: 4px solid var(--accent); border-radius: 8px; padding: 14px 16px; margin: 0 0 16px; }
+  a { color: var(--accent); }
+  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.95rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Your Claude System</h1>
+  <p class="lede">A private, self-maintaining assistant built on Claude. Your notes and decisions live in a private repository that only you and Claude can read, and routines keep it current every night.</p>
+
+  <div class="buttons">
+    <a class="btn primary" href="https://github.com/new?template_owner=IntegralOrg&template_name=ClaudeCodeSystem&name=brain&visibility=private">Create your Brain</a>
+    <a class="btn secondary" href="https://claude.ai/code">Open it in Claude</a>
+  </div>
+
+  <h2>What you get</h2>
+  <div class="card">
+    <ul>
+      <li><strong>Guard hooks.</strong> Claude is blocked from reading your credentials, cannot run destructive commands, and every action is logged with secrets masked.</li>
+      <li><strong>Credentials stay out of chat.</strong> Keys are loaded by scripts; they never appear in a conversation.</li>
+      <li><strong>Current facts and history, kept apart.</strong> Every client page has one place for what is true now and one for what happened.</li>
+      <li><strong>Nightly self-healing.</strong> Duplicates, contradictions, and stale facts are found and flagged. Duplicate detection runs in-process, so your notes are never sent to a third-party embedding service; routines run in Claude's cloud on your private repository.</li>
+      <li><strong>A knowledge graph</strong> rebuilt from your notes, so context is easy to find.</li>
+      <li><strong>The System Journal.</strong> Every session leaves a small evidence record, and the telemetry report shows where the system wastes effort, so improvements are evidence-based.</li>
+      <li><strong>Session telemetry.</strong> It shows where the system wastes effort, and <code>/opportunity-scan</code> works on any session.</li>
+      <li><strong>The same hooks everywhere,</strong> in the cloud and on your computer.</li>
+      <li><strong>Recall with a trust order.</strong> When it looks something up, it knows which sources to believe first.</li>
+      <li><strong>An end-of-day routine</strong> that closes what it can prove and reaches you when something needs you.</li>
+      <li><strong>Nothing to provision.</strong> No servers to set up and no terminal to learn.</li>
+    </ul>
+  </div>
+
+  <h2>What you need</h2>
+  <ul>
+    <li>A <strong>GitHub account</strong>.</li>
+    <li>A <strong>Claude Max plan</strong>. Routines and cloud sessions need it.</li>
+  </ul>
+  <p class="later">Later, to add your own computer: <strong>Claude Desktop</strong>, <strong>GitHub Desktop</strong>, and Git (on Windows, also Python 3). On a Mac, give Claude Desktop the <strong>Accessibility</strong> and Screen Recording permissions.</p>
+
+  <h2>What happens next</h2>
+  <ol>
+    <li>Your private repository appears under your GitHub account.</li>
+    <li>Open it in Claude, choose <code>brain</code>, and the setup starts by itself.</li>
+    <li>It asks for your discovery interview transcript, or five short questions if you do not have one.</li>
+    <li>It builds your vault and schedules the routines.</li>
+    <li>Then it walks you through putting it on your computer.</li>
+  </ol>
+
+  <div class="buttons">
+    <a class="btn primary" href="https://github.com/new?template_owner=IntegralOrg&template_name=ClaudeCodeSystem&name=brain&visibility=private">Create your Brain</a>
+    <a class="btn secondary" href="https://claude.ai/code">Open it in Claude</a>
+  </div>
+
+  <h2>For whoever introduces it</h2>
+  <p class="intro"><strong>Your Claude system now keeps itself honest: it blocks credential leaks, it notices when its own notes contradict each other, and it records every session so improvements are based on evidence, not memory.</strong></p>
+  <ul>
+    <li><strong>Safety.</strong> Guard hooks block reading credentials and destructive commands, and every action is logged with secrets masked. Your repository is private.</li>
+    <li><strong>Accuracy.</strong> Each fact has one current home and one history. A nightly pass finds duplicates, contradictions, and stale facts, same-subject merges wait for your decision, and removals are staged, never deleted.</li>
+    <li><strong>Improvement.</strong> Each session is recorded, and <code>/opportunity-scan</code> answers what would have prevented a problem, so the system improves from evidence.</li>
+  </ul>
+
+  <footer>Questions: ask your agent; it answers from <code>System/</code>. White-glove setup is available.</footer>
+</main>
+</body>
+</html>

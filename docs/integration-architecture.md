@@ -85,7 +85,7 @@ RIZE_API_KEY=...
 # SERVICE_API_KEY=...
 ```
 
-See `templates/.env.example` for a full list of supported variables with descriptions.
+See `.env.example` for a full list of supported variables with descriptions.
 
 ### How the AI Uses It
 
@@ -477,7 +477,7 @@ If you are using the easy way (Claude.ai managed connections), skip this entire 
 
 Preferred path: use the `gws` CLI if it is available in the workspace. Cloud Console is the fallback path when the CLI is unavailable or fails.
 
-This fallback walkthrough assumes you have never used Google Cloud Console and have no existing project. If you run `/onboard`, Claude will walk you through these same steps interactively.
+This fallback walkthrough assumes you have never used Google Cloud Console and have no existing project. Claude can walk you through these same steps interactively; the click paths are also in [Connecting Tools](../System/Connecting%20Tools.md).
 
 #### Check: Can You Access Cloud Console?
 
@@ -609,7 +609,7 @@ If you are a Workspace admin, you can also pre-approve the OAuth consent screen 
 
 ### Step 2: Configure Direct Connections
 
-Add direct connections for services you use outside the vault. Built-in connectors are added through claude.ai's **Settings > Connectors** page -- Claude cannot configure these connections itself; only you can add them. Self-configured MCP servers go in the vault's `.mcp.json` (committed with the repository, with secrets referenced as `${ENV_VAR}` placeholders). Your task manager and any database tools are common first choices. Each connection has its own setup process (usually an API key or OAuth flow). See the `/connect` skill for step-by-step guidance.
+Add direct connections for services you use outside the vault. Built-in connectors are added through claude.ai's **Settings > Connectors** page -- Claude cannot configure these connections itself; only you can add them. Self-configured MCP servers go in the vault's `.mcp.json` (committed with the repository, with secrets referenced as `${ENV_VAR}` placeholders). Your task manager and any database tools are common first choices. Each connection has its own setup process (usually an API key or OAuth flow). See [Connecting Tools](../System/Connecting%20Tools.md) for step-by-step guidance.
 
 ### Step 3: Document Your Integrations
 
