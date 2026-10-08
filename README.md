@@ -14,7 +14,7 @@ This is the **cloud edition**: it runs in [Claude Code on the web](https://code.
 2. Open your new repository in [Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web).
 3. Tell Claude what you do and what you want help with. The vault's `CLAUDE.md` is the instruction manual Claude reads at the start of every session.
 
-Connection steps for each tool (calendar, email, tasks, calls, chat) are in [Connection Steps](docs/connect-steps.md).
+Connection steps for each tool (calendar, email, tasks, calls, chat) are in [Connecting Tools](System/Connecting%20Tools.md).
 
 ## Architecture
 
@@ -93,10 +93,10 @@ ClaudeCodeSystem/
 │   └── *.md                            # Mirror of all commands with YAML frontmatter
 ├── docs/
 │   ├── DEVELOPING.md                   # Maintainer notes for this template (not part of a client vault's behavior)
-│   ├── connect-steps.md                # Per-tool connection click paths
 │   ├── vault-design-guide.md           # How to build the vault (folder structure, inbox, templates)
 │   ├── integration-architecture.md     # How Claude connects to your tools
 │   └── daily-workflow.md               # Today.md + /morning + EOD pipeline
+├── System/                             # Setup procedure, guidance the agent answers from, routine definitions
 ├── .claude/settings.json               # Committed vault permissions and the guardrail + cloud-landing hooks
 ├── .github/workflows/                  # vault-autosync.yml (skipped on the template itself)
 ├── Templates/Client Note.md            # Client profile skeleton
@@ -115,7 +115,7 @@ ClaudeCodeSystem/
 
 | Document | What It Covers |
 |----------|---------------|
-| [Connection Steps](docs/connect-steps.md) | Per-tool connection click paths: Google, ClickUp, Fathom, Slack, Rize, and others |
+| [Connecting Tools](System/Connecting%20Tools.md) | Per-tool connection click paths: Gmail, Google Calendar, Slack, Fathom, ClickUp, and Claude plugins |
 | [Vault Design Guide](docs/vault-design-guide.md) | Folder structure, inbox system, CLAUDE.md design, skills, integrations, monthly reviews, step-by-step build guide |
 | [Integration Architecture](docs/integration-architecture.md) | How Claude connects to your tools: direct connections, tool credentials, custom scripts, scheduled automation |
 | [Daily Workflow](docs/daily-workflow.md) | Today.md structure, /morning interactive review, EOD 5-phase pipeline, scheduled automation, tracking list pattern, carry-forward system |

@@ -6,7 +6,8 @@ SELF = Path(__file__).resolve()
 SKIP_DIRS = {".git", "node_modules", ".pytest_cache", "__pycache__", ".venv"}
 WORD = "obsi" + "dian"            # built from pieces so this file is not its own first hit
 PATTERN = re.compile(WORD, re.IGNORECASE)
-EXTS = {".md", ".py", ".sh", ".json", ".yml", ".yaml", ".html", ".txt", ".example"}
+EXTS = {".md", ".py", ".sh", ".json", ".yml", ".yaml", ".html", ".txt", ".example", ".toml", ".cfg"}
+NAMES = {".gitignore", ".gitattributes", "LICENSE", ".gitkeep"}
 
 
 def _entry_date(changelog, lineno):
@@ -23,7 +24,7 @@ def _entry_date(changelog, lineno):
 def test_no_obsidian_anywhere():
     hits = []
     for p in ROOT.rglob("*"):
-        if any(part in SKIP_DIRS for part in p.parts) or not p.is_file() or p.suffix not in EXTS or p.resolve() == SELF:
+        if any(part in SKIP_DIRS for part in p.parts) or not p.is_file() or (p.suffix not in EXTS and p.name not in NAMES) or p.resolve() == SELF:
             continue
         for i, line in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
             if PATTERN.search(line):

@@ -42,6 +42,8 @@ The `name` field should match the filename (without `.md`). The `description` sh
 
 **Skills with scripts live in `.claude/skills/<name>/`** (a `SKILL.md` plus `scripts/` and `references/`). They have no CoWork mirror: their scripts run on the user's own machine, which CoWork and Claude Code on the web do not have. The folder ships with the template as is. Keep each one's upstream license file in its folder.
 
+**`System/` holds the setup procedure and the guidance the agent answers from** (`Setup Procedure.md`, `How This Works.md`, `Connecting Tools.md`, `Routines.md`, `Adding Your Computer.md`, `Getting Help.md`), plus the routine definitions in `System/routines/`. It is maintained here, in the template, and ships to every new vault as is. A client's copy does not update itself: a refresh mechanism (pulling newer `System/` files from the template into an existing vault) is a known gap, and for now a client asks the agent to fetch `System/` from the template. Keep these files client-neutral: they are public and are shipped as the client's own instructions.
+
 **There is exactly one folder of Code commands: `.claude/commands/`.** (The old `examples/commands/` folder was removed -- it created the illusion that some commands were optional examples, so some commands never reached users. All commands are first-class and shipped.)
 
 **To add a new command:**
