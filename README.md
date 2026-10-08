@@ -21,7 +21,7 @@ Connection steps for each tool (calendar, email, tasks, calls, chat) are in [Con
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                  You: ask your agent (it reads today's note)       │
+│                  You: ask your agent (it reads today's note)      │
 │                      /morning is optional                         │
 └──────────────────────────────┬───────────────────────────────────┘
                                │
