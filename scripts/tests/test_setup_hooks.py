@@ -37,9 +37,9 @@ def test_marker_triggers_on_any_session_start(tmp_path):
 
 
 def test_marker_ignored_in_template_repo(tmp_path):
-    for origin in ("https://github.com/IntegralOrg/ClaudeCodeSystem.git", "git@github.com:IntegralOrg/ClaudeCodeSystem-Cloud.git",
-                   "https://github.com/StackDev223/ClaudeCodeSystem"):
-        v = git_repo(tmp_path / origin.split("/")[-1].replace(".git", ""), origin)
+    for i, origin in enumerate(("https://github.com/IntegralOrg/ClaudeCodeSystem.git", "git@github.com:IntegralOrg/ClaudeCodeSystem-Cloud.git",
+                   "https://github.com/StackDev223/ClaudeCodeSystem")):
+        v = git_repo(tmp_path / f"t{i}", origin)
         (v / "SETUP_PENDING").write_text("x"); (v / "System").mkdir(); (v / "System" / "Setup Procedure.md").write_text("#")
         rc, out, _ = run_hook("setup_pending.py", v)
         assert rc == 0 and out.strip() == "", origin
@@ -53,7 +53,8 @@ def test_no_marker_prints_nothing(tmp_path):
 def test_marker_without_procedure_says_so(tmp_path):
     v = git_repo(tmp_path / "v"); (v / "SETUP_PENDING").write_text("x")
     rc, out, _ = run_hook("setup_pending.py", v)
-    assert rc == 0 and "Setup Procedure.md is missing" in context_of(out)
+    text = context_of(out)
+    assert rc == 0 and "Setup Procedure.md" in text and "is missing" in text
 
 
 def test_synced_folder_warning_names_the_fix(tmp_path):
@@ -68,7 +69,7 @@ def test_plain_folder_prints_nothing(tmp_path):
     assert rc == 0 and out.strip() == ""
 
 
-def test_onedrive_dropbox_drive_detected(tmp_path):
+def test_other_sync_services_detected(tmp_path):
     for part, label in (("OneDrive", "OneDrive"), ("Dropbox", "Dropbox"), ("Google Drive", "Google Drive"), ("GoogleDrive-me@x.com", "Google Drive")):
         d = tmp_path / part / "Brain"; d.mkdir(parents=True)
         _, out, _ = run_hook("guard_vault_path.py", d)
