@@ -11,7 +11,7 @@ This is the **cloud edition**: it starts in [Claude Code on the web](https://cod
 ## Get Started
 You need a GitHub account and a Claude Max plan.
 1. Click **Use this template** (private, name it `brain`).
-2. Open the new repository at claude.ai/code and install the Claude GitHub app on it when asked. Setup starts by itself in that first session.
+2. Open the new repository (`brain`) at claude.ai/code and install the Claude GitHub app on it when asked. Setup starts by itself in that first session.
 3. Put it on your computer: `System/Adding Your Computer.md` (Claude Desktop, GitHub Desktop, clone to `~/Brain`).
 Questions: ask your agent. It answers from `System/`.
 
@@ -21,8 +21,8 @@ Connection steps for each tool (calendar, email, tasks, calls, chat) are in [Con
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                         You (Morning Review)                      │
-│                    Read Today.md → /morning → Day starts          │
+│                  You: ask your agent (it reads today's note)       │
+│                      /morning is optional                         │
 └──────────────────────────────┬───────────────────────────────────┘
                                │
 ┌──────────────────────────────▼───────────────────────────────────┐
@@ -159,7 +159,7 @@ Because each handoff is a named, persistent file inside the vault, they accumula
 Long-running workflows track every extracted item in a tracking list (`/tmp/eod-manifest-TODAY.md`). Each item gets: description, client, type, source, destination, status. This makes sure nothing gets lost during long processes.
 
 ### File Writes
-Your vault is a Git repository in a cloud workspace -- there is no background file sync racing against Claude's edits, so the built-in editor is safe for reads and writes. Git history is your safety net: commit and push to persist changes and roll back if needed.
+When Claude finishes a turn, the Stop hook lands your changes on `main`: `scripts/land-local.sh` on your computer, `scripts/cloud-land.sh` in the cloud. You never run Git. Git history is the rollback: every change is recoverable from it.
 
 ### Route-As-You-Go
 Every extracted item is routed to its destination file immediately, not batched for later. This prevents data loss if a step fails partway through or the process runs long.
@@ -180,7 +180,7 @@ uv run --python 3.12 --with fastembed,numpy scripts/vault-embed.py report --vaul
 **Privacy:** the **embedding** step runs in-process with a small local model (`bge-small`) and sends no note content off the machine; its only outbound call is a one-time download of the model weights. (The separate **judging** step hands the candidate pair's text to Claude, the same as any other Claude session that reads your vault.) After a file or folder rename, run `python3 scripts/vault-embed.py migrate --vault <path> --rename "<old>" "<new>"` to re-key the saved state so nothing re-embeds or re-judges. Thresholds, the owner/company exclusion list, and the staleness window are config in the schema's `embedding:` block.
 
 ### EOD Command
-The default `/eod` flow should run as one command in one Claude session. Claude Code now supports long-context sessions, so the simplest setup is a single `/eod` that gathers, routes, syncs, writes the daily note, and builds tomorrow's plan. If a user's workflow is unusually heavy, or if they want unattended scheduled automation, you can still split EOD into separate phases as an advanced fallback.
+End of Day is a scheduled routine, created at setup from `System/routines/eod.md` and recorded in `System/Routines.md`. It runs weeknights in the cloud and writes the daily note. `/eod` is the manual re-run when you want it now.
 
 ## Guardrails
 
