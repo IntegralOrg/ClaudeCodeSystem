@@ -27,14 +27,39 @@ THROTTLE_SECS=60            # evidence write + landing, absorbs rapid-fire turns
 DISTILL_THROTTLE_SECS=900   # the paid journal line, at most every 15 min (always on --final)
 
 [ -n "$CLAUDE_CODE_SESSION_ID" ] || exit 0
-[ "$HOME" = "/root" ] && [ -d /home/user ] || exit 0
+if [ -z "$CLOUD_JOURNAL_TEST_DIR" ]; then
+  # Cloud container only. Never runs on a local machine.
+  [ "$HOME" = "/root" ] && [ -d /home/user ] || exit 0
+else
+  # Local self-test against a throwaway repo.
+  LOGDIR="$CLOUD_JOURNAL_TEST_DIR/.system-journal"; LOG="$LOGDIR/hook.log"; STAMP="$LOGDIR/last-run"
+fi
+command -v git >/dev/null 2>&1 || exit 0
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ORIGIN_URL="$(git -C "$REPO" remote get-url origin 2>/dev/null)"
+mkdir -p "$LOGDIR"
+# Template self-protection: the template repository itself must never land from a cloud session
+# (settings are committed, so these hooks run there too). Same exact owner/repo match as land-local.sh:
+# case-insensitive, optional .git suffix and trailing slash, https or scp-style.
+O=$(printf '%s' "$ORIGIN_URL" | tr 'A-Z' 'a-z')
+O="${O%/}"; O="${O%.git}"; O="${O%/}"
+O_REPO="${O##*[/:]}"
+O_REST="${O%[/:]*}"
+O_OWNER="${O_REST##*[/:]}"
+case "$O_OWNER/$O_REPO" in
+  integralorg/claudecodesystem|integralorg/claudecodesystem-cloud|stackdev223/claudecodesystem)
+    echo "$(date -u '+%FT%TZ') origin is the template repository; journal disabled" >> "$LOG" 2>&1
+    cat >/dev/null 2>&1 || true
+    exit 0 ;;
+esac
+
 command -v python3 >/dev/null 2>&1 || exit 0
 command -v claude >/dev/null 2>&1 || exit 0
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CLOUD_DIR="$REPO/_generated/system-journal/cloud"
 EVIDENCE_DIR="$REPO/_generated/system-journal/evidence"
-mkdir -p "$LOGDIR" "$CLOUD_DIR" "$EVIDENCE_DIR"
+mkdir -p "$CLOUD_DIR" "$EVIDENCE_DIR"
 
 FINAL=0
 [ "${1:-}" = "--final" ] && FINAL=1

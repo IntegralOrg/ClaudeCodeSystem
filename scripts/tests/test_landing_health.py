@@ -80,3 +80,11 @@ def test_two_locked_lines_are_not_enough_and_success_resets(tmp_path):
     assert run_hook(tmp_path) == (0, "")
     write_log(tmp_path, [f"2026-10-08 10:0{i}:00 locked: another landing is running" for i in range(3)] + ["2026-10-08 11:00:00 landed on main (attempt 1)"])
     assert run_hook(tmp_path) == (0, "")
+
+
+def test_fetch_failed_run_is_reported_as_unreachable_not_conflict(tmp_path):
+    write_log(tmp_path, ["2026-10-08 09:00:00 landed on main (attempt 1)"] + [f"2026-10-08 10:0{i}:00 fetch failed" for i in range(3)])
+    rc, text = run_hook(tmp_path)
+    assert rc == 0 and "cannot reach GitHub from this computer (sign-in or network); see System/Adding Your Computer.md step 4" in text
+    assert "conflict" not in text.lower().replace("not a conflict", "")
+    assert "resolve the conflict" not in text

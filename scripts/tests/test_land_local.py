@@ -173,6 +173,30 @@ def test_landing_log_is_capped(world):
     assert not (a / "_generated" / "landing.tmp.log").exists()
 
 
+def test_landing_git_log_is_capped(world):
+    a = world["a"]; (a / "n.md").write_text("n\n")
+    (a / "_generated").mkdir()
+    (a / "_generated" / "landing-git.log").write_text("".join(f"raw git output {i}\n" for i in range(4500)))
+    land(world, a, "--final")
+    lines = (a / "_generated" / "landing-git.log").read_text().splitlines()
+    assert len(lines) < 2200
+    assert not (a / "_generated" / "landing.tmp.log").exists()
+
+
+def test_credential_files_never_land_even_if_the_ignore_file_forgets_them(world):
+    a = world["a"]
+    (a / ".gitignore").write_text("_generated/landing.log\n")  # no credentials line
+    (a / CRED).write_text("SECRET=1\n"); (a / (CRED + ".local")).write_text("SECRET=2\n")
+    (a / "sub").mkdir(); (a / "sub" / CRED).write_text("SECRET=3\n")
+    (a / "tls.pem").write_text("pem\n"); (a / "sub" / "id.key").write_text("key\n"); (a / "AuthKey.p8").write_text("p8\n")
+    (a / "ok.md").write_text("ok\n")
+    land(world, a, "--final")
+    names = landed(a).splitlines()
+    assert "ok.md" in names
+    for bad in (CRED, CRED + ".local", "sub/" + CRED, "tls.pem", "sub/id.key", "AuthKey.p8"):
+        assert bad not in names, bad
+
+
 def test_exits_silently_inside_a_cloud_container(world):
     a = world["a"]; (a / "c.md").write_text("c\n")
     p = land(world, a, "--final", extra_env={"LAND_LOCAL_FORCE_LOCAL": "", "LAND_LOCAL_FORCE_CLOUD": "1"})

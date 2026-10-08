@@ -42,6 +42,12 @@ def main(payload):
         elif any(w in line for w in FAILURE_WORDS):
             failures.append(line)
     parts = []
+    fetch_fails = [l for l in failures if "fetch failed" in l]
+    failures = [l for l in failures if "fetch failed" not in l]
+    if fetch_fails:
+        parts.append(f"Landing could not fetch from GitHub {len(fetch_fails)} times since {fetch_fails[0][:19]}: cannot reach GitHub from this "
+                     "computer (sign-in or network); see System/Adding Your Computer.md step 4. The edits on this computer have not "
+                     "reached the repository. Tell the user this first; this is not a conflict.")
     if failures:
         first, last = failures[0], failures[-1]
         parts.append(f"Landing has failed {len(failures)} times since {first[:19]} (latest: {last[20:200]}). The edits on this "

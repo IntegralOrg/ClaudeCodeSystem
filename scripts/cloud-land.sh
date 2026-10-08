@@ -54,6 +54,20 @@ case "$ORIGIN_URL" in
   *) exit 0 ;;
 esac
 mkdir -p "$LOGDIR"
+# Template self-protection: the template repository itself must never land from a cloud session
+# (settings are committed, so these hooks run there too). Same exact owner/repo match as land-local.sh:
+# case-insensitive, optional .git suffix and trailing slash, https or scp-style.
+O=$(printf '%s' "$ORIGIN_URL" | tr 'A-Z' 'a-z')
+O="${O%/}"; O="${O%.git}"; O="${O%/}"
+O_REPO="${O##*[/:]}"
+O_REST="${O%[/:]*}"
+O_OWNER="${O_REST##*[/:]}"
+case "$O_OWNER/$O_REPO" in
+  integralorg/claudecodesystem|integralorg/claudecodesystem-cloud|stackdev223/claudecodesystem)
+    echo "$(date -u '+%FT%TZ') origin is the template repository; landing disabled" >> "$LOG" 2>&1
+    cat >/dev/null 2>&1 || true
+    exit 0 ;;
+esac
 
 # Drain stdin (hook JSON) so the parent never blocks on a full pipe.
 cat >/dev/null 2>&1 || true

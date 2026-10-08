@@ -34,14 +34,19 @@ git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
 mkdir -p "$REPO/_generated" 2>/dev/null
 LOG="$REPO/_generated/landing.log"
 GITLOG="$REPO/_generated/landing-git.log"
+# Cap a log file: past LOG_MAX_LINES lines keep the last LOG_KEEP_LINES.
+cap_log() {
+  local n
+  n=$(wc -l < "$1" 2>/dev/null | tr -d ' ')
+  if [ "${n:-0}" -gt "$LOG_MAX_LINES" ]; then
+    tail -n "$LOG_KEEP_LINES" "$1" > "$REPO/_generated/landing.tmp.log" 2>/dev/null \
+      && mv "$REPO/_generated/landing.tmp.log" "$1" 2>/dev/null
+  fi
+}
+cap_log "$GITLOG"   # raw git output is capped the same way, once per run before this run appends to it
 log() {
   printf '%s %s\n' "$(date '+%F %T')" "$*" >> "$LOG" 2>/dev/null
-  local n
-  n=$(wc -l < "$LOG" 2>/dev/null | tr -d ' ')
-  if [ "${n:-0}" -gt "$LOG_MAX_LINES" ]; then
-    tail -n "$LOG_KEEP_LINES" "$LOG" > "$REPO/_generated/landing.tmp.log" 2>/dev/null \
-      && mv "$REPO/_generated/landing.tmp.log" "$LOG" 2>/dev/null
-  fi
+  cap_log "$LOG"
 }
 # File mtime in epoch seconds; empty when it cannot be read. GNU stat first (BSD stat rejects -c).
 mtime_of() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null; }
@@ -100,7 +105,11 @@ if ! git merge --ff-only -q origin/main >>"$GITLOG" 2>&1; then
 fi
 
 # 2. Stage everything .gitignore allows (the landing logs never land, even if a repo forgot to ignore them) and commit.
-git add -A -- . ':(exclude)_generated/landing.log' ':(exclude)_generated/landing-git.log' ':(exclude)_generated/landing.tmp.log' >>"$GITLOG" 2>&1
+# Credential-shaped files are excluded explicitly too (the way cloud-land.sh does), so a client repo whose
+# ignore file was edited still never lands them.
+git add -A -- . ':(exclude)_generated/landing.log' ':(exclude)_generated/landing-git.log' ':(exclude)_generated/landing.tmp.log' \
+  ':(exclude,glob).env' ':(exclude,glob)**/.env' ':(exclude,glob).env.*' ':(exclude,glob)**/.env.*' \
+  ':(exclude,glob)**/*.pem' ':(exclude,glob)**/*.key' ':(exclude,glob)**/*.p8' >>"$GITLOG" 2>&1
 if git diff --cached --quiet >>"$GITLOG" 2>&1; then
   log "nothing to land"
 else

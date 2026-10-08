@@ -26,6 +26,13 @@ def test_settings_hooks_point_at_root_scripts():
         assert "$CLAUDE_PROJECT_DIR/scripts/" in c and "templates/" not in c
 
 
+def test_settings_deny_reads_of_the_credentials_file():
+    s = json.loads((ROOT / ".claude" / "settings.json").read_text())
+    deny = s["permissions"]["deny"]
+    for rule in ("Read(./.env)", "Read(./.env.*)", "Read(./**/.env)", "Read(./**/.env.*)"):
+        assert rule in deny, rule
+
+
 def test_gitignore_is_an_allow_list_for_dot_claude():
     gi = [l.strip() for l in (ROOT / ".gitignore").read_text().splitlines()]
     for needed in (".env", ".claude/*", "!.claude/settings.json", "!.claude/commands/", "!.claude/skills/",
