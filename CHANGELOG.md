@@ -6,6 +6,36 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-08] - Cloud-first onboarding: the template is the vault, setup runs itself
+
+### Added
+- **Self-running setup** -- `SETUP_PENDING` at the root plus `scripts/hooks/setup_pending.py` start setup from `System/Setup Procedure.md` in the first session; no command to type. Silent in the template repository itself.
+- **`System/`** -- the system explains itself: How This Works, Connecting Tools (including Claude plugins), Routines, Adding Your Computer, Getting Help; `CLAUDE.md` answers system questions only from these, in a fixed shape.
+- **`System/routines/*.md` and `scripts/check-keys.py`** -- routine definitions declare the key names they need; the script reports present/missing by name, never a value; `--init` creates the credentials file from the example once (local sessions only).
+- **Push channel** -- EOD ends with a status line and reaches the owner by email (Gmail connector) or an all-day calendar event when Vault Hygiene is stale or a key or connector is missing.
+- **`scripts/land-local.sh` and `scripts/hooks/landing_health.py`** -- every local session lands on `main` from the Stop hook (ff-only pull, commit, push; throttle; lock; never force); repeated landing failures are announced at the next session start.
+- **`scripts/hooks/guard_vault_path.py`** -- warns every session while the vault sits in iCloud, OneDrive, Dropbox, or Google Drive.
+- **`docs/index.html`** -- the front door on GitHub Pages: Use this template, then open in Claude.
+- **Tests** -- repo layout and autosync guard, retired commands, editor-trace gate, setup hooks, check-keys, land-local, landing health, System docs, front door.
+- **`scripts/hooks/routine_health.py`** -- at session start, says when End of Day, Vault Hygiene, or Monthly Review has not run, or a routine is still not live; the connector-free push channel.
+
+### Changed
+- **The repository root is the vault root** -- `scripts/`, `.claude/settings.json`, `CLAUDE.md` (client skeleton), `Templates/`, `.env.example`, and `.github/workflows/vault-autosync.yml` (guarded so it never runs on the template) live at the root; maintainer notes moved to `docs/DEVELOPING.md`.
+- **EOD** -- starts with the keys check and a connector listing; writes a "Routine health" section into the daily note.
+- **Repository renamed** -- `IntegralOrg/ClaudeCodeSystem-Cloud` is now `IntegralOrg/ClaudeCodeSystem`; the separate Mac edition is archived.
+- **Monthly Review** -- writes `Work/Monthly/YYYY-MM-DD Monthly Review.md`, which the health hook reads.
+
+### Removed
+- **`/onboard`, `/train`, `/connect`, `/finish`** (both command folders), `docs/onboarding-guide.md`, Wispr Flow from setup, every reference to the previous note editor, `examples/settings.json` and `examples/cloud-hooks.settings.json` (now `.claude/settings.json`).
+
+### Known gaps
+- `System/` guidance does not refresh itself from the template; ask the agent to fetch it.
+- Markdown union merges can duplicate a frontmatter line on a true conflict; Vault Hygiene repairs it nightly.
+- Human steps on the white-glove onboarding call (connectors, keys, installs, permission grants) are logged by hand in the facilitator's checklist, not by the system.
+- The previous note editor's state folder is no longer excluded from hygiene and graph scans; delete it from a vault if one exists.
+
+---
+
 ## [2026-09-30] - /handoff always ends with the copy-ready /pickup command
 
 `/handoff` printed "To resume: /pickup NAME" inside its summary, mixed in with the other lines. In practice the name got lost in the summary or dropped when the reply carried extra warnings, and the user had to retype it in the next session.
