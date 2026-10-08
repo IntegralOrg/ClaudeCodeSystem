@@ -106,6 +106,8 @@ ClaudeCodeSystem/
 │   ├── monthly-review.md               # Monthly system review
 │   ├── brain-dump.md                   # Manual brain dump capture
 │   └── daily-note.md                   # Simplified daily note (lightweight EOD)
+├── .claude/skills/                     # Skills with scripts/references (folder per skill; every one installs during /onboard)
+│   └── drive-screen/                   # Take control of the desktop (Windows/macOS/Linux) when a step must be clicked through
 ├── cowork-commands/                    # CoWork versions (YAML frontmatter, manual upload)
 │   └── *.md                            # Mirror of all commands with YAML frontmatter
 ├── docs/
@@ -143,7 +145,8 @@ Successful tasks turned into repeatable routines. Each skill is a text file that
 
 **Two formats exist for different runtimes:**
 - **Claude Code:** Skills live in `.claude/commands/` and are auto-discovered. No special formatting needed.
-- **Claude CoWork:** Skills require YAML frontmatter (`name:` and `description:` fields in a `---` block) and must be manually uploaded through the **Customize** section in the app settings. The `cowork-commands/` directory contains pre-formatted versions of all skills ready for upload.
+- **Claude Code, skills with scripts:** A skill that needs scripts or reference files lives in its own folder under `.claude/skills/<name>/` with a `SKILL.md` at the top. `drive-screen` is the first: it lets Claude take real control of the desktop (Windows, macOS, Linux) for steps that can only be clicked through, and only after you hand it the keyboard for that session.
+- **Claude CoWork:** Skills require YAML frontmatter (`name:` and `description:` fields in a `---` block) and must be manually uploaded through the **Customize** section in the app settings. The `cowork-commands/` directory contains pre-formatted versions of every slash command ready for upload; skills with scripts (`.claude/skills/`) have no CoWork mirror because their scripts run on the user's own machine.
 
 ### Session Continuity (`/handoff` and `/pickup`)
 Every user gets these two commands. They solve the single biggest limitation of working with an AI agent: a session's memory is finite. When the context window fills up, or you run `/clear`, close the window, or the conversation gets compacted, everything that was only "in the chat" is gone.
