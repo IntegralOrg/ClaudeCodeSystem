@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """SessionStart: if the vault has not been set up yet, tell the agent to start setup now.
-The only signal is the SETUP_PENDING file at the vault root; setup deletes it last.
+The only signal is the SETUP_PENDING file at the vault root; setup deletes it right after writing the completion line, before landing.
 Silent in the template repository itself (maintainers are not clients). Fails open."""
 import json
 import sys
@@ -19,8 +19,8 @@ def main(payload):
         return
     if (root / PROCEDURE).is_file():
         text = ("This vault is not set up. Read `System/Setup Procedure.md` now and begin setup in this session; "
-                "do not wait for a command and do not ask whether to start. When setup is complete, its last step "
-                f"deletes the `{MARKER}` file at the vault root.")
+                "do not wait for a command and do not ask whether to start. Setup deletes the "
+                f"`{MARKER}` file at the vault root right after writing its completion line.")
     else:
         text = (f"This vault is not set up (`{MARKER}` exists) but `System/Setup Procedure.md` is missing. "
                 "Tell the user the template is incomplete and to re-create the repository from the template.")

@@ -34,7 +34,7 @@ Open the folder: in Claude Desktop choose **File, Open folder** and pick `~/Brai
 Without asking you between steps, the agent:
 
 1. Runs `git --version` and `python3 --version` to confirm both exist (and tells you what to install if one is missing).
-2. Runs `python3 scripts/check-keys.py --init`, which creates the credentials file with blank values, and walks you through the keys: for each missing name it tells you what it is for and where to get it, and you paste the value yourself into the file, opened in Claude Desktop's file pane. Values never go in the chat. See `System/Connecting Tools.md`.
+2. Runs `python3 scripts/check-keys.py --init`, which creates the credentials file with blank values, and walks you through the keys: for each missing name it tells you what it is for and where to get it, and you paste the value yourself into the file, opened in Claude Desktop's file pane. The file is `.env` at the vault root and it is hidden: in the file pane turn on hidden files, or on a Mac press Command+Shift+Period in the Open dialog. Values never go in the chat. See `System/Connecting Tools.md`.
 3. Runs `bash scripts/system-journal/install.sh --vault ~/Brain --write-hooks`. This is the only global write the system makes: it adds three hooks to `~/.claude/settings.json` and copies scripts to `~/scripts/system-journal/`. The end-of-session distill step runs `claude -p`, which is a paid call against your Claude account. (Skip this step if you do not want that; the vault works without it.)
 4. Installs the **Superpowers** plugin: Settings, Plugins (see "Claude plugins" in `System/Connecting Tools.md`).
 5. Lists the connectors this session can see, and tells you which are missing.

@@ -118,15 +118,21 @@ def test_setup_procedure_is_safe_to_re_run():
     has(text, "list_triggers", "reuse it", "instead of creating a duplicate", "in place",
         "Create a routine by hand", "connector-missing", "persist_session: false",
         "Delete `SETUP_PENDING` now, so an interrupted hand-off never restarts setup")
-    # SETUP_PENDING is deleted at the start of step 6, before the completion line of step 7
-    assert text.index("Delete `SETUP_PENDING` now") < text.index("## 7. Finish")
-    assert "Delete `SETUP_PENDING`" not in text[text.index("## 7. Finish"):]
+    # order after the keys step: completion line, then marker deletion, then landing, then the demo
+    keys = text.index("## 4. Keys")
+    done = text.index("Setup completed <date>")
+    gone = text.index("Delete `SETUP_PENDING` now")
+    land = text.index("land-local.sh --final")
+    demo = text.index("Two-minute demo")
+    assert keys < done < gone < land < demo
+    assert text.count("Delete `SETUP_PENDING`") == 1
 
 
 def test_credentials_file_is_named_once_for_the_human_only():
     for name in ("Connecting Tools", "Setup Procedure"):
         has(read(name), "hidden file", "Command+Shift+Period", "The agent never opens it")
-    has(read("Connecting Tools"), "update_trigger", "nothing after the `=`")
+    has(read("Adding Your Computer"), "hidden", "Command+Shift+Period")
+    has(read("Connecting Tools"), "update_trigger", "nothing after the `=`", "connector path")
     assert "never edits MCP server configuration" not in read("Connecting Tools")
 
 

@@ -41,7 +41,7 @@ If everything passes, skip this entirely.
 
 **The steps (full control way).** One full control setup covers both Gmail and Google Calendar. If Google Calendar was connected the full control way, Gmail is already done (the Gmail API, the `gmail.modify` scope, and the same three `GOOGLE_*` values); only run the test. Otherwise follow the full control way under Google Calendar: enable the **Gmail API**, include the `https://www.googleapis.com/auth/gmail.modify` scope on the consent screen and in the OAuth Playground, and save the same `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REFRESH_TOKEN` values.
 
-**What changes afterwards.** Attach the connector to the End of Day routine (Routines, the routine, Connectors; or `update_trigger`), then start a new session. End of Day then reads your email and can reach you by email when Vault Hygiene is stale or a key or connector is missing.
+**What changes afterwards.** On the connector path (the easy way), attach the connector to the End of Day routine (Routines, the routine, Connectors; or `update_trigger`), then start a new session. The full control (key) path needs no attaching; it works once the three `GOOGLE_*` values are in the environment's variables. End of Day then reads your email and can reach you by email when Vault Hygiene is stale or a key or connector is missing.
 
 ## Google Calendar
 
@@ -114,7 +114,7 @@ SH
 
 If it lists upcoming events: Google is connected.
 
-**What changes afterwards.** Attach the connector to the End of Day routine (Routines, the routine, Connectors; or `update_trigger`), then start a new session. End of Day then reads today's and tomorrow's calendar and can place the "Brain needs you" event when it has to reach you.
+**What changes afterwards.** On the connector path (the easy way), attach the connector to the End of Day routine (Routines, the routine, Connectors; or `update_trigger`), then start a new session. The full control (key) path needs no attaching; it works once the three `GOOGLE_*` values are in the environment's variables. End of Day then reads today's and tomorrow's calendar and can place the "Brain needs you" event when it has to reach you.
 
 ## Slack
 

@@ -5,9 +5,9 @@ updated: 2026-10-08
 ---
 # Setup Procedure
 
-You are reading this because `SETUP_PENDING` exists at the vault root. Run every step below in this session, in order, without asking permission between steps. Ask the user only the questions written here. Delete `SETUP_PENDING` at the start of step 6, right after landing, so an interrupted hand-off never restarts setup.
+You are reading this because `SETUP_PENDING` exists at the vault root. Run every step below in this session, in order, without asking permission between steps. Ask the user only the questions written here. The order at the end matters: after the keys step, write the completion line, delete `SETUP_PENDING`, land, and only then run the demo, so an interrupted hand-off never restarts setup.
 
-First, know where you are: a **cloud session** runs in a container (home directory `/root`, nothing on the user's computer); a **local session** runs in Claude Desktop on their machine. Step 4, step 5, and step 6 differ by that.
+First, know where you are: a **cloud session** runs in a container (home directory `/root`, nothing on the user's computer); a **local session** runs in Claude Desktop on their machine. Step 4, step 6, and step 7 differ by that.
 
 ## 1. One opening question
 
@@ -58,20 +58,19 @@ Run `python3 scripts/check-keys.py` (local session: `python3 scripts/check-keys.
 
 Never ask the user to paste a value into the chat.
 
-## 5. Land
+## 5. Record completion, then release the marker
+
+1. Write one line to `Work/Daily/<today>.md`: "Setup completed <date> in a <cloud|local> session; routines: <names, live or not live>; keys missing: <names or none>."
+2. Delete `SETUP_PENDING` now, so an interrupted hand-off never restarts setup.
+
+## 6. Land
 
 - **Cloud session:** landing happens when this turn ends (the Stop hook). Nothing to run.
 - **Local session:** run `bash scripts/land-local.sh --final` now.
 
-## 6. Show it working, then step two
-
-Delete `SETUP_PENDING` now, so an interrupted hand-off never restarts setup.
+## 7. Show it working, then step two
 
 Two-minute demo on the user's own data: capture one task they mentioned into `Inbox/`, render one client page, and show today's daily note. Then:
 
 - **Cloud session:** say, in these words: "Tools like email and calendar connect on your call with Dean; ask me any time and I will walk you through it. Next we put this on your computer." Then follow `System/Adding Your Computer.md`.
 - **Local session:** say that tools like email and calendar connect on the onboarding call (and you can walk them through any of it now). You are already on their computer, so skip the hand-off: run the first-local-session checks from `System/Adding Your Computer.md` step 4.
-
-## 7. Finish
-
-Write one line to `Work/Daily/<today>.md`: "Setup completed <date> in a <cloud|local> session; routines: <names, live or not live>; keys missing: <names or none>."
