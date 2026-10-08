@@ -37,6 +37,8 @@ def test_setup_procedure_matches_the_hooks_and_routine_tools():
     text = read("Setup Procedure")
     has(text, "create_trigger", "persist_session", "## Owner", "email:", "Setup completed", "live_since: not live",
         "Work/Daily/", "Claude GitHub app")
+    step3 = text[text.index("## 3. Create the routines"):text.index("## 4. Keys")]
+    has(step3, "repository", "get_trigger", "delete_trigger", "Do not pass `connectors`")
     assert "scheduled-tasks" not in text
     # nowhere may the agent be told to open, read, cat, or print the credentials file
     bad = re.compile(r"\b(read|cat|print|echo|source|grep)\b[^.\n]{0,25}(\.env\b|credentials file)", re.I)
@@ -87,6 +89,9 @@ def test_routines_doc_has_the_manual_path():
     text = read("Routines")
     has(text, "Create a routine by hand", "environment", "GitHub app", "not live")
     has(text, "create_trigger", "persist_session", "Work/Monthly/YYYY-MM-DD Monthly Review.md")
+    by_hand = text[text.index("## Create a routine by hand"):text.index("## If a routine is stale")]
+    has(by_hand, "Repository: choose `brain`")
+    has(text, "get_trigger", "connectors")
     for title in ("End of Day", "Vault Hygiene", "Monthly Review"):
         assert f"## {title}\n- live_since: not live" in text, title
 
