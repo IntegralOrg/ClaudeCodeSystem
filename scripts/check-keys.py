@@ -27,36 +27,54 @@ def parse_frontmatter(text):
     if not m:
         return {}
     out = {}
-    for line in m.group(1).splitlines():
+    lines = m.group(1).splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
         if ":" not in line:
+            i += 1
             continue
         k, _, v = line.partition(":")
         v = v.strip()
         k_stripped = k.strip()
-        if v.startswith("[") and v.endswith("]"):
+
+        # Check for block-style YAML list (empty value followed by - items)
+        if k_stripped in ("keys", "optional_keys") and v == "":
+            items = []
+            i += 1
+            while i < len(lines) and lines[i].startswith("- "):
+                item = lines[i][2:].strip().strip("'\"")
+                items.append(item)
+                i += 1
+            out[k_stripped] = items
+        elif v.startswith("[") and v.endswith("]"):
+            # Inline list format
             out[k_stripped] = [x.strip().strip("'\"") for x in v[1:-1].split(",") if x.strip()]
+            i += 1
         else:
-            # If value looks like a list but is a bare scalar, error
-            if k_stripped in ("keys", "optional_keys") and not (v.startswith("[") and v.endswith("]")):
-                if v and v != "[]":
-                    # This is a bare scalar like "FOO", not a proper list
-                    return None
+            # If key is keys/optional_keys and value is not a list format, error
+            if k_stripped in ("keys", "optional_keys") and v:
+                # This is a bare scalar like "FOO", not a proper list
+                return None
             out[k_stripped] = v.strip("'\"")
+            i += 1
     return out
 
 
 def load_routines(vault):
     routines = {}
+    errors = []
     for path in sorted(glob.glob(os.path.join(vault, "System", "routines", "*.md"))):
         with open(path, encoding="utf-8") as f:
             fm = parse_frontmatter(f.read())
         if fm is None:
-            print(f"error in {os.path.basename(path)}: keys must be a list", file=sys.stderr)
-            return None
+            name = os.path.splitext(os.path.basename(path))[0]
+            errors.append((name, f"routine {name}: keys must be a list"))
+            continue
         name = fm.get("name") or os.path.splitext(os.path.basename(path))[0]
         routines[name] = {"title": fm.get("title", name), "keys": fm.get("keys", []) or [],
                           "optional_keys": fm.get("optional_keys", []) or []}
-    return routines
+    return routines, errors
 
 
 def env_names_present(vault):
@@ -106,14 +124,29 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     notes = [init_env(args.vault)] if args.init else []
-    routines = load_routines(args.vault)
-    if routines is None:
-        return 2
+    routines, errors = load_routines(args.vault)
+
+    # If --routine is specified and that routine has an error, exit 2
+    if args.routine:
+        for name, msg in errors:
+            if name == args.routine:
+                print(msg, file=sys.stderr)
+                return 2
+
+    # Report other routine errors on stderr but continue (unless --routine specified)
     if args.routine:
         if args.routine not in routines:
             print(f"unknown routine: {args.routine} (known: {', '.join(sorted(routines)) or 'none'})", file=sys.stderr)
             return 2
         routines = {args.routine: routines[args.routine]}
+    else:
+        # Report errors for all routines only if not filtering
+        for name, msg in errors:
+            if args.json:
+                notes.append(msg)
+            else:
+                print(msg, file=sys.stderr)
+
     present = env_names_present(args.vault)
     report, any_missing = {}, False
     for name, r in routines.items():

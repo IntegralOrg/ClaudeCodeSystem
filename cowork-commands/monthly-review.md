@@ -3,6 +3,11 @@ name: monthly-review
 description: Full monthly tune-up: audits and repairs the vault automatically, rebuilds the knowledge graph, then coaches you on the habits that caused the drift.
 ---
 
+# Monthly Review
+
+A full tune-up of the user's vault and agent. You audit, you **repair**, you rebuild the
+knowledge graph, and only at the very end do you talk to the user.
+
 **Run this on the last workday of each month.**
 
 ## How this command works

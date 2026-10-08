@@ -3,6 +3,11 @@ name: eod-note
 description: EOD Phase 4: Generate the permanent daily note from the manifest, calendar, and inbox files.
 ---
 
+# EOD Phase 4: Daily Note
+
+Generates the permanent daily note at `Work/Daily/YYYY-MM-DD.md`. Pulls from the manifest, calendar cache, client inbox files, and optional Rize time data. Writes one file and confirms.
+
+**This is a short, non-interactive phase.** No user input needed. Read from disk, generate, write, done.
 
 ---
 

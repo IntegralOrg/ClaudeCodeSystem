@@ -4,6 +4,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Import parse_frontmatter for direct testing
+import importlib.util
+spec = importlib.util.spec_from_file_location("check_keys", Path(__file__).resolve().parents[1] / "check-keys.py")
+check_keys = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(check_keys)
+parse_frontmatter = check_keys.parse_frontmatter
+
 SCRIPT = Path(__file__).resolve().parents[1] / "check-keys.py"
 CRED = ".env"
 
@@ -75,16 +82,13 @@ def test_documented_invocations_never_name_the_credentials_file():
                     assert CRED not in line, line
 
 
-def test_crlf_file_still_reports_missing_keys(tmp_path):
-    v = make_vault(tmp_path)
-    # Write routine file with CRLF line endings
-    eod_path = v / "System" / "routines" / "eod.md"
-    content = eod_path.read_text()
-    eod_path.write_text(content.replace('\n', '\r\n'))
-    (v / CRED).write_text("ALPHA_KEY=secret\n")
-    p = run(v, "--routine", "eod")
-    assert p.returncode == 1
-    assert "missing: BETA_TOKEN" in p.stdout
+def test_crlf_frontmatter_normalized_before_parsing(tmp_path):
+    # Direct test of parse_frontmatter with CRLF line endings
+    text_with_crlf = "---\r\nname: test\r\nkeys: [KEY1, KEY2]\r\n---\r\nbody"
+    fm = parse_frontmatter(text_with_crlf)
+    assert fm is not None
+    assert fm.get("name") == "test"
+    assert fm.get("keys") == ["KEY1", "KEY2"]
 
 
 def test_keys_as_bare_scalar_exits_2(tmp_path):
@@ -101,6 +105,32 @@ def test_keys_as_bare_scalar_exits_2(tmp_path):
 def test_export_with_extra_spaces_counts_as_present(tmp_path):
     v = make_vault(tmp_path)
     (v / CRED).write_text("export  ALPHA_KEY=secret\nBETA_TOKEN=value\n")
+    p = run(v, "--routine", "eod")
+    assert p.returncode == 0
+    assert "missing: none" in p.stdout
+
+
+def test_block_style_yaml_list_parsing(tmp_path):
+    v = make_vault(tmp_path)
+    # Overwrite eod.md with block-style list format
+    (v / "System" / "routines" / "eod.md").write_text(
+        "---\nname: eod\ntitle: End of Day\nschedule: \"0 23 * * 1-5\"\nprompt: /eod\nconnectors: [Gmail]\n"
+        "keys:\n- ALPHA_KEY\n- BETA_TOKEN\noptional_keys: [GAMMA_KEY]\n---\n# EOD\n")
+    (v / CRED).write_text("ALPHA_KEY=secret\nBETA_TOKEN=value\n")
+    p = run(v, "--routine", "eod")
+    assert p.returncode == 0
+    assert "missing: none" in p.stdout
+    assert "present: ALPHA_KEY, BETA_TOKEN" in p.stdout
+
+
+def test_other_routine_malformed_does_not_abort_when_routine_specified(tmp_path):
+    v = make_vault(tmp_path)
+    # Make vault-hygiene malformed
+    (v / "System" / "routines" / "vault-hygiene.md").write_text(
+        "---\nname: vault-hygiene\ntitle: Vault Hygiene\nschedule: \"0 1 * * *\"\nprompt: /vault-audit\n"
+        "keys: MALFORMED\n---\n")
+    # When we specify --routine eod, the malformed vault-hygiene should not abort
+    (v / CRED).write_text("ALPHA_KEY=secret\nBETA_TOKEN=value\n")
     p = run(v, "--routine", "eod")
     assert p.returncode == 0
     assert "missing: none" in p.stdout

@@ -3,6 +3,11 @@ name: eod
 description: End of day processing: gather data from all sources, process transcripts, sync tasks, and build tomorrow's plan.
 ---
 
+# End of Day
+
+Run this before wrapping up for the day. It processes everything that happened today and builds tomorrow's plan.
+
+Default mode: run the full EOD in this one command. Claude Code can handle long sessions, so do not split this into sub-agents unless this specific vault proves too large in practice.
 
 ---
 
@@ -110,7 +115,7 @@ Report: total hours tracked, hours per client, hours per work type, number of ga
 
 ## 4. Daily Note
 
-Read the manifest at `$MANIFEST`. Read the calendar cache at `/tmp/eod-calendar-$TODAY.md`. If `/tmp/eod-time-$TODAY.md` exists, read the time tracking summary. Read the keys-check findings from Setup step 1 and the connectors list from Setup step 1. Read `_generated/vault-hygiene/audit-log.md` to find the newest `## YYYY-MM-DD` heading (Vault Hygiene's last run date). If it does not exist and `System/Routines.md` has no `live_since` for vault-hygiene, note "Vault Hygiene: not yet run" for the health section. Otherwise, if the newest date is more than 2 days old, flag it as STALE. If `_generated/landing.log` exists, read its last line; otherwise note "cloud session, landing by hook".
+Read the manifest at `$MANIFEST`. Read the calendar cache at `/tmp/eod-calendar-$TODAY.md`. If `/tmp/eod-time-$TODAY.md` exists, read the time tracking summary. Read the keys-check findings from Setup step 1 and the connectors list from Setup step 1. Read `_generated/vault-hygiene/audit-log.md` to find the newest `## YYYY-MM-DD` heading (Vault Hygiene's last run date). If the audit-log does not exist and `System/Routines.md` has no `live_since` for vault-hygiene, note "Vault Hygiene: not yet run" for the health section (not STALE). If the audit-log does not exist but `System/Routines.md` has `live_since` for vault-hygiene, that is STALE (the log vanished after the routine went live; open System/Routines.md and check the routine is scheduled). Otherwise, if the newest date in audit-log is more than 2 days old, flag it as STALE (open System/Routines.md and check the routine is scheduled). If `_generated/landing.log` exists, read its last line; otherwise note "cloud session, landing by hook".
 
 Create the daily note at `$VAULT/Work/Daily/$TODAY.md` with these sections:
 
@@ -198,12 +203,12 @@ After all sections complete, print the final summary:
 
 ## Final Step: Status and Push Channel
 
-End the daily note with one status line: `Routine status: <ok | needs you: <reason>>`. If Vault Hygiene is stale (marked STALE in Setup step 7), or any required keys or connectors are missing, build a list of stable dedupe keys:
+End the daily note with one status line: `Routine status: <ok | needs you: <reason>>`. If Vault Hygiene is stale (marked STALE in Section 4), or any required keys or connectors are missing, build a list of stable dedupe keys:
 - `vault-hygiene-stale` if Vault Hygiene's last run is more than 2 days old
 - `key-missing:<NAME>` for each missing required key
 - `connector-missing:<NAME>` for each missing required connector (Gmail, Google Calendar)
 
-For each key, check `_generated/routine-alerts.json` (create if missing; treat malformed or missing as `{}`). Send a push (outside the vault) only if the key is absent from the JSON or its ISO date is 7 or more days ago. After sending, merge all keys into the JSON with today's date and write it back.
+For each key, check `_generated/routine-alerts.json` (create if missing; treat malformed or missing as `{}`). Send a push (outside the vault) only if the key is absent from the JSON or its ISO date is 7 or more days ago. After sending, write today's date only for the keys actually sent, merge them into the JSON, and write it back. "Vault Hygiene: not yet run" never produces a push.
 
 To send: read CLAUDE.md's Owner section and extract the owner's email address. If absent, skip email and use the calendar fallback.
 
@@ -217,8 +222,6 @@ If the Gmail connector can only draft (does not send), create the draft AND proc
 Calendar fallback: Use Google Calendar connector. All-day event tomorrow. Title: `Brain needs you: <reason>`. Description: the fix from System/Routines.md or System/Connecting Tools.md.
 
 Record which channel was used in the daily note after the status line: `(sent via Gmail | sent via calendar)`.
-
----
 
 ---
 
