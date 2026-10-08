@@ -5,6 +5,11 @@
 *.key
 *.p8
 .DS_Store
+._*
+*.log
+*.swp
+.vscode/
+.idea/
 __pycache__/
 *.pyc
 node_modules/

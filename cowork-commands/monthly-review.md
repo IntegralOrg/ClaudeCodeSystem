@@ -89,8 +89,8 @@ If they say yes:
    `credentials` or `secrets`, or any other file that plausibly holds a password or API key,
    **unstage it** (`git restore --staged <file>`) and add it to `.gitignore` before
    continuing. This push uploads to a remote server, and **a secret pushed once must be
-   treated as leaked even if it is deleted afterward.** `/onboard` puts `.env` in
-   `.gitignore` for exactly this reason, but never assume that ran correctly.
+   treated as leaked even if it is deleted afterward.** The vault's
+   `.gitignore` lists `.env` for exactly this reason, but never assume that ran correctly.
 3. `git commit -m "Backup before monthly review <today's date>"`
 4. `git push`
 5. **Re-run check 6 from Phase 0a.** A push can report success and still leave commits

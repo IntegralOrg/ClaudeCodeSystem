@@ -7,7 +7,7 @@ Renders `Graph/index.md` and the generated block of each MOC (`Graph/Clients.md`
 nightly concept index (`_generated/vault-hygiene/vault-index.json`). Replaces the
 hand-maintained index/MOC edits that the daily graph sync and /graph-sync used to
 make: the graph is derived from metadata, not from inline wiki-links written for
-Obsidian's graph view.
+graph viewers.
 
 Each MOC keeps its frontmatter and any hand-written intro above the marker
 `<!-- graph-render:begin -->`; everything between the begin and end markers is
@@ -46,7 +46,7 @@ from collections import defaultdict
 # concept index, schema, and vector cache) are derived from the selected vault inside main().
 VAULT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-SKIP_DIRS = {".git", ".obsidian", ".claude", "Attachments", "Templates", "Graph",
+SKIP_DIRS = {".git", ".claude", "Attachments", "Templates", "Graph",
              "node_modules", "scripts", "docs", "_generated", "Inbox", ".handoffs",
              ".superpowers", ".playwright-mcp", "cowork-commands", ".github"}
 # Top-level folders that never appear in Graph/ (so a private folder stays out of an exported

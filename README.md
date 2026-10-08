@@ -10,28 +10,11 @@ This is the **cloud edition**: it runs in [Claude Code on the web](https://code.
 
 ## Get Started
 
-1. Create (or pick) a GitHub repository to hold your vault, and open it in [Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web).
-2. Add this setup repo's files to that workspace if they are not already there.
-3. Type `/onboard` to begin.
+1. On GitHub, click **Use this template** to create your own private vault repository from this one.
+2. Open your new repository in [Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web).
+3. Tell Claude what you do and what you want help with. The vault's `CLAUDE.md` is the instruction manual Claude reads at the start of every session.
 
-**Already have a vault repository?** Drop this setup repo's files into it, then say:
-
-> Set me up
-
-Claude will find the setup files, copy the commands into place, and start the process automatically.
-
-Either way, Claude interviews you in a friendly question-and-answer format (no manual file editing). The full setup has 4 parts:
-
-| Step | Command | What It Does | Time |
-|------|---------|-------------|------|
-| 1 | `/onboard` | Learn about you, build your vault folders and files | ~20 min |
-| 2 | `/train` | Walk through your vault, skills, and the daily loop | ~15 min |
-| 3 | `/connect` | Connect each of your tools (calendar, email, tasks, etc.) one by one | ~20 min |
-| 4 | `/finish` | Live demo with real data, improvement tips, how to maximize the system | ~10 min |
-
-Each part ends by telling you what to type next. You can pause between parts and pick up later.
-
-> For a detailed reference of what gets set up, see the [Onboarding Guide](docs/onboarding-guide.md).
+Connection steps for each tool (calendar, email, tasks, calls, chat) are in [Connection Steps](docs/connect-steps.md).
 
 ## Architecture
 
@@ -69,31 +52,26 @@ Each part ends by telling you what to type next. You can pause between parts and
 4. **All day** -- Work with Claude Code as needed (drafting, research, task management, document creation)
 5. **End of day** -- Cycle repeats
 
-## What the Setup Creates
+## What You Get
 
-By the end of all 4 steps, you will have (see the [Onboarding Guide](docs/onboarding-guide.md) for details):
+A vault created from this template comes with:
 
 - **Permissions** configured so Claude can work without interrupting you
 - **Notes folder** (a Git-backed Markdown vault) with organized folders for clients, projects, and tasks
-- **Instruction manual** (CLAUDE.md) customized with your name, schedule, clients, and preferences
-- **Tool connections** to your calendar, email, task manager, and other services
-- **Skills** for morning review, end-of-day processing, and other workflows
-- **Understanding** of how the system works and how to improve it over time
+- **Instruction manual** (CLAUDE.md) that Claude reads every session, and that you fill in with your name, schedule, clients, and preferences
+- **Connection steps** for your calendar, email, task manager, and other services
+- **Commands** for morning review, end-of-day processing, and other workflows
 
 ## Repository Structure
 
 ```
 ClaudeCodeSystem/
-├── CLAUDE.md                           # The client's vault CLAUDE.md skeleton (customized by /onboard)
+├── CLAUDE.md                           # The client's vault CLAUDE.md skeleton
 ├── .env.example                        # All env var names with descriptions
 ├── .gitattributes                      # Markdown union-merge so parallel sessions never conflict
 ├── .gitignore                          # Allow-list for .claude/, secrets and local state ignored
 ├── README.md                           # This file
-├── .claude/commands/                   # ALL Claude Code slash commands (auto-discovered; every one installs during /onboard)
-│   ├── onboard.md                      # Part 1: Permissions, interview, build vault
-│   ├── train.md                        # Part 2: Learn the system
-│   ├── connect.md                      # Part 3: Connect all your tools
-│   ├── finish.md                       # Part 4: Live demo, improvement tips
+├── .claude/commands/                   # ALL Claude Code slash commands (auto-discovered by Claude Code)
 │   ├── handoff.md                      # Save current work state to a named briefing file
 │   ├── pickup.md                       # Resume from a named handoff in a fresh session
 │   ├── strategy.md / optimize.md       # Decision-making + tool/process improvement
@@ -109,13 +87,13 @@ ClaudeCodeSystem/
 │   ├── monthly-review.md               # Monthly system review
 │   ├── brain-dump.md                   # Manual brain dump capture
 │   └── daily-note.md                   # Simplified daily note (lightweight EOD)
-├── .claude/skills/                     # Skills with scripts/references (folder per skill; every one installs during /onboard)
+├── .claude/skills/                     # Skills with scripts/references (folder per skill)
 │   └── drive-screen/                   # Take control of the desktop (Windows/macOS/Linux) when a step must be clicked through
 ├── cowork-commands/                    # CoWork versions (YAML frontmatter, manual upload)
 │   └── *.md                            # Mirror of all commands with YAML frontmatter
 ├── docs/
 │   ├── DEVELOPING.md                   # Maintainer notes for this template (not part of a client vault's behavior)
-│   ├── onboarding-guide.md             # Reference for what /onboard sets up
+│   ├── connect-steps.md                # Per-tool connection click paths
 │   ├── vault-design-guide.md           # How to build the vault (folder structure, inbox, templates)
 │   ├── integration-architecture.md     # How Claude connects to your tools
 │   └── daily-workflow.md               # Today.md + /morning + EOD pipeline
@@ -137,7 +115,7 @@ ClaudeCodeSystem/
 
 | Document | What It Covers |
 |----------|---------------|
-| [Onboarding Guide](docs/onboarding-guide.md) | Step-by-step setup for new users: permissions, vault structure, CLAUDE.md, first tool connection, workflow discovery |
+| [Connection Steps](docs/connect-steps.md) | Per-tool connection click paths: Google, ClickUp, Fathom, Slack, Rize, and others |
 | [Vault Design Guide](docs/vault-design-guide.md) | Folder structure, inbox system, CLAUDE.md design, skills, integrations, monthly reviews, step-by-step build guide |
 | [Integration Architecture](docs/integration-architecture.md) | How Claude connects to your tools: direct connections, tool credentials, custom scripts, scheduled automation |
 | [Daily Workflow](docs/daily-workflow.md) | Today.md structure, /morning interactive review, EOD 5-phase pipeline, scheduled automation, tracking list pattern, carry-forward system |
@@ -267,4 +245,4 @@ Yes. Create a scheduled [Routine](https://code.claude.com/docs/en/routines) in C
 
 ## License
 
-[CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/) — you may share this with attribution, but you may not sell it or distribute modified versions. See [LICENSE](LICENSE) for details.
+[CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/): you may share this with attribution, but you may not sell it or distribute modified versions. See [LICENSE](LICENSE) for details.

@@ -298,10 +298,10 @@ class TestCliHelpers(unittest.TestCase):
             index = va.load_index(tmp)
             va.refresh_index(tmp, index, files)
             va.save_index(tmp, index)
-            # Attempt to stage .obsidian/workspace.json (protected) and config.json (non-md)
+            # Attempt to stage .claude/workspace.json (protected) and config.json (non-md)
             # and _generated/Today.md (protected)
             va.stage_files(tmp, [
-                ".obsidian/workspace.json",
+                ".claude/workspace.json",
                 "Work/Clients/Acme/config.json",
                 "_generated/Today.md"
             ])

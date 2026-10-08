@@ -22,7 +22,7 @@
 #    exists, CLAUDE_CODE_SESSION_ID set) in a git work tree with an `origin` remote. It never
 #    runs on a local machine, so it never races a local file sync that owns the vault there.
 #  - Excludes secrets and junk from the landing: .env*, *.pem/*.key/*.p8, Attachments/,
-#    files over 50 MB, worktrees, browser debug dirs, caches, volatile Obsidian state.
+#    files over 50 MB, worktrees, browser debug dirs, caches.
 #    _generated/system-journal/cloud/ is left to cloud-journal.sh so the two hooks never
 #    race on a half-written distill file.
 #  - Never force-pushes. Always exits 0 and never prints to stdout, so it can never block
@@ -73,7 +73,6 @@ EXCLUDES=(
   ':(exclude).claude/settings.local.json'
   ':(exclude,glob)**/__pycache__/**' ':(exclude,glob)**/node_modules/**'
   ':(exclude,glob)**/.venv/**' ':(exclude,glob)**/venv/**'
-  ':(exclude,glob).obsidian/workspace*' ':(exclude,glob).obsidian/cache*'
 )
 
 {

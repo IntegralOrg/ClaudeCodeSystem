@@ -175,7 +175,7 @@ For each workspace (customize with your workspace names):
 
 ## Section 5: Completion Check
 
-EOD is the one place that checks whether open tasks already got finished. It runs here because Sections 1 to 4 have just read the day's calls, mail, and Slack. (It replaces the separate `/morning-precheck` routine, which re-read the same day a few hours later.)
+EOD is the one place that checks whether open tasks already got finished. It runs here because Sections 1 to 4 have just read the day's calls, mail, and Slack.
 
 **Skip rule.** Run this section only when the vault tracks tasks: at least one `Inbox/*.md` file has open items under `## Open Tasks`. If none does, print `Completion check skipped (no task lists in use)` and move on. A vault that is not used for task management carries no completion check at all.
 

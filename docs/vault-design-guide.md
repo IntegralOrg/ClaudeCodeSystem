@@ -367,7 +367,7 @@ After the review, improvement ideas go to a dedicated `System Improvements.md` f
 
 Create the folder structure above. Start with just `Inbox/`, `Work/`, `Resources/`, and `Templates/`. You can add more folders later as your system grows. Do not try to build the full structure on day one.
 
-Create these folders in your vault repository -- Claude can make them for you during `/onboard`.
+Create these folders in your vault repository -- Claude can make them for you.
 
 ### Step 2: Write Claude's Instruction Manual
 

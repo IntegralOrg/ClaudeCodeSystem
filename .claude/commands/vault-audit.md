@@ -21,7 +21,7 @@ Hard rules:
 
 ## Setup
 
-0. If `scripts/vault-audit.py` or `scripts/vault-embed.py` is missing in this vault, copy both from the setup repo's `scripts/` folder first: `cp REPO_PATH/scripts/vault-audit.py REPO_PATH/scripts/vault-embed.py VAULT_PATH/scripts/` (locate `REPO_PATH` the same way `/onboard` does; ask the user if you can't find a local clone of the setup repo). They live side by side; `vault-embed.py` imports `vault-audit.py`.
+0. If `scripts/vault-audit.py` or `scripts/vault-embed.py` is missing in this vault, stop and tell the user: this vault is the repository they created from the template, and both scripts ship with it, so something removed them (restoring them from the template repository fixes it). They live side by side; `vault-embed.py` imports `vault-audit.py`.
 1. `date` for today (`TODAY`).
 2. `VAULT` = vault root (directory containing CLAUDE.md). `AUDIT="python3 \"$VAULT/scripts/vault-audit.py\""`, `EMBED="python3 \"$VAULT/scripts/vault-embed.py\""`.
 3. If `_generated/vault-hygiene/vault-schema.md` is missing, stop and run Init instead.
