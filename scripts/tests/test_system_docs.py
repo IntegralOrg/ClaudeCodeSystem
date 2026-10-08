@@ -38,7 +38,7 @@ def test_setup_procedure_matches_the_hooks_and_routine_tools():
     has(text, "create_trigger", "persist_session", "## Owner", "email:", "Setup completed", "live_since: not live",
         "Work/Daily/", "Claude GitHub app")
     step3 = text[text.index("## 3. Create the routines"):text.index("## 4. Keys")]
-    has(step3, "repository", "get_trigger", "delete_trigger", "Do not pass `connectors`")
+    has(step3, "repository", "get_trigger", "delete_trigger", "Do not pass `connectors`", "created or reused")
     assert "scheduled-tasks" not in text
     # nowhere may the agent be told to open, read, cat, or print the credentials file
     bad = re.compile(r"\b(read|cat|print|echo|source|grep)\b[^.\n]{0,25}(\.env\b|credentials file)", re.I)
