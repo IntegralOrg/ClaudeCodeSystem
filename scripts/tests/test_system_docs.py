@@ -143,3 +143,50 @@ def test_connecting_tools_keeps_the_original_walkthroughs():
     has(text, "mc_live_XXX", "clickup-mcp-server", "ENOTFOUND", "apt-get", "nodejs.org", "Download JSON",
         "already have a project", "organization policy", "rize.io", "Direct Connections", "Tools That Need Login Credentials")
     assert text.count('"mcpServers"') >= 3
+
+
+def test_adding_your_computer_final_fix_content():
+    text = read("Adding Your Computer")
+    has(text, "Microsoft Store", "python3 -c", "xcode-select --install", "~/Documents/GitHub", "choose `~/Brain`",
+        "GIT_TERMINAL_PROMPT=0 git ls-remote origin", "Git Credential Manager", "gh auth login --web && gh auth setup-git",
+        "land-local.sh --final", "landed on main", "nothing to push", "worktree")
+    assert "python.org installer does not provide" in text
+    # the screen-driving consent comes before the Superpowers install; the landing auth check before the landing
+    assert text.index("drive the screen for anything") < text.index("Installs the **Superpowers**")
+    assert text.index("ls-remote origin") < text.index("land-local.sh --final")
+    assert "python.org and tick" not in text
+
+
+def test_routine_schedules_are_utc_and_environment_choice_is_simple():
+    setup, routines = read("Setup Procedure"), read("Routines")
+    has(setup, "UTC", "0 3 * * 2-6", "0 4 * * 2-6", "America/New_York", "without naming an environment")
+    has(routines, "UTC", "0 3 * * 2-6", "0 4 * * 2-6", "daylight-saving")
+    assert "find the environment id other routines use" not in setup
+    for folder in (".claude/commands", "cowork-commands"):
+        eod = (ROOT / folder / "eod.md").read_text(encoding="utf-8")
+        has(eod, "TZ=<that zone> date +%F")
+        assert "[Your Timezone])" not in eod
+
+
+def test_skeleton_has_the_sections_setup_fills_and_the_maintainer_and_local_notes():
+    text = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+    first = text.split("\n\n")[1]
+    has(first, "IntegralOrg/ClaudeCodeSystem", "docs/DEVELOPING.md", "maintaining the template")
+    for h in ("## Owner", "## Company", "## Tools I live in", "## The shape of my week", "## First jobs for this system"):
+        assert h in text, h
+        has(read("Setup Procedure"), h)
+    has(text, "scripts/land-local.sh", "do not pull, rebase, or push by hand", "_generated/landing.log")
+
+
+def test_no_false_repair_promise_for_duplicate_frontmatter():
+    for text in (read("How This Works"), (ROOT / "System" / "routines" / "vault-hygiene.md").read_text(encoding="utf-8"), (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")):
+        assert "Vault Hygiene repairs the duplicates" not in text and "Vault Hygiene repairs it nightly" not in text
+        assert "also repairs duplicated frontmatter" not in text
+    has(read("How This Works"), "autosync workflow repairs", "by hand")
+
+
+def test_vault_audit_init_seeds_the_template_root_files():
+    for folder in (".claude/commands", "cowork-commands"):
+        text = (ROOT / folder / "vault-audit.md").read_text(encoding="utf-8")
+        has(text, "README.md", "CHANGELOG.md", "LICENSE", "SETUP_PENDING", ".env.example", ".gitattributes", "`docs`", "`System`", "`Templates`",
+            "duplicate_frontmatter_keys")

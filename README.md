@@ -28,7 +28,7 @@ Connection steps for each tool (calendar, email, tasks, calls, chat) are in [Con
 ┌──────────────────────────────▼───────────────────────────────────┐
 │                     Claude Code (AI Agent)                        │
 │              Reads CLAUDE.md · Executes skills                    │
-│              Reads .env · Calls APIs · Writes vault files        │
+│              Scripts load keys · Calls APIs · Writes vault files  │
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                    │
 │   MCP Servers          REST/GraphQL APIs       Custom Scripts     │

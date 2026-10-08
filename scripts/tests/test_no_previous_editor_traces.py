@@ -21,7 +21,7 @@ def _entry_date(changelog, lineno):
     return date
 
 
-def test_no_obsidian_anywhere():
+def test_no_previous_editor_anywhere():
     hits = []
     for p in ROOT.rglob("*"):
         if any(part in SKIP_DIRS for part in p.parts) or not p.is_file() or (p.suffix not in EXTS and p.name not in NAMES) or p.resolve() == SELF:

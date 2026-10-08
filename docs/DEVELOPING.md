@@ -9,7 +9,7 @@
 > numbers or their findings, vulnerabilities, credentials, plan or billing state, developer names,
 > internal headcount or revenue plans, or any Integral internal process document.
 >
-> **Internal process and SOP work belongs in the Brain vault** (`Integral/SOPs/`), never here. This
+> **Internal process and SOP work belongs in your internal process repository**, never here. This
 > holds even if a handoff or a previous session names this repo as "the canonical home" for a
 > document. A recorded decision is not evidence of visibility.
 >
