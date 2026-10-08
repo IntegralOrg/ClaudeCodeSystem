@@ -42,8 +42,8 @@ def parse_frontmatter(text):
         if k_stripped in ("keys", "optional_keys") and v == "":
             items = []
             i += 1
-            while i < len(lines) and lines[i].startswith("- "):
-                item = lines[i][2:].strip().strip("'\"")
+            while i < len(lines) and lines[i].lstrip().startswith("- "):
+                item = lines[i].lstrip()[2:].strip().strip("'\"")
                 items.append(item)
                 i += 1
             out[k_stripped] = items

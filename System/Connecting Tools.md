@@ -187,14 +187,14 @@ No meetings can simply mean the account is new.
      "mcpServers": {
        "clickup": {
          "command": "npx",
-         "args": ["-y", "@anthropic/mcp-remote", "https://mcp.clickup.com/s/mc_live_XXX"],
+         "args": ["-y", "mcp-remote", "https://mcp.clickup.com/mcp"],
          "env": {}
        }
      }
    }
    ```
 
-   The exact server URL or package depends on the ClickUp MCP server version available at the time. Search the web for the current ClickUp MCP server setup command if the above does not work. Common alternatives: `npx -y @anthropic/mcp-remote https://mcp.clickup.com/s/<connection_id>` (ClickUp's hosted MCP) and `npx -y clickup-mcp-server` (community package with the `CLICKUP_API_KEY` env var). Also add `"mcp__clickup__*"` to `permissions.allow` in `.claude/settings.json`.
+   The exact server URL or package depends on the ClickUp MCP server version available at the time. Search the web for the current ClickUp MCP server setup command if the above does not work. Common alternatives: `npx -y mcp-remote https://mcp.clickup.com/mcp` (ClickUp's hosted MCP) and `npx -y clickup-mcp-server` (community package with the `CLICKUP_API_KEY` env var). Also add `"mcp__clickup__*"` to `permissions.allow` in `.claude/settings.json`.
 
    If you use an API-key-based server, pass the key through the env block **as a placeholder, never the raw value** (`.mcp.json` is committed; the real value lives in the credentials file and the environment's variables):
 

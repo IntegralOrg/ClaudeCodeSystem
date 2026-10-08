@@ -34,11 +34,11 @@ def run(vault, *args, env_extra=None):
 
 def test_init_creates_env_from_example_only_when_missing(tmp_path):
     v = make_vault(tmp_path)
-    p = run(v, "--init")
+    run(v, "--init")
     f = v / CRED
     assert f.is_file() and f.read_text() == (v / (CRED + ".example")).read_text()
     f.write_text("ALPHA_KEY=secret-value\n")
-    run(v, "--init")
+    p = run(v, "--init")
     assert f.read_text() == "ALPHA_KEY=secret-value\n"
     assert "secret-value" not in p.stdout + p.stderr
 
@@ -121,6 +121,16 @@ def test_block_style_yaml_list_parsing(tmp_path):
     assert p.returncode == 0
     assert "missing: none" in p.stdout
     assert "present: ALPHA_KEY, BETA_TOKEN" in p.stdout
+
+
+def test_indented_block_list_items_are_parsed(tmp_path):
+    v = make_vault(tmp_path)
+    (v / "System" / "routines" / "eod.md").write_text(
+        "---\nname: eod\ntitle: End of Day\nschedule: \"0 23 * * 1-5\"\nprompt: /eod\nconnectors: [Gmail]\n"
+        "keys:\n  - ALPHA_KEY\n  - BETA_TOKEN\noptional_keys: [GAMMA_KEY]\n---\n# EOD\n")
+    p = run(v, "--routine", "eod")
+    assert p.returncode == 1
+    assert "missing: ALPHA_KEY, BETA_TOKEN" in p.stdout
 
 
 def test_other_routine_malformed_does_not_abort_when_routine_specified(tmp_path):

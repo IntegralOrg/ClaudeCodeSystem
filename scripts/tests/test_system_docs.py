@@ -140,7 +140,7 @@ def test_connecting_tools_keeps_the_original_walkthroughs():
     text = read("Connecting Tools")
     for h in ["## ClickUp", "## Rize", "## Other tools"]:
         assert h in text, h
-    has(text, "mc_live_XXX", "clickup-mcp-server", "ENOTFOUND", "apt-get", "nodejs.org", "Download JSON",
+    has(text, "npx", "mcp-remote", "https://mcp.clickup.com/mcp", "clickup-mcp-server", "ENOTFOUND", "apt-get", "nodejs.org", "Download JSON",
         "already have a project", "organization policy", "rize.io", "Direct Connections", "Tools That Need Login Credentials")
     assert text.count('"mcpServers"') >= 3
 

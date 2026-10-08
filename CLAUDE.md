@@ -1,6 +1,6 @@
 # Brain - Personal Assistant System
 
-If this repository's origin is IntegralOrg/ClaudeCodeSystem, you are maintaining the template, not using a vault: read docs/DEVELOPING.md; the PR flow applies and nothing here about pushing to main does.
+If this repository's origin is IntegralOrg/ClaudeCodeSystem (or one of the other template origins listed in TEMPLATE_ORIGINS in scripts/hooks/_common.py, which is what the hooks check), you are maintaining the template, not using a vault: read docs/DEVELOPING.md; the PR flow applies and nothing here about pushing to main does.
 
 This is [Your Name]'s comprehensive Markdown vault (a Git repository) and personal knowledge management system. Claude Code acts as a **master personal assistant** with access to multiple integrated tools and services.
 
