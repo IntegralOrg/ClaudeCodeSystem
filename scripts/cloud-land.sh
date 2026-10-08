@@ -1,5 +1,6 @@
 #!/bin/bash
 # cloud-land.sh: land a cloud session's vault edits on the repo's main branch, deterministically.
+# Local sessions land through land-local.sh; this script is cloud-only.
 #
 # Runs INSIDE an Anthropic cloud container as a Claude Code hook (Stop + SessionEnd, see
 # .claude/settings.json). It replaces every "commit via the cloud git flow" step that would

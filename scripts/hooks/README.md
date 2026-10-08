@@ -9,9 +9,13 @@ Stdlib-only Python 3 (3.11+). Each hook reads the Claude Code JSON payload on st
 | `guard_state_writes.py` | PreToolUse (Edit, Write, MultiEdit) | Keeps `## Current State` / `## Log` structure in state-bearing files |
 | `guard_vault_path.py` | SessionStart | Warns when the vault is inside a synced folder (iCloud, OneDrive, Dropbox, Google Drive) |
 | `setup_pending.py` | SessionStart | Starts setup while SETUP_PENDING exists (silent in the template repo) |
+| `landing_health.py` | SessionStart | Reports repeated local landing failures from `_generated/landing.log` (silent when the last attempt succeeded) |
+| `routine_health.py` | SessionStart | Connector-free push channel: names a routine that is stale (no recent daily note, audit-log heading or monthly review) or still not live after setup. Silent when healthy and in the template repo |
 | `session_context.py` | SessionStart | Injects branch, uncommitted count, recent commits, newest handoff |
 
-`_common.py` holds the shared helpers (`read_payload`, `project_dir`, `block`, `allow`, `run`).
+`_common.py` holds the shared helpers (`read_payload`, `project_dir`, `block`, `allow`, `run`, `is_template_repo`).
+
+`../land-local.sh` is not a hook script but runs from the `Stop` and `SessionEnd` hooks (`--final`): it lands a local session's edits on `main` (cloud sessions use `../cloud-land.sh`), never forces, never discards the local commit, and logs to `_generated/landing.log`, which `landing_health.py` reads. Override env vars: `LAND_LOCAL_REPO`, `LAND_LOCAL_STATE`, `LAND_LOCAL_FORCE_LOCAL`, `LAND_LOCAL_FORCE_CLOUD`. `routine_health.py` honors `ROUTINE_HEALTH_TODAY=YYYY-MM-DD` for tests.
 
 ## Exit codes
 

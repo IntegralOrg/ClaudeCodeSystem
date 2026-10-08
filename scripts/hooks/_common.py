@@ -78,16 +78,24 @@ def run(main_fn):
     sys.exit(0)
 
 
-TEMPLATE_ORIGINS = ("IntegralOrg/ClaudeCodeSystem", "StackDev223/ClaudeCodeSystem")
+TEMPLATE_ORIGINS = ("IntegralOrg/ClaudeCodeSystem", "IntegralOrg/ClaudeCodeSystem-Cloud", "StackDev223/ClaudeCodeSystem")
+
+
+def origin_repo_path(url):
+    """'owner/repo' of a git remote URL (https or scp-style, optional .git and trailing slash), lowercased; '' if none."""
+    import re
+    m = re.search(r"[/:]([^/:]+)/([^/:]+?)(?:\.git)?/*$", (url or "").strip())
+    return f"{m.group(1)}/{m.group(2)}".lower() if m else ""
 
 
 def is_template_repo(root):
-    """True when this checkout IS the public template (a maintainer's clone), not a client's brain."""
+    """True when this checkout IS the public template (a maintainer's clone), not a client's brain.
+    Exact match on the origin's owner/repo, so a lookalike such as ClaudeCodeSystem-Foo is not the template."""
     try:
         import subprocess
         p = subprocess.run(["git", "--no-optional-locks", "-C", str(root), "remote", "get-url", "origin"],
                            capture_output=True, text=True, timeout=2)
-        url = p.stdout.strip().lower() if p.returncode == 0 else ""
+        url = p.stdout.strip() if p.returncode == 0 else ""
     except Exception:
         return False
-    return any(t.lower() in url for t in TEMPLATE_ORIGINS)
+    return origin_repo_path(url) in {t.lower() for t in TEMPLATE_ORIGINS}

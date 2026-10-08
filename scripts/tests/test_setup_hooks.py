@@ -74,3 +74,19 @@ def test_other_sync_services_detected(tmp_path):
         d = tmp_path / part / "Brain"; d.mkdir(parents=True)
         _, out, _ = run_hook("guard_vault_path.py", d)
         assert label in context_of(out), part
+
+
+def test_lookalike_folder_names_are_not_synced(tmp_path):
+    for part in ("icloud-tools", "dropboxfan", "my-onedrive-notes", "cloudstorage-docs"):
+        d = tmp_path / part / "Brain"; d.mkdir(parents=True)
+        rc, out, _ = run_hook("guard_vault_path.py", d)
+        assert rc == 0 and out.strip() == "", part
+
+
+def test_template_origin_match_is_exact(tmp_path):
+    for i, origin in enumerate(("https://github.com/IntegralOrg/ClaudeCodeSystem-Foo.git", "git@github.com:IntegralOrg/ClaudeCodeSystem2.git",
+                                "https://github.com/someone/IntegralOrg/ClaudeCodeSystem-x", "https://github.com/Other/ClaudeCodeSystem.git")):
+        v = git_repo(tmp_path / f"n{i}", origin)
+        (v / "SETUP_PENDING").write_text("x"); (v / "System").mkdir(); (v / "System" / "Setup Procedure.md").write_text("#")
+        rc, out, _ = run_hook("setup_pending.py", v)
+        assert rc == 0 and "not set up" in context_of(out), origin

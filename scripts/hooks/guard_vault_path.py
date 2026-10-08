@@ -9,18 +9,27 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import project_dir, run  # noqa: E402
 
-SYNCED_FOLDER_MARKERS = (
-    ("com~apple~CloudDocs", "iCloud"), ("Mobile Documents", "iCloud"), ("iCloud", "iCloud"),
-    ("OneDrive", "OneDrive"), ("Dropbox", "Dropbox"),
-    ("Google Drive", "Google Drive"), ("GoogleDrive", "Google Drive"), ("CloudStorage", "a cloud-storage"),
+# Whole path components only (case-insensitive), so "icloud-tools" or a user named "dropboxfan" never match.
+SYNCED_EXACT = (
+    ("com~apple~clouddocs", "iCloud"), ("mobile documents", "iCloud"), ("icloud", "iCloud"),
+    ("onedrive", "OneDrive"), ("dropbox", "Dropbox"), ("cloudstorage", "a cloud-storage"),
+)
+SYNCED_PREFIX = (
+    ("onedrive-", "OneDrive"), ("onedrive -", "OneDrive"),
+    ("googledrive-", "Google Drive"), ("google drive", "Google Drive"),
 )
 
 
 def synced_service(path):
     parts = [p.lower() for p in Path(path).resolve().parts]
-    for marker, label in SYNCED_FOLDER_MARKERS:
-        if any(marker.lower() in part for part in parts):
-            return label
+    for part in parts:  # service-specific prefixes first: .../CloudStorage/GoogleDrive-x is Google Drive, not generic
+        for prefix, label in SYNCED_PREFIX:
+            if part.startswith(prefix):
+                return label
+    for part in parts:
+        for marker, label in SYNCED_EXACT:
+            if part == marker:
+                return label
     return None
 
 
