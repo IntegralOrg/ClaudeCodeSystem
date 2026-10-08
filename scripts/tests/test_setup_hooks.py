@@ -90,3 +90,10 @@ def test_template_origin_match_is_exact(tmp_path):
         (v / "SETUP_PENDING").write_text("x"); (v / "System").mkdir(); (v / "System" / "Setup Procedure.md").write_text("#")
         rc, out, _ = run_hook("setup_pending.py", v)
         assert rc == 0 and "not set up" in context_of(out), origin
+
+
+def test_more_sync_folder_names_detected(tmp_path):
+    for part, label in (("Dropbox (Personal)", "Dropbox"), ("OneDrive for Business", "OneDrive"), ("iCloudDrive", "iCloud")):
+        d = tmp_path / part / "Brain"; d.mkdir(parents=True)
+        _, out, _ = run_hook("guard_vault_path.py", d)
+        assert label in context_of(out), part

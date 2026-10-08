@@ -23,5 +23,7 @@ venv/
 .playwright-mcp/
 _generated/agent-actions/
 _generated/landing.log
+_generated/landing-git.log
+_generated/landing.tmp.log
 .handoffs/
 docs/superpowers/

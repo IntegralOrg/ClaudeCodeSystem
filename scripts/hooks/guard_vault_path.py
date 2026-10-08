@@ -11,12 +11,13 @@ from _common import project_dir, run  # noqa: E402
 
 # Whole path components only (case-insensitive), so "icloud-tools" or a user named "dropboxfan" never match.
 SYNCED_EXACT = (
-    ("com~apple~clouddocs", "iCloud"), ("mobile documents", "iCloud"), ("icloud", "iCloud"),
+    ("com~apple~clouddocs", "iCloud"), ("mobile documents", "iCloud"), ("icloud", "iCloud"), ("iclouddrive", "iCloud"),
     ("onedrive", "OneDrive"), ("dropbox", "Dropbox"), ("cloudstorage", "a cloud-storage"),
 )
 SYNCED_PREFIX = (
     ("onedrive-", "OneDrive"), ("onedrive -", "OneDrive"),
     ("googledrive-", "Google Drive"), ("google drive", "Google Drive"),
+    ("dropbox (", "Dropbox"), ("onedrive for", "OneDrive"),
 )
 
 

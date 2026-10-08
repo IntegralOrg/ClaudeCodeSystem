@@ -27,7 +27,6 @@ KNOWN = {
     "monthly-review": ("Monthly Review", ("monthly review", "monthly-review")),
 }
 DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
-LIVE_RE = re.compile(r"live_since:\s*[\"']?(\d{4}-\d{2}-\d{2})")
 SETUP_DONE_RE = re.compile(r"setup\b.{0,20}\b(complete|completed|finished|done)\b|\b(completed|finished)\b.{0,20}\bsetup\b", re.I)
 
 
@@ -76,62 +75,76 @@ def newest_audit_heading(root):
 
 
 def newest_monthly_output(root):
+    """Newest Monthly Review output date. Convention: Work/Monthly/YYYY-MM-DD Monthly Review.md; a month-only
+    name such as 2026-09.md counts as the last day of that month."""
     files = list((root / "Work" / "Monthly").glob("*.md")) + list((root / "Work").glob("Monthly Review*")) \
         + list((root / "Work").glob("*/Monthly Review*"))
     best = None
     for f in files:
-        m = DATE_RE.search(f.name)
-        if not m:
-            continue
-        d = to_date(f"{m.group(1)}-{m.group(2)}-{m.group(3)}")
+        d = None
+        m = re.search(r"(\d{4})-(\d{2})-(\d{2})", f.name)
+        if m:
+            d = to_date(m.group(0))
+        else:
+            m = re.search(r"(\d{4})-(\d{2})(?!\d)", f.name)
+            if m:
+                y, mo = int(m.group(1)), int(m.group(2))
+                if 1 <= mo <= 12:
+                    d = (date(y + (mo == 12), mo % 12 + 1, 1) - timedelta(days=1))
         if d and (best is None or d > best):
             best = d
-    if best:
-        return best
-    months = []
-    for f in files:
-        m = re.search(r"(\d{4})-(\d{2})(?!\d)", f.name)
+    return best
+
+
+def norm_heading(text):
+    """Heading text without numbering ('1.'), parentheses and markup, lowercased."""
+    t = re.sub(r"\([^)]*\)", " ", text)
+    t = re.sub(r"[*_`]", "", t)
+    t = re.sub(r"^\s*\d+\s*[.)]\s*", "", t)
+    return re.sub(r"\s+", " ", t).strip().lower()
+
+
+def routine_names(root):
+    """slug -> set of lowercase names a heading may start with (slug, title, known aliases)."""
+    names = {slug: set(a) for slug, (_, a) in KNOWN.items()}
+    for rf in (root / "System" / "routines").glob("*.md"):
+        n = names.setdefault(rf.stem, set())
+        n.update({rf.stem, rf.stem.replace("-", " ")})
+        try:
+            m = re.search(r"^title:\s*(.+)$", rf.read_text(encoding="utf-8", errors="replace"), re.M)
+        except Exception:
+            m = None
         if m:
-            d = to_date(f"{m.group(1)}-{m.group(2)}-01")
-            if d:
-                months.append(d)
-    return max(months) if months else None
+            n.add(norm_heading(m.group(1).strip().strip("\"'")))
+    return names
 
 
 def parse_routines(root):
-    """Return {slug: live_since date or None} for routines listed in System/Routines.md; {} when the file is absent."""
+    """{slug: live_since date or None} for routines with a `## <title>` section in System/Routines.md; {} when the
+    file is absent. A section runs to the next `## ` heading; only its FIRST `live_since:` bullet counts
+    (a date, or `not live`), so a later routine's value is never attributed to an earlier one."""
     f = root / "System" / "Routines.md"
     if not f.is_file():
         return {}
-    names = {slug: set(a) for slug, (_, a) in KNOWN.items()}
-    for rf in (root / "System" / "routines").glob("*.md"):
-        names.setdefault(rf.stem, set()).update({rf.stem, rf.stem.replace("-", " ")})
-    blocks = []  # (label text, body text)
-    cur = None
+    sections = []  # [normalized heading, [body lines]]
     for line in f.read_text(encoding="utf-8", errors="replace").splitlines():
-        s = line.strip()
-        if s.startswith("#"):
-            cur = [s.lstrip("#").strip().lower(), ""]
-            blocks.append(cur)
-        elif s.startswith("|") or s.startswith(("-", "*")):
-            if s.startswith("|"):
-                cells = [c.strip() for c in s.strip("|").split("|")]
-                label = (cells[0] if cells else "").lower()
-            else:
-                label = re.split(r"[:\u2014]", s.lstrip("-* "), 1)[0].strip().lower()
-            blocks.append([label.strip("`* "), s])
-            if cur is not None:
-                cur[1] += s + "\n"
-        elif cur is not None:
-            cur[1] += s + "\n"
+        if re.match(r"^##\s+\S", line):
+            sections.append([norm_heading(line[2:]), []])
+        elif sections:
+            sections[-1][1].append(line)
     found = {}
-    for slug, aliases in names.items():
-        for label, body in blocks:
-            if label in aliases:
-                m = LIVE_RE.search(body)
-                live = to_date(m.group(1)) if m else None
-                if found.get(slug) is None:
-                    found[slug] = live
+    for slug, names in routine_names(root).items():
+        for heading, body in sections:
+            if any(heading.startswith(n) for n in names if n):
+                live = None
+                for line in body:
+                    m = re.match(r"^\s*(?:[-*]\s*)?live_since:\s*(.*)$", line)
+                    if m:
+                        d = DATE_RE.search(m.group(1))
+                        live = to_date(d.group(0)) if d else None
+                        break
+                found[slug] = live
+                break
     return found
 
 

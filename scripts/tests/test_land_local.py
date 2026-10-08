@@ -1,12 +1,15 @@
 import json
 import os
+import re
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
 
 SCRIPT = Path(__file__).resolve().parents[1] / "land-local.sh"
 CRED = ".env"
+STAMPED = re.compile(r"^\d{4}-\d{2}-\d{2} \d\d:\d\d:\d\d ")
 
 
 def git(cwd, *args):
@@ -50,12 +53,17 @@ def landed(clone):
     return git(clone, "ls-tree", "-r", "--name-only", "origin/main") if git(clone, "fetch", "-q", "origin") == "" else ""
 
 
+def origin_tip(w):
+    return git(w["origin"], "rev-parse", "main")
+
+
 def test_first_local_landing_from_clean_clone(world):
     a = world["a"]; (a / "Notes.md").write_text("hello\n")
     p = land(world, a, "--final")
     assert p.returncode == 0 and p.stdout == ""
     assert "Notes.md" in landed(a) and git(a, "rev-parse", "HEAD") == git(a, "rev-parse", "origin/main")
     assert "Session sid12345" in git(a, "log", "-1", "--format=%s")
+    assert not any(n.startswith("_generated/") for n in landed(a).splitlines())  # the landing logs never land
 
 
 def test_session_id_from_stdin_then_env_then_local(world):
@@ -84,7 +92,7 @@ def test_markdown_conflict_union_merges(world):
     a, b = world["a"], world["b"]
     (b / "README.md").write_text("# brain\nfrom b\n"); land(world, b, "--final")
     (a / "README.md").write_text("# brain\nfrom a\n"); p = land(world, a, "--final")
-    assert p.returncode == 0
+    assert p.returncode == 0 and p.stdout == ""
     git(a, "fetch", "-q", "origin"); text = git(a, "show", "origin/main:README.md")
     assert "from a" in text and "from b" in text
 
@@ -94,10 +102,39 @@ def test_non_markdown_conflict_is_logged_and_left(tmp_path):
     a, b = w["a"], w["b"]
     (b / "data.json").write_text('{"v": 1}\n'); land(w, b, "--final")
     (a / "data.json").write_text('{"v": 2}\n'); p = land(w, a, "--final")
-    assert p.returncode == 0
-    assert "conflict" in (a / "_generated" / "landing.log").read_text()
+    assert p.returncode == 0 and p.stdout == ""
+    log = (a / "_generated" / "landing.log").read_text()
+    assert "conflict" in log
+    assert all(STAMPED.match(l) for l in log.splitlines())  # raw git output never reaches landing.log
+    assert (a / "_generated" / "landing-git.log").is_file()
     assert (a / "data.json").read_text() == '{"v": 2}\n'
     assert not (a / ".git" / "rebase-merge").exists() and not (a / ".git" / "rebase-apply").exists()
+
+
+def test_mid_merge_never_commits_conflict_markers(tmp_path):
+    w = make_world(tmp_path, union=False)
+    a, b = w["a"], w["b"]
+    (b / "data.json").write_text('{"v": 1}\n'); land(w, b, "--final")
+    (a / "data.json").write_text('{"v": 2}\n'); git(a, "add", "data.json"); git(a, "commit", "-q", "-m", "local")
+    subprocess.run(["git", "-C", str(a), "pull", "--no-rebase", "-q", "origin", "main"], capture_output=True, text=True)
+    assert (a / ".git" / "MERGE_HEAD").exists() and git(a, "ls-files", "-u")
+    before = origin_tip(w)
+    p = land(w, a, "--final")
+    assert p.returncode == 0 and p.stdout == ""
+    assert origin_tip(w) == before
+    assert "skipped: repository is mid-merge/rebase/cherry-pick/revert" in (a / "_generated" / "landing.log").read_text()
+    assert (a / ".git" / "MERGE_HEAD").exists() and "<<<<<<<" in (a / "data.json").read_text()
+
+
+@pytest.mark.parametrize("marker", ["CHERRY_PICK_HEAD", "REVERT_HEAD", "rebase-merge", "rebase-apply"])
+def test_other_in_progress_operations_skip(world, marker):
+    a = world["a"]; (a / "n.md").write_text("n\n")
+    path = a / ".git" / marker
+    path.mkdir() if marker.startswith("rebase") else path.write_text("x\n")
+    before = origin_tip(world)
+    p = land(world, a, "--final")
+    assert p.returncode == 0 and origin_tip(world) == before
+    assert "mid-merge/rebase/cherry-pick/revert" in (a / "_generated" / "landing.log").read_text()
 
 
 def test_throttle_skips_rapid_stops_but_final_bypasses(world):
@@ -114,6 +151,26 @@ def test_lock_prevents_concurrent_landing(world):
     p = land(world, a, "--final")
     assert p.returncode == 0 and "locked" in (a / "_generated" / "landing.log").read_text()
     assert "n.md" not in landed(a)
+
+
+def test_stale_lock_is_removed_and_landing_proceeds(world):
+    a = world["a"]; (a / "n.md").write_text("n\n")
+    state = world["state"] / a.name; state.mkdir(parents=True); lock = state / "lock"; lock.mkdir()
+    old = time.time() - 3600; os.utime(lock, (old, old))
+    p = land(world, a, "--final")
+    log = (a / "_generated" / "landing.log").read_text()
+    assert p.returncode == 0 and "stale lock removed" in log and "landed on main" in log
+    assert "n.md" in landed(a) and not lock.exists()
+
+
+def test_landing_log_is_capped(world):
+    a = world["a"]; (a / "n.md").write_text("n\n")
+    (a / "_generated").mkdir()
+    (a / "_generated" / "landing.log").write_text("".join(f"2026-01-01 00:00:00 filler {i}\n" for i in range(4500)))
+    land(world, a, "--final")
+    lines = (a / "_generated" / "landing.log").read_text().splitlines()
+    assert len(lines) < 2100 and "landed on main" in lines[-1]
+    assert not (a / "_generated" / "landing.tmp.log").exists()
 
 
 def test_exits_silently_inside_a_cloud_container(world):
