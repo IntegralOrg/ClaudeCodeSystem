@@ -57,7 +57,7 @@ def classify(tpl, vault):
         meta, path = line.split("\t", 1)
         current[path] = meta.split()[1]
     past = history(tpl)
-    folded = {p.lower() for p in current}  # macOS and Windows: a case-only rename is the same file
+    by_fold = {p.lower(): p for p in current}  # a case-only rename: the old path is the new file on macOS and Windows
     out = {k: [] for k in ("add", "take", "same", "changed", "owned", "retire", "retire-changed")}
     for path in sorted(set(current) | set(past)):
         if path in NEVER:
@@ -69,8 +69,9 @@ def classify(tpl, vault):
             continue
         h = hashes(mine)
         if path not in current:
-            if path.lower() in folded:
-                continue
+            twin = by_fold.get(path.lower())
+            if twin and (vault / twin).is_file():
+                continue  # the vault already has the new spelling (or the filesystem folds case): nothing to retire
             out["retire" if h & past.get(path, set()) else "retire-changed"].append(path)
         elif current[path] in h:
             out["same"].append(path)

@@ -27,7 +27,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Monthly Review** -- the `/monthly-review` command (both command folders), its routine definition `System/routines/monthly-review.md`, its section in `System/Routines.md`, the new-month nudge and monthly prompts in `CLAUDE.md`, and the health hook's "has not run" check. Retired for lack of use; nightly Vault Hygiene keeps the vault clean.
 
 ### In an existing vault
-1. Delete `.claude/commands/monthly-review.md`, `cowork-commands/monthly-review.md`, and `System/routines/monthly-review.md`.
+1. Delete `.claude/commands/monthly-review.md`, `cowork-commands/monthly-review.md`, and `System/routines/monthly-review.md`. If you had edited any of them, move what you added somewhere it still serves you first (an `/update` run does this for you).
 2. Remove the `## Monthly Review` section from `System/Routines.md`.
 3. In `CLAUDE.md`, remove the "Last Monthly Review" startup step and block and the "Monthly Review Prompts" section.
 4. Turn off the Monthly Review routine in your Claude account (Routines page, or `update_trigger` with `enabled: false` from a cloud session).

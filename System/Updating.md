@@ -23,16 +23,16 @@ Anything else is adopted.
 
 ## Steps
 
-1. **Get the template fresh.** Clone it outside the vault: `git clone --quiet https://github.com/IntegralOrg/ClaudeCodeSystem "$TMPDIR/ccs-template"` (use a fresh folder; on Windows any temporary folder). Follow this file from that clone, not the vault's copy, which may be older.
+1. **Get the template fresh.** Clone it into a new, empty folder outside the vault: `TPL="$(mktemp -d)/ccs-template" && git clone --quiet https://github.com/IntegralOrg/ClaudeCodeSystem "$TPL"` (on Windows, make a new empty folder under the temp directory and use its path as `TPL`). Never reuse a folder from an earlier run: a clone into a folder that already exists fails, and that is a local collision, not a GitHub problem. Use `$TPL` for every step below. Follow this file from that clone, not the vault's copy, which may be older.
 2. **Read what changed.** In the clone's `CHANGELOG.md`, read every entry above the one whose `## [` heading matches the top entry of the vault's `CHANGELOG.md` (all of them if the vault has none or no heading matches). Note each `### In an existing vault` list; those are steps you do in step 4.
-3. **Sort the files.** Run `python3 "$TMPDIR/ccs-template/scripts/template-diff.py" --template "$TMPDIR/ccs-template" --vault .` from the vault root. It lists each file in a group:
+3. **Sort the files.** Run `python3 "$TPL/scripts/template-diff.py" --template "$TPL" --vault .` from the vault root. It lists each file in a group:
    - `add`, `take`, `retire`: apply as listed (copy in, replace, delete). No judgment needed; the owner never edited these.
    - `changed`: the owner edited a file the template also changed. Compare both against the two rules above. Usually that means taking the template's version and re-applying the owner's edit on top of it.
    - `retire-changed`: the template removed a file the owner edited. Delete it unless the vault is ahead or something relies on it; then keep it and say so.
    - `owned` (`CLAUDE.md`, `System/Routines.md`, `System/routines/*.md`, the local routines registry): the owner's files. Change them only where a CHANGELOG entry from step 2 says to, and keep everything else in them, including the owner's settings such as `timezone:` and `live_since:`.
    - Files the script does not list exist only in the vault: leave them.
-4. **Do the CHANGELOG steps** from step 2, in order, oldest entry first. A step that needs the owner (a connector, a key, a routine in their Claude account) goes in the report instead, as one plain sentence.
-5. **Check.** Run `python3 -m compileall -q scripts` (silent means every script still parses) and confirm `.claude/settings.json` is valid JSON. A failure means a merge in step 3 broke a file; fix it. Then remove the clone.
+4. **Do the CHANGELOG steps** from step 2, in order, oldest entry first. A step that deletes a file applies only to a file the sort put in `retire`; a file in `retire-changed` follows step 3's judgment, and anything the owner added to it is moved somewhere it still serves them before the file goes. A step that needs the owner (a connector, a key, a routine in their Claude account) goes in the report instead, as one plain sentence.
+5. **Check.** Run `python3 -m compileall -q scripts` (silent means every script still parses) and confirm `.claude/settings.json` is valid JSON. A failure means a merge in step 3 broke a file; fix it. Then remove the clone (`rm -rf "$TPL"`).
 6. **Save once.** Commit everything as one commit, `Update from the template (<date of the newest CHANGELOG entry>)`, and land it the way this vault always saves (see Git in `CLAUDE.md`).
 7. **Report** in at most ten lines, in plain language: what is new for the owner (from the CHANGELOG), what was merged, what was kept and the one-line reason for each, and anything the owner has to do. Never list the files that were simply taken.
 

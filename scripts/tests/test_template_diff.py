@@ -90,3 +90,12 @@ def test_case_only_rename_is_never_retired(tmp_path):
     write(vault, {"Templates/Note.md": "n\n"})
     got = run(tpl, vault)
     assert got["retire"] == [] and got["retire-changed"] == []
+    # a vault that still has only the old spelling: on a case-sensitive filesystem the old path retires and the
+    # new one is added; where the filesystem folds case the two are one file and nothing retires
+    vault2 = tmp_path / "vault2"
+    write(vault2, {"templates/Note.md": "n\n"})
+    got = run(tpl, vault2)
+    if (vault2 / "Templates" / "Note.md").is_file():
+        assert got["retire"] == [] and got["add"] == []
+    else:
+        assert got["retire"] == ["templates/Note.md"] and got["add"] == ["Templates/Note.md"]
