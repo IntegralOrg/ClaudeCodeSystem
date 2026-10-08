@@ -42,7 +42,7 @@ loop, not to schedule another cleanup.
 
 ## Pre-Flight: Keys Check
 
-Run `python3 scripts/check-keys.py --routine monthly-review`. Record the result (missing key names, or "none"). If the script exits 1, note it in the findings. If this run's keys check exits 0 and `System/Routines.md` has no `live_since` for this routine, add `live_since: <today>` there. Proceed to Phase 0.
+Run `python3 scripts/check-keys.py --routine monthly-review`. Record the result (missing key names, or "none"). If the script exits 1, note it in the findings. If this run's keys check exits 0, then in `System/Routines.md`, under this routine's `## <title>` heading, if the first bullet reads `- live_since: not live` (or is missing), change that same bullet to `- live_since: <today's date>`; never add a second live_since bullet. Proceed to Phase 0.
 
 ---
 

@@ -99,3 +99,41 @@ def test_public_repo_clean_of_internal_names():
             assert "Integral" not in text, name
         if name != "Getting Help" and name != "Setup Procedure":
             assert "Dean" not in text and "Eva" not in text, name
+
+
+def test_go_live_flip_edits_the_first_bullet_never_adds_one():
+    for folder in (".claude/commands", "cowork-commands"):
+        for name in ("eod", "vault-audit", "monthly-review"):
+            text = (ROOT / folder / f"{name}.md").read_text(encoding="utf-8")
+            assert "has no `live_since`" not in text, (folder, name)
+            has(text, "change that same bullet", "never add a second live_since bullet")
+    for p in (ROOT / "System" / "routines").glob("*.md"):
+        text = p.read_text(encoding="utf-8")
+        assert "has no `live_since`" not in text, p.name
+        has(text, "never add a second live_since bullet")
+
+
+def test_setup_procedure_is_safe_to_re_run():
+    text = read("Setup Procedure")
+    has(text, "list_triggers", "reuse it", "instead of creating a duplicate", "in place",
+        "Create a routine by hand", "connector-missing", "persist_session: false",
+        "Delete `SETUP_PENDING` now, so an interrupted hand-off never restarts setup")
+    # SETUP_PENDING is deleted at the start of step 6, before the completion line of step 7
+    assert text.index("Delete `SETUP_PENDING` now") < text.index("## 7. Finish")
+    assert "Delete `SETUP_PENDING`" not in text[text.index("## 7. Finish"):]
+
+
+def test_credentials_file_is_named_once_for_the_human_only():
+    for name in ("Connecting Tools", "Setup Procedure"):
+        has(read(name), "hidden file", "Command+Shift+Period", "The agent never opens it")
+    has(read("Connecting Tools"), "update_trigger", "nothing after the `=`")
+    assert "never edits MCP server configuration" not in read("Connecting Tools")
+
+
+def test_connecting_tools_keeps_the_original_walkthroughs():
+    text = read("Connecting Tools")
+    for h in ["## ClickUp", "## Rize", "## Other tools"]:
+        assert h in text, h
+    has(text, "mc_live_XXX", "clickup-mcp-server", "ENOTFOUND", "apt-get", "nodejs.org", "Download JSON",
+        "already have a project", "organization policy", "rize.io", "Direct Connections", "Tools That Need Login Credentials")
+    assert text.count('"mcpServers"') >= 3

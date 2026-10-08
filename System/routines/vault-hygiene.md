@@ -11,4 +11,4 @@ description: Nightly self-healing pass: frontmatter, duplicate-subject detection
 ---
 # Vault Hygiene
 
-Runs nightly at 1 AM. Needs no keys. First step every run: `python3 scripts/check-keys.py --routine vault-hygiene`. If this run's keys check exits 0 and `System/Routines.md` has no `live_since` for this routine, add `live_since: <today>` there. Its report is `_generated/vault-hygiene/audit-log.md`; End of Day reads that file's newest date to confirm this ran. It also repairs duplicated frontmatter lines that a merge can leave behind.
+Runs nightly at 1 AM. Needs no keys. First step every run: `python3 scripts/check-keys.py --routine vault-hygiene`. If this run's keys check exits 0, then in `System/Routines.md`, under this routine's `## <title>` heading, if the first bullet reads `- live_since: not live` (or is missing), change that same bullet to `- live_since: <today's date>`; never add a second live_since bullet. Its report is `_generated/vault-hygiene/audit-log.md`; End of Day reads that file's newest date to confirm this ran. It also repairs duplicated frontmatter lines that a merge can leave behind.

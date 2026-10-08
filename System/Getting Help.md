@@ -15,7 +15,7 @@ The agent answers anything covered in `System/`: how the system works, how to co
 
 ## 2. Eva
 
-Eva is the assistant you spoke with during your interview, and she can also help you after setup. To reach her, use the link you were given with your interview invitation. Bring:
+Eva is the assistant you spoke with during your interview, and she can also help you after setup. Ask your onboarding contact for the Eva link. Bring:
 
 - the last error line you saw (copy it as text),
 - the routine name involved (`End of Day`, `Vault Hygiene`, or `Monthly Review`),
@@ -23,7 +23,7 @@ Eva is the assistant you spoke with during your interview, and she can also help
 
 ## 3. Dean, for white-glove sessions
 
-Book a session with Dean (your Integral contact) when a step needs someone with you: connecting Gmail, Google Calendar, Slack, or Fathom; adding keys to the environment; the two installs (Claude Desktop and GitHub Desktop) and the macOS permission grants (Accessibility and Screen Recording). Dean can drive the screen with you and leave nothing half-connected.
+Book a session with Dean (your onboarding contact) when a step needs someone with you: connecting Gmail, Google Calendar, Slack, or Fathom; adding keys to the environment; the two installs (Claude Desktop and GitHub Desktop) and the macOS permission grants (Accessibility and Screen Recording). Dean can drive the screen with you and leave nothing half-connected.
 
 ## What never to paste anywhere
 

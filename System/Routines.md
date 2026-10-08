@@ -56,7 +56,7 @@ Do this once per routine, in a browser on claude.ai.
 
 ## If a routine is stale or not live
 
-End of Day's **Routine health** section in `Work/Daily/<date>.md`, and the session-start note from `routine_health.py`, say when a routine has not run when it should. When Gmail is connected the same reason is emailed to you, and otherwise a "Brain needs you: <reason>" all-day event appears on your calendar. A reason is sent at most once a week.
+There are two channels. The session-start note from `routine_health.py` says, with no connector needed, when End of Day or Monthly Review has not run when it should. End of Day's **Routine health** section in `Work/Daily/<date>.md` records Vault Hygiene staleness and any missing keys or connectors (a missing connector shows as `connector-missing`), and the same reasons are pushed outside the vault: emailed to you when Gmail is connected, otherwise a "Brain needs you: <reason>" all-day event on your calendar. A reason is sent at most once a week.
 
 There are two fixes:
 

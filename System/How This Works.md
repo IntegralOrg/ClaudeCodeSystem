@@ -49,7 +49,7 @@ Markdown files use `merge=union`, which means that when two sessions change the 
 
 ## How you are told, even with no connectors
 
-Two small hooks run at the start of every local session and speak first, without needing Gmail or a calendar:
+Two small hooks run at the start of every session (cloud or local) and speak first, without needing Gmail or a calendar:
 
 - `landing_health.py` reads `_generated/landing.log` and says so when saves have been failing, or when landing appears to be switched off (several `on branch` or `locked` lines in a row).
 - `routine_health.py` says when a routine has not run when it should (End of Day, Vault Hygiene, or Monthly Review), using the daily notes, the hygiene log, and the `live_since` lines in `System/Routines.md`.
