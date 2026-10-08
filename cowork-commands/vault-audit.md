@@ -21,7 +21,7 @@ Hard rules:
 
 ## Setup
 
-0. Run `python3 scripts/check-keys.py --routine vault-hygiene`. If the script exits 1, write the missing keys under `## Routine health` in the daily note and continue. If this run's keys check exits 0 and `System/Routines.md` has no `live_since` for this routine, add `live_since: <today>` there.
+0. Run `python3 scripts/check-keys.py --routine vault-hygiene`. Record the result (missing key names, or "none"). If this run's keys check exits 0 and `System/Routines.md` has no `live_since` for this routine, add `live_since: <today>` there. In Step 6b below (receipt), append the keys result to `_generated/vault-hygiene/audit-log.md` as a note (it will be read by End of Day for the daily note's Routine health section).
 1. If `scripts/vault-audit.py` or `scripts/vault-embed.py` is missing in this vault, stop and tell the user: this vault is the repository they created from the template, and both scripts ship with it, so something removed them (restoring them from the template repository fixes it). They live side by side; `vault-embed.py` imports `vault-audit.py`.
 2. `date` for today (`TODAY`).
 3. `VAULT` = vault root (directory containing CLAUDE.md). `AUDIT="python3 \"$VAULT/scripts/vault-audit.py\""`, `EMBED="python3 \"$VAULT/scripts/vault-embed.py\""`.

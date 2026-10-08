@@ -25,7 +25,7 @@ Advanced fallback:
 
 ## Setup
 
-1. Run `python3 scripts/check-keys.py --routine eod` and list the connectors available in this session (name each; note any of Gmail, Google Calendar that is absent). If the script exits 1 or a required connector is absent, write the names under `## Routine health` in today's daily note and continue with what is available. If this run's keys check exits 0 and `System/Routines.md` has no `live_since` for this routine, add `live_since: <today>` there.
+1. Run `python3 scripts/check-keys.py --routine eod` and list the connectors available in this session (name each; note any of Gmail, Google Calendar that is absent). Hold the findings (missing keys, missing connectors) for Section 4 to include in the daily note under `## Routine health`. If this run's keys check exits 0 and `System/Routines.md` has no `live_since` for this routine, add `live_since: <today>` there. If the script exits 1 or a required connector is absent, continue with what is available.
 2. Run `date` to get today's date and current time ([Your Timezone])
 3. Do not read or source the credentials file. Scripts load credentials themselves (`scripts/envload.py`); for a one-off external call use `python3 scripts/with-env.py -- <command>`
 4. Set variables:
@@ -110,7 +110,7 @@ Report: total hours tracked, hours per client, hours per work type, number of ga
 
 ## 4. Daily Note
 
-Read the manifest at `$MANIFEST`. Read the calendar cache at `/tmp/eod-calendar-$TODAY.md`. If `/tmp/eod-time-$TODAY.md` exists, read the time tracking summary.
+Read the manifest at `$MANIFEST`. Read the calendar cache at `/tmp/eod-calendar-$TODAY.md`. If `/tmp/eod-time-$TODAY.md` exists, read the time tracking summary. Read the keys-check findings from Setup step 1 and the connectors list from Setup step 1. Read `_generated/vault-hygiene/audit-log.md` to find the newest `## YYYY-MM-DD` heading (Vault Hygiene's last run date). If it does not exist and `System/Routines.md` has no `live_since` for vault-hygiene, note "Vault Hygiene: not yet run" for the health section. Otherwise, if the newest date is more than 2 days old, flag it as STALE. If `_generated/landing.log` exists, read its last line; otherwise note "cloud session, landing by hook".
 
 Create the daily note at `$VAULT/Work/Daily/$TODAY.md` with these sections:
 
@@ -120,7 +120,8 @@ Create the daily note at `$VAULT/Work/Daily/$TODAY.md` with these sections:
 4. TASKS COMPLETED: Items marked done today
 5. TASKS ADDED: New items routed today
 6. TIME SUMMARY: Hours per client and work type, or "Time tracking not configured"
-7. SUMMARY: 2-3 sentence narrative of the day
+7. ROUTINE HEALTH: Vault Hygiene freshness (OK or STALE, with date), missing keys (names only, or "none"), connectors (connected/missing by name), landing (last line or default)
+8. SUMMARY: 2-3 sentence narrative of the day, ending with `Routine status: <ok | needs you: reason>`
 
 Report: file path and brief stats.
 
@@ -197,7 +198,27 @@ After all sections complete, print the final summary:
 
 ## Final Step: Status and Push Channel
 
-End with one status line in the daily note: `Routine status: <ok | needs you: reason>`. If Vault Hygiene is stale (marked STALE in Setup step 7), or a key or a required connector is missing, reach the owner outside the vault: send a short email through the Gmail connector (subject `Brain needs you: <reason>`); if the connector cannot send, create an all-day Google Calendar event for tomorrow titled `Brain needs you: <reason>` with the fix in its description. Record which channel was used. Before sending, check `_generated/routine-alerts.json` (create if missing); send only if the reason is new or was last sent 7 or more days ago. After sending, record `{"<reason>": "<YYYY-MM-DD sent>"}` in `_generated/routine-alerts.json`.
+End the daily note with one status line: `Routine status: <ok | needs you: <reason>>`. If Vault Hygiene is stale (marked STALE in Setup step 7), or any required keys or connectors are missing, build a list of stable dedupe keys:
+- `vault-hygiene-stale` if Vault Hygiene's last run is more than 2 days old
+- `key-missing:<NAME>` for each missing required key
+- `connector-missing:<NAME>` for each missing required connector (Gmail, Google Calendar)
+
+For each key, check `_generated/routine-alerts.json` (create if missing; treat malformed or missing as `{}`). Send a push (outside the vault) only if the key is absent from the JSON or its ISO date is 7 or more days ago. After sending, merge all keys into the JSON with today's date and write it back.
+
+To send: read CLAUDE.md's Owner section and extract the owner's email address. If absent, skip email and use the calendar fallback.
+
+Email route (preferred): Use the Gmail connector's send tool. Subject: `Brain needs you: <reason>` (the first missing item). Body (3 lines):
+- What is stale or missing (Vault Hygiene, names of keys, names of connectors)
+- The fix (from System/Routines.md or System/Connecting Tools.md)
+- "reply not needed"
+
+If the Gmail connector can only draft (does not send), create the draft AND proceed to calendar fallback.
+
+Calendar fallback: Use Google Calendar connector. All-day event tomorrow. Title: `Brain needs you: <reason>`. Description: the fix from System/Routines.md or System/Connecting Tools.md.
+
+Record which channel was used in the daily note after the status line: `(sent via Gmail | sent via calendar)`.
+
+---
 
 ---
 

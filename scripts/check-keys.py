@@ -21,6 +21,8 @@ EXAMPLE_NAME = ".env.example"
 
 
 def parse_frontmatter(text):
+    # Normalize CRLF to LF before matching
+    text = text.replace('\r\n', '\n')
     m = re.match(r"^---\n(.*?)\n---", text, re.S)
     if not m:
         return {}
@@ -30,10 +32,16 @@ def parse_frontmatter(text):
             continue
         k, _, v = line.partition(":")
         v = v.strip()
+        k_stripped = k.strip()
         if v.startswith("[") and v.endswith("]"):
-            out[k.strip()] = [x.strip().strip("'\"") for x in v[1:-1].split(",") if x.strip()]
+            out[k_stripped] = [x.strip().strip("'\"") for x in v[1:-1].split(",") if x.strip()]
         else:
-            out[k.strip()] = v.strip("'\"")
+            # If value looks like a list but is a bare scalar, error
+            if k_stripped in ("keys", "optional_keys") and not (v.startswith("[") and v.endswith("]")):
+                if v and v != "[]":
+                    # This is a bare scalar like "FOO", not a proper list
+                    return None
+            out[k_stripped] = v.strip("'\"")
     return out
 
 
@@ -42,6 +50,9 @@ def load_routines(vault):
     for path in sorted(glob.glob(os.path.join(vault, "System", "routines", "*.md"))):
         with open(path, encoding="utf-8") as f:
             fm = parse_frontmatter(f.read())
+        if fm is None:
+            print(f"error in {os.path.basename(path)}: keys must be a list", file=sys.stderr)
+            return None
         name = fm.get("name") or os.path.splitext(os.path.basename(path))[0]
         routines[name] = {"title": fm.get("title", name), "keys": fm.get("keys", []) or [],
                           "optional_keys": fm.get("optional_keys", []) or []}
@@ -60,7 +71,10 @@ def env_names_present(vault):
                 k, _, v = line.partition("=")
                 if v.strip().strip("'\""):
                     k = k.strip()
-                    present.add(k[7:] if k.startswith("export ") else k)
+                    # Strip extra whitespace after export keyword
+                    if k.startswith("export "):
+                        k = k[7:].lstrip()
+                    present.add(k)
     except OSError:
         pass
     return present
@@ -93,6 +107,8 @@ def main(argv=None):
 
     notes = [init_env(args.vault)] if args.init else []
     routines = load_routines(args.vault)
+    if routines is None:
+        return 2
     if args.routine:
         if args.routine not in routines:
             print(f"unknown routine: {args.routine} (known: {', '.join(sorted(routines)) or 'none'})", file=sys.stderr)

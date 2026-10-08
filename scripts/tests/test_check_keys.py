@@ -73,3 +73,34 @@ def test_documented_invocations_never_name_the_credentials_file():
             for line in p.read_text().splitlines():
                 if "check-keys.py" in line:
                     assert CRED not in line, line
+
+
+def test_crlf_file_still_reports_missing_keys(tmp_path):
+    v = make_vault(tmp_path)
+    # Write routine file with CRLF line endings
+    eod_path = v / "System" / "routines" / "eod.md"
+    content = eod_path.read_text()
+    eod_path.write_text(content.replace('\n', '\r\n'))
+    (v / CRED).write_text("ALPHA_KEY=secret\n")
+    p = run(v, "--routine", "eod")
+    assert p.returncode == 1
+    assert "missing: BETA_TOKEN" in p.stdout
+
+
+def test_keys_as_bare_scalar_exits_2(tmp_path):
+    v = make_vault(tmp_path)
+    # Overwrite eod.md with bare scalar keys (not a list)
+    (v / "System" / "routines" / "eod.md").write_text(
+        "---\nname: eod\ntitle: End of Day\nschedule: \"0 23 * * 1-5\"\nprompt: /eod\nconnectors: [Gmail]\n"
+        "keys: ALPHA_KEY\noptional_keys: [GAMMA_KEY]\n---\n# EOD\n")
+    p = run(v, "--routine", "eod")
+    assert p.returncode == 2
+    assert "keys must be a list" in p.stderr
+
+
+def test_export_with_extra_spaces_counts_as_present(tmp_path):
+    v = make_vault(tmp_path)
+    (v / CRED).write_text("export  ALPHA_KEY=secret\nBETA_TOKEN=value\n")
+    p = run(v, "--routine", "eod")
+    assert p.returncode == 0
+    assert "missing: none" in p.stdout
