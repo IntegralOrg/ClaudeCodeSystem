@@ -34,6 +34,7 @@ def test_marker_triggers_on_any_session_start(tmp_path):
     assert rc == 0 and err == ""
     text = context_of(out)
     assert "not set up" in text and "System/Setup Procedure.md" in text and "do not wait" in text
+    assert "If no human is present in this session (a scheduled routine), do not run setup; report that setup is pending." in text
 
 
 def test_marker_ignored_in_template_repo(tmp_path):

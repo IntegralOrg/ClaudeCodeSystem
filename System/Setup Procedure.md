@@ -20,7 +20,7 @@ Fields: owner name, role, company, company one-liner, tools, week shape, first t
 
 ## 2. Build the vault
 
-- Write `CLAUDE.md` from the skeleton: fill the `## Owner` section (name, role, company, time zone, and `email: <owner email>` on its own line), the company, tools, week shape, and first jobs sections; keep every rule and the `System/` reference intact.
+- Write `CLAUDE.md` from the skeleton: fill the `## Owner` section (name, role, company, time zone as an IANA name, and `email: <owner email>` on its own line), then replace the placeholder line under each of `## Company`, `## Tools I live in`, `## The shape of my week`, and `## First jobs for this system`; keep every rule and the `System/` reference intact.
 - Create folders: `Work/Clients/`, `Work/Projects/`, `Work/Daily/`, `Work/Monthly/`, `Personal/`, `Resources/Reference/`, `Inbox/`.
 - For each client or project the user named, create a page from `Templates/Client Note.md`.
 - Set `timezone:` in every file under `System/routines/` to the user's zone as an IANA name (for example `America/New_York`), then edit the three routine sections of `System/Routines.md` in place (the `## End of Day`, `## Vault Hygiene`, `## Monthly Review` sections) to match those files; keep every other section of the file, including "Create a routine by hand" and "If a routine is stale or not live".
@@ -29,9 +29,11 @@ Fields: owner name, role, company, company one-liner, tools, week shape, first t
 
 Call `mcp__Claude_Code_Remote__list_triggers` first. For each file in `System/routines/`: if a routine with the same name already exists, reuse it (update it with `update_trigger` if the schedule or prompt differs) instead of creating a duplicate; otherwise create it with `create_trigger`. The tools a cloud session exposes for this are `mcp__Claude_Code_Remote__create_trigger`, `list_triggers`, `get_trigger`, `update_trigger`, and `delete_trigger`. `create_trigger` takes a name, a cron expression (or `run_once_at` for a single run), the prompt, and the connectors. The name, schedule, time zone, prompt, and connectors come from the routine's file.
 
+- **The cron expression is in UTC.** The routine files give the schedule in the owner's local time, with `timezone:` set to their IANA zone. Convert it to UTC before calling `create_trigger`, using the offset in force today. Example: 11 PM Monday to Friday in America/New_York is `0 3 * * 2-6` in UTC during daylight time (EDT) and `0 4 * * 2-6` in standard time (EST); the weekday field moves by one because 3 AM UTC is the next day. Write the UTC expression and the local intent in `System/Routines.md` (the fire time shifts by an hour at each daylight-saving change, see that file).
+
 - Create every routine with `persist_session: false` (each run is a fresh session, so nothing a previous run left in memory is relied on).
 - Create each routine with the connectors its definition lists even if they are not connected yet; a run without them degrades and Routine health reports `connector-missing`.
-- Pick the **environment**: use the `list_triggers` output to find the environment id other routines use; if none exists, or no environment has the Claude GitHub app on this repository, follow "Create a routine by hand" in `System/Routines.md` (it includes creating the environment and installing the Claude GitHub app) and tell the user you will verify on the next run.
+- **Environment:** create the routine on the current session's environment when the tool reports one, or without naming an environment when the tool allows. Use "Create a routine by hand" in `System/Routines.md` (it includes creating the environment and installing the Claude GitHub app) only when creation fails, or when a routine's first run reports no repository access; tell the user you will verify on the next run.
 - Record each routine's id and the environment id in `System/Routines.md`.
 
 If these tools are not available in this session (a local session usually has no `Claude_Code_Remote` server), follow "Create a routine by hand" in `System/Routines.md` and tell the user you will verify on the next run. Mark every routine "not live" until its first run reports its keys present.
@@ -41,7 +43,7 @@ If these tools are not available in this session (a local session usually has no
 ```markdown
 ## End of Day
 - live_since: not live
-- schedule: 0 23 * * 1-5 (America/New_York)
+- schedule: 11 PM Monday to Friday America/New_York, cron `0 3 * * 2-6` UTC (EDT; `0 4 * * 2-6` in standard time)
 - needs: connectors Gmail, Google Calendar; optional keys FATHOM_API_KEY, SLACK_TOKEN_WORKSPACE_A
 - routine id: <id from create_trigger, or "not created yet">
 - environment id: <environment id, or "not created yet">

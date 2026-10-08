@@ -31,7 +31,7 @@ Advanced fallback:
 ## Setup
 
 1. Run `python3 scripts/check-keys.py --routine eod` and list the connectors available in this session (name each; note any of Gmail, Google Calendar that is absent). Hold the findings (missing keys, missing connectors) for Section 4 to include in the daily note under `## Routine health`. If this run's keys check exits 0, then in `System/Routines.md`, under this routine's `## <title>` heading, if the first bullet reads `- live_since: not live` (or is missing), change that same bullet to `- live_since: <today's date>`; never add a second live_since bullet. If the script exits 1 or a required connector is absent, continue with what is available.
-2. Run `date` to get today's date and current time ([Your Timezone])
+2. Compute today's date and time in the owner's time zone, never the container's clock (cloud containers run on UTC, so a bare `date` can already be tomorrow at 11 PM Eastern): read the IANA zone from `## Owner` in `CLAUDE.md`, then run `TZ=<that zone> date +%F` for the date and `TZ=<that zone> date` for the time
 3. Do not read or source the credentials file. Scripts load credentials themselves (`scripts/envload.py`); for a one-off external call use `python3 scripts/with-env.py -- <command>`
 4. Set variables:
    - `TODAY` = current date in YYYY-MM-DD format

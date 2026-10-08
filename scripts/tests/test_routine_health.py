@@ -163,3 +163,58 @@ def test_full_date_monthly_file_name_convention(tmp_path):
     (tmp_path / "Work" / "Monthly").mkdir(parents=True)
     (tmp_path / "Work" / "Monthly" / "2026-10-01 Monthly Review.md").write_text("# review\n")
     assert run_hook(tmp_path) == (0, "")
+
+
+MONTHLY_DEF = '---\nname: monthly-review\ntitle: Monthly Review\nschedule: "0 8 1 * *"\n---\n'
+DAILY_DEF = '---\nname: vault-hygiene\ntitle: Vault Hygiene\nschedule: "0 1 * * *"\n---\n'
+
+
+def routine_defs(root):
+    (root / "System" / "routines").mkdir(parents=True, exist_ok=True)
+    (root / "System" / "routines" / "monthly-review.md").write_text(MONTHLY_DEF)
+    (root / "System" / "routines" / "vault-hygiene.md").write_text(DAILY_DEF)
+
+
+def monthly_world(root, today):
+    """Setup on 2026-10-08; every routine live except Monthly Review."""
+    routine_defs(root)
+    audit(root, today); daily(root, today - timedelta(days=1))
+    daily(root, date(2026, 10, 8), "# Day\nSetup complete.\n")
+    routines_file(root, "# Routines\n\n## End of Day\n- live_since: 2026-10-09\n\n## Vault Hygiene\n- live_since: 2026-10-09\n\n## Monthly Review\n- live_since: not live\n")
+
+
+def test_monthly_review_not_live_allowance_runs_past_the_first_of_next_month(tmp_path):
+    monthly_world(tmp_path, date(2026, 10, 13))
+    assert run_hook(tmp_path, today=date(2026, 10, 13)) == (0, "")  # 5 days after setup, but monthly: silent
+    for f in (tmp_path / "_generated").rglob("*.md"):
+        f.unlink()
+    d = date(2026, 11, 2)
+    audit(tmp_path, d); daily(tmp_path, d - timedelta(days=1))
+    assert run_hook(tmp_path, today=d) == (0, "")  # first run was the 1st; allowance ends the 3rd
+    d = date(2026, 11, 3)
+    audit(tmp_path, d); daily(tmp_path, d - timedelta(days=1))
+    assert "Routine Monthly Review is still not live 26 days after setup" in run_hook(tmp_path, today=d)[1]
+
+
+def test_daily_routine_still_reported_after_two_days_while_monthly_waits(tmp_path):
+    monthly_world(tmp_path, date(2026, 10, 13))
+    routines_file(tmp_path, "# Routines\n\n## End of Day\n- live_since: 2026-10-09\n\n## Vault Hygiene\n- live_since: not live\n\n## Monthly Review\n- live_since: not live\n")
+    text = run_hook(tmp_path, today=date(2026, 10, 13))[1]
+    assert "Routine Vault Hygiene is still not live" in text and "Monthly Review" not in text
+
+
+def test_routine_health_section_missing_lines_are_reported(tmp_path):
+    fresh(tmp_path)
+    daily(tmp_path, TODAY - timedelta(days=1),
+          "# Day\n\n## Routine health\n- Vault Hygiene: ran 2026-10-14\n- Missing key: FATHOM_API_KEY\n- Connector missing: Gmail (alert sent by calendar event)\n- Missing keys: none\n\n## Notes\n- a thing that is missing here is ignored\n")
+    rc, text = run_hook(tmp_path)
+    assert rc == 0
+    assert "Tell the user first: Missing key: FATHOM_API_KEY" in text
+    assert "Tell the user first: Connector missing: Gmail" in text
+    assert "Missing keys: none" not in text and "ignored" not in text
+
+
+def test_routine_health_section_without_missing_is_silent(tmp_path):
+    fresh(tmp_path)
+    daily(tmp_path, TODAY - timedelta(days=1), "# Day\n\n## Routine health\n- all routines ran\n- keys: none missing\n")
+    assert run_hook(tmp_path) == (0, "")

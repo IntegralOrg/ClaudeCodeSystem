@@ -17,7 +17,10 @@ import time
 from datetime import date, datetime, timedelta
 
 ALWAYS_PROTECTED = [".git", ".git-cloud", ".claude", "Attachments",
-                    "node_modules", "cowork-commands", "_generated", "docs", "scripts", ".github"]
+                    "node_modules", "cowork-commands", "_generated", "docs", "scripts", ".github",
+                    # Routine definitions and the live routine registry: read by the health hooks, whose
+                    # parsers need their exact shape, so the audit never moves or rewrites them.
+                    "System/routines", "System/Routines.md"]
 
 # The audit's own operational files (schema, index, staged trash) live here,
 # deliberately OUT of .claude/. Cloud `acceptEdits` auto-approves Edit/Write
@@ -426,7 +429,7 @@ def _cluster_invariants(marks, index):
 
 def structural_checks(vault, schema, files):
     findings = {"root_clutter": [], "unknown_folder": [], "naming_violations": [],
-                "missing_frontmatter": [], "empty_stubs": []}
+                "missing_frontmatter": [], "duplicate_frontmatter_keys": [], "empty_stubs": []}
     whitelist = set(schema.get("root_whitelist") or [])
     folders = schema.get("folders") or []
     required = schema.get("frontmatter_required") or []
@@ -457,6 +460,8 @@ def structural_checks(vault, schema, files):
             continue
         keys, body = read_frontmatter_keys_and_body(full)
         exempt = any(fnmatch.fnmatch(rel, pat) for pat in fm_exempt)
+        if len(keys) != len(set(keys)):
+            findings["duplicate_frontmatter_keys"].append(rel)  # report only: fixed by hand, never auto-rewritten
         if required and not exempt and not all(k in keys for k in required):
             findings["missing_frontmatter"].append(rel)
         if len("".join(body.split())) < 40 and (now - os.path.getmtime(full)) > 3 * 86400:

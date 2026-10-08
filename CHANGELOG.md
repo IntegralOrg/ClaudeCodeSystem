@@ -22,7 +22,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - **The repository root is the vault root** -- `scripts/`, `.claude/settings.json`, `CLAUDE.md` (client skeleton), `Templates/`, `.env.example`, and `.github/workflows/vault-autosync.yml` (guarded so it never runs on the template) live at the root; maintainer notes moved to `docs/DEVELOPING.md`.
 - **EOD** -- starts with the keys check and a connector listing; writes a "Routine health" section into the daily note.
-- **Repository renamed** -- `IntegralOrg/ClaudeCodeSystem-Cloud` is now `IntegralOrg/ClaudeCodeSystem`; the separate Mac edition is archived.
+- **Repository renamed** -- `IntegralOrg/ClaudeCodeSystem-Cloud` is now `IntegralOrg/ClaudeCodeSystem`; the separate Mac edition is being archived.
 - **Monthly Review** -- writes `Work/Monthly/YYYY-MM-DD Monthly Review.md`, which the health hook reads.
 
 ### Removed
@@ -30,7 +30,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Known gaps
 - `System/` guidance does not refresh itself from the template; ask the agent to fetch it.
-- Markdown union merges can duplicate a frontmatter line on a true conflict; Vault Hygiene repairs it nightly.
+- Markdown union merges can duplicate a frontmatter line on a true conflict. The autosync workflow repairs it on branch merges only; a duplicate left by a local rebase is reported by Vault Hygiene's frontmatter check and fixed by hand.
 - Human steps on the white-glove onboarding call (connectors, keys, installs, permission grants) are logged by hand in the facilitator's checklist, not by the system.
 - The previous note editor's state folder is no longer excluded from hygiene and graph scans; delete it from a vault if one exists.
 

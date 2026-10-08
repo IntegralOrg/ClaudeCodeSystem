@@ -20,7 +20,8 @@ def main(payload):
     if (root / PROCEDURE).is_file():
         text = ("This vault is not set up. Read `System/Setup Procedure.md` now and begin setup in this session; "
                 "do not wait for a command and do not ask whether to start. Setup deletes the "
-                f"`{MARKER}` file at the vault root right after writing its completion line.")
+                f"`{MARKER}` file at the vault root right after writing its completion line. "
+                "If no human is present in this session (a scheduled routine), do not run setup; report that setup is pending.")
     else:
         text = (f"This vault is not set up (`{MARKER}` exists) but `System/Setup Procedure.md` is missing. "
                 "Tell the user the template is incomplete and to re-create the repository from the template.")

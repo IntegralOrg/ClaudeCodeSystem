@@ -165,6 +165,24 @@ class TestStructuralChecks(unittest.TestCase):
             self.assertEqual(va.no_merge_paths(schema),
                              ["Work/Clients/*/Transcripts", "Work/Transcripts"])
 
+    def test_duplicate_frontmatter_keys_are_reported_not_fixed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            w = make_vault(tmp)
+            dup = "---\ntype: note\ncreated: 2026-01-01\nupdated: 2026-01-02\nupdated: 2026-01-05\n---\nbody that is long enough to not be a stub at all"
+            w("Work/Clients/Acme/dup.md", dup)
+            w("Work/Clients/Acme/ok.md", "---\ntype: note\ncreated: 2026-01-01\n---\nbody that is long enough to not be a stub at all")
+            schema = va.load_schema(tmp)
+            files = va.walk_vault(tmp, schema.get("protected", []))
+            f = va.structural_checks(tmp, schema, files)
+            self.assertEqual(f["duplicate_frontmatter_keys"], ["Work/Clients/Acme/dup.md"])
+            with open(os.path.join(tmp, "Work/Clients/Acme/dup.md"), encoding="utf-8") as fh:
+                self.assertEqual(fh.read(), dup)  # the scan never rewrites
+
+    def test_routine_registry_is_always_protected(self):
+        self.assertTrue(va.is_protected("System/Routines.md", []))
+        self.assertTrue(va.is_protected("System/routines/eod.md", []))
+        self.assertFalse(va.is_protected("System/How This Works.md", []))
+
     def test_wildcard_no_merge_excludes_records(self):
         # is_protected()-style plain prefix matching never matches a
         # wildcard no_merge pattern like "Work/Clients/*/Transcripts"

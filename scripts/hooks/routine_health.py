@@ -3,8 +3,9 @@
 the newest daily note (End of Day's output), the newest heading in the Vault Hygiene audit log, the
 newest Monthly Review output, and `live_since:` values in System/Routines.md. Prints one line per
 stale routine, prefixed "Tell the user first:". A routine that never produced output and has no
-live_since is "not yet run" (End of Day's job) and is never reported. Silent when nothing is stale,
-silent in the template repository, fails open. ROUTINE_HEALTH_TODAY=YYYY-MM-DD overrides today (tests)."""
+live_since is "not yet run" (End of Day's job) and is never reported. Also reports any
+line of the newest daily note's `## Routine health` section that says a key or connector is missing.
+Silent when nothing is stale, silent in the template repository, fails open. ROUTINE_HEALTH_TODAY=YYYY-MM-DD overrides today (tests)."""
 import json
 import os
 import re
@@ -159,6 +160,62 @@ def setup_date(notes):
     return None
 
 
+def schedule_dom(root, slug):
+    """Day-of-month field of the routine's cron `schedule:` in System/routines/<slug>.md, or "*" when unknown
+    (a missing file counts as daily, except the known monthly routine)."""
+    try:
+        text = (root / "System" / "routines" / f"{slug}.md").read_text(encoding="utf-8", errors="replace")
+        m = re.search(r"^schedule:\s*[\"']?([^\"'\n]+)", text, re.M)
+        fields = m.group(1).split() if m else []
+        if len(fields) >= 3:
+            return fields[2]
+    except Exception:
+        pass
+    return "1" if slug == "monthly-review" else "*"
+
+
+def first_run_after(setup, dom):
+    """Date of the first scheduled run strictly after `setup` for a monthly day-of-month field."""
+    m = re.match(r"\d+", dom)
+    day = min(int(m.group(0)), 28) if m and int(m.group(0)) >= 1 else 1
+    y, mo = setup.year, setup.month
+    if setup.day >= day:
+        y, mo = (y + 1, 1) if mo == 12 else (y, mo + 1)
+    return date(y, mo, day)
+
+
+def not_live_allowance_ends(root, slug, setup):
+    """Date from which a routine that is still not live is worth reporting: 2 days after setup for a daily or
+    weekday routine; for a monthly one, 2 days after its first scheduled run following setup."""
+    dom = schedule_dom(root, slug)
+    if dom == "*":
+        return setup + timedelta(days=NOT_LIVE_AFTER_DAYS)
+    return first_run_after(setup, dom) + timedelta(days=NOT_LIVE_AFTER_DAYS)
+
+
+MISSING_OK_RE = re.compile(r"\b(none|no|nothing|nil|n/a)\b[^:\n]{0,40}\bmissing\b|\bmissing\b[^:\n]{0,40}:\s*(none|no|nothing|nil|n/a)?\s*\W*$", re.I)
+
+
+def routine_health_missing(notes):
+    """Lines of the newest daily note's `## Routine health` section that report a missing key or connector."""
+    if not notes:
+        return []
+    try:
+        lines = notes[-1][1].read_text(encoding="utf-8", errors="replace").splitlines()
+    except Exception:
+        return []
+    out, inside = [], False
+    for line in lines:
+        if re.match(r"^##\s+\S", line):
+            inside = bool(re.match(r"^##\s+routine health\b", line, re.I))
+            continue
+        if inside and re.search(r"\bmissing\b", line, re.I) and not MISSING_OK_RE.search(line):
+            text = re.sub(r"^\s*(?:[-*+]|\d+[.)])\s*", "", line).strip()
+            if text:
+                out.append(text)
+    return out[:5]
+
+
 def display(root, slug):
     if slug in KNOWN:
         return KNOWN[slug][0]
@@ -192,8 +249,9 @@ def problems(root, today):
     done = setup_date(notes) if listed else None
     if done and (today - done).days >= NOT_LIVE_AFTER_DAYS:
         for slug, live in listed.items():
-            if live is None:
+            if live is None and today >= not_live_allowance_ends(root, slug, done):
                 out.append(f"Routine {display(root, slug)} is still not live {(today - done).days} days after setup")
+    out.extend(routine_health_missing(notes))
     return out
 
 

@@ -20,7 +20,7 @@ updated: 2026-10-08
 | Routine | When | What it touches |
 |---|---|---|
 | End of Day | Weeknights, 11 PM your time | Reads your calendar and email (and calls and Slack when connected), writes `Work/Daily/<date>.md`, updates client pages, checks that the other routines ran, and reaches you outside the vault when something needs you |
-| Vault Hygiene | Every night, 1 AM your time | Repairs frontmatter, finds duplicate subjects, marks canonical files, writes `_generated/vault-hygiene/audit-log.md` |
+| Vault Hygiene | Every night, 1 AM your time | Backfills missing frontmatter, reports repeated frontmatter keys, finds duplicate subjects, marks canonical files, writes `_generated/vault-hygiene/audit-log.md` |
 | Monthly Review | The 1st of the month, 8 AM your time | Repairs the vault, rebuilds the knowledge graph, writes a coaching note to `Work/Monthly/YYYY-MM-DD Monthly Review.md` |
 
 Their definitions are in `System/routines/`; whether each is live is in `System/Routines.md`.
@@ -39,7 +39,7 @@ The committed settings let Claude run every Bash command without asking first, s
 
 ## What a merge conflict looks like here
 
-Markdown files use `merge=union`, which means that when two sessions change the same lines of the same file, Git keeps both versions instead of stopping. You never get a blocked save, and you never lose a line. The cost is that you can see a repeated line, and a file's frontmatter (the block between the `---` lines at the top) can gain a duplicate line such as two `updated:` entries. Vault Hygiene repairs the duplicates every night.
+Markdown files use `merge=union`, which means that when two sessions change the same lines of the same file, Git keeps both versions instead of stopping. You never get a blocked save, and you never lose a line. The cost is that you can see a repeated line, and a file's frontmatter (the block between the `---` lines at the top) can gain a duplicate line such as two `updated:` entries. The autosync workflow repairs those duplicates when it merges branches. A duplicate left by a local rebase is not repaired automatically: Vault Hygiene's frontmatter check reports it, and it is fixed by hand.
 
 ## When something seems off
 
