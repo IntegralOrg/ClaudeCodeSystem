@@ -7,6 +7,8 @@ Stdlib-only Python 3 (3.11+). Each hook reads the Claude Code JSON payload on st
 | `guard_secrets.py` | PreToolUse | Blocks credential files, env dumps, naming `.env`, destructive commands |
 | `log_tool_use.py` | PostToolUse, PostToolUseFailure | Appends one masked JSONL row per call to `_generated/agent-actions/` |
 | `guard_state_writes.py` | PreToolUse (Edit, Write, MultiEdit) | Keeps `## Current State` / `## Log` structure in state-bearing files |
+| `guard_vault_path.py` | SessionStart | Warns when the vault is inside a synced folder (iCloud, OneDrive, Dropbox, Google Drive) |
+| `setup_pending.py` | SessionStart | Starts setup while SETUP_PENDING exists (silent in the template repo) |
 | `session_context.py` | SessionStart | Injects branch, uncommitted count, recent commits, newest handoff |
 
 `_common.py` holds the shared helpers (`read_payload`, `project_dir`, `block`, `allow`, `run`).
@@ -30,6 +32,8 @@ Human terminal:
 ```bash
 echo '{"tool_name":"Read","tool_input":{"file_path":".env"}}' | python3 scripts/hooks/guard_secrets.py; echo "exit=$?"   # expect 2
 echo '{"tool_name":"Read","tool_input":{"file_path":"README.md"}}' | python3 scripts/hooks/guard_secrets.py; echo "exit=$?" # expect 0
+CLAUDE_PROJECT_DIR=$PWD python3 scripts/hooks/setup_pending.py <<< '{}' # expect nothing (this is the template repo)
+CLAUDE_PROJECT_DIR=$PWD python3 scripts/hooks/guard_vault_path.py <<< '{}' # expect nothing (path is not synced)
 ```
 
 Tests: `python -m pytest scripts/tests/test_hooks.py scripts/tests/test_sanitize_ingest.py -q`

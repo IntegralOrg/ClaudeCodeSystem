@@ -76,3 +76,18 @@ def run(main_fn):
     except Exception:
         sys.exit(0)
     sys.exit(0)
+
+
+TEMPLATE_ORIGINS = ("IntegralOrg/ClaudeCodeSystem", "StackDev223/ClaudeCodeSystem")
+
+
+def is_template_repo(root):
+    """True when this checkout IS the public template (a maintainer's clone), not a client's brain."""
+    try:
+        import subprocess
+        p = subprocess.run(["git", "--no-optional-locks", "-C", str(root), "remote", "get-url", "origin"],
+                           capture_output=True, text=True, timeout=2)
+        url = p.stdout.strip().lower() if p.returncode == 0 else ""
+    except Exception:
+        return False
+    return any(t.lower() in url for t in TEMPLATE_ORIGINS)
