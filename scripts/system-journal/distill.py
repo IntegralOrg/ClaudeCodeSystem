@@ -30,6 +30,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from extract import session_is_private  # noqa: E402  (one private-session rule for both stages)
+
 HOME = os.path.expanduser("~")
 STATE_DIR = os.path.join(HOME, ".system-journal")
 STATE_FILE = os.path.join(STATE_DIR, "state.json")
@@ -71,13 +74,15 @@ _GENERIC_VOCAB = {
         "tasks", "routines", "documentation", "email", "slack", "calendar", "transcripts",
         "vault-hygiene", "knowledge-graph", "claude-code", "hooks", "mcp", "skills", "subagents",
         "github", "deploy", "testing", "sales", "proposals", "hiring", "team",
-        "personal", "health", "finance", "family", "relationships",
+        "personal", "health", "finance", "family", "relationships", "vent",
     ],
     "sensitive_tags": [
         "personal", "health", "medical", "therapy", "relationships", "family",
-        "finance", "taxes", "legal-personal", "mental-health",
+        "finance", "taxes", "legal-personal", "mental-health", "vent",
     ],
-    "sensitive_path_prefixes": ["Personal/", "Personal\\"],
+    "sensitive_path_prefixes": ["Personal/", "Personal\\", "Personal/Journal/"],
+    "private_commands": ["vent"],
+    "private_path_prefixes": ["Personal/Journal/"],
 }
 
 
@@ -90,7 +95,7 @@ def load_vocab(vault):
     except (OSError, ValueError):
         data = {}
     out = {}
-    for key in ("systems", "sensitive_tags", "sensitive_path_prefixes"):
+    for key in ("systems", "sensitive_tags", "sensitive_path_prefixes", "private_commands", "private_path_prefixes"):
         out[key] = list(data.get(key) or _GENERIC_VOCAB[key])
     return out
 
@@ -239,6 +244,19 @@ def call_claude(raw, model, prompt_text):
     return json.loads(text[start:end + 1]), cost
 
 
+def private_stub(raw, rules):
+    """The journal line for a PRIVATE session: same keys as a normal line so readers never break,
+    no content, no model call. The line is never dropped, because counts and freshness need it."""
+    names = {str(n).strip().lstrip("/").split(":")[-1].lower() for n in rules["private_commands"]}
+    used = [c for c in raw.get("slash_commands", []) if c.lstrip("/").split(":")[-1].lower() in names]
+    return {
+        "ask": "[private session]", "outcome": "private", "outcome_note": "",
+        "failures": [], "complaints": [], "shipped": [], "decisions": [], "open_loop": "",
+        "systems": [used[0].lstrip("/").split(":")[-1].lower()] if used else ["vent"],
+        "topics": [], "why": "", "private": True,
+    }
+
+
 def host_tag():
     return socket.gethostname().split(".")[0].lower().replace(" ", "-")
 
@@ -327,6 +345,8 @@ def sensitivity(entry, vault, sensitive_tags, sensitive_path_prefixes):
     """Return (is_sensitive, reasons). Tag match is exact or on the segment before ':'/'-'.
     The sensitivity rules come from the SELECTED vault's vocab (passed in by the caller)."""
     reasons = []
+    if entry.get("private"):
+        reasons.append("private")
     for t in entry.get("systems") or []:
         t = str(t).lower()
         head = t.split(":")[0]
@@ -474,9 +494,16 @@ def main():
         if args.dry_run:
             print(f"would distill {sid} ({raw.get('title')}, {raw.get('user_turns')} turns)")
             return ("dry", 0.0, None)
+        # A private session never reaches the model. `private` is set by extract.py; the rule is
+        # re-checked on the record's commands and files so an older record is also covered.
+        private = bool(raw.get("private")) or session_is_private(
+            raw.get("slash_commands", []), [], raw.get("files_touched", []), vocab)
         try:
-            summary, cost = call_claude(raw, args.model, prompt_text)
-            summary = normalize_systems(summary, systems_vocab)
+            if private:
+                summary, cost = private_stub(raw, vocab), 0.0
+            else:
+                summary, cost = call_claude(raw, args.model, prompt_text)
+                summary = normalize_systems(summary, systems_vocab)
         except Exception as e:  # noqa: BLE001
             log_error(sid, f"distill failed: {e}")
             return ("fail", 0.0, None)
@@ -485,15 +512,16 @@ def main():
             "project": raw.get("project"),
             "started": raw.get("started"),
             "ended": raw.get("ended"),
-            "title": raw.get("title") or fallback_title(summary.get("ask")),
+            "title": "[private session]" if private else (raw.get("title") or fallback_title(summary.get("ask"))),
             "user_turns": raw.get("user_turns"),
             "slash_commands": raw.get("slash_commands", []),
             "tool_error_count": raw.get("tool_error_count", 0),
-            "files_touched": raw.get("files_touched", [])[:10],
-            "pr_refs": raw.get("pr_refs", []),
+            "files_touched": [] if private else raw.get("files_touched", [])[:10],
+            "pr_refs": [] if private else raw.get("pr_refs", []),
             "session_models": raw.get("models") or raw.get("session_models", {}),
             "evidence": state[sid]["evidence"],
             **{k: summary.get(k) for k in ("ask", "outcome", "outcome_note", "failures", "complaints", "shipped", "decisions", "open_loop", "systems", "topics", "why")},
+            **({"private": True} if private else {}),
             "distilled_at": now_iso(),
             "model": args.model,  # the distiller, NOT the session model (see session_models)
         }

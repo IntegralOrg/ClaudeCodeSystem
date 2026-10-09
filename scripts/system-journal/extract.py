@@ -11,6 +11,10 @@ model: the same transcript always yields the same bytes, so a future distiller r
 the same evidence instead of re-summarizing a summary, and every claim in a journal line
 can be checked against the user's actual words. Nothing non-deterministic touches this tier.
 
+A PRIVATE session (a /vent journaling session; rules in vocab.json) is the exception: its record
+keeps metadata only (ids, times, counts, tool names and status, tokens), every turn's text is
+"[withheld: private session]", and `"private": true` is set. See session_is_private().
+
 What is dropped, on purpose: tool outputs (what the agent read), attachments, thinking,
 system-injected reminders, subagent sidechains. If a journal line says "the query returned
 zero rows", the evidence shows the query the agent ran and what it said next, not the rows.
@@ -155,6 +159,70 @@ def slash_command(text):
     return m.group(1) if m else None
 
 
+# Private sessions (a journaling session such as /vent). The user's words in such a session must
+# not be copied into any machine log, so the evidence record keeps metadata only and distill.py
+# writes a stub line without calling a model. The rules are config-driven: vocab.json keys
+# `private_commands` (command or skill names, no slash) and `private_path_prefixes` (vault-relative
+# path prefixes). distill.py imports session_is_private() from here, so one rule serves both stages.
+PRIVATE_WITHHELD = "[withheld: private session]"
+_DEFAULT_PRIVATE_RULES = {"private_commands": ["vent"], "private_path_prefixes": ["Personal/Journal/"]}
+_PATH_KEYS = ("file_path", "notebook_path", "path")
+
+
+def load_private_rules(vault):
+    """The private-session rules from <vault>/scripts/system-journal/vocab.json, defaulting per key."""
+    data = {}
+    try:
+        with open(os.path.join(vault, "scripts", "system-journal", "vocab.json")) as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        data = {}
+    return {k: list(data.get(k) or v) for k, v in _DEFAULT_PRIVATE_RULES.items()}
+
+
+def _command_name(name):
+    """'/vent', 'vent' and a plugin-namespaced '/ccs:vent' all name the command 'vent'."""
+    return str(name or "").strip().lstrip("/").split(":")[-1].lower()
+
+
+def session_is_private(commands, skills, paths, rules=None):
+    """True when a slash command or Skill call names a private command, or any touched path sits
+    under a private prefix. `commands`/`skills` are names, `paths` are file paths (absolute, ~/ or
+    vault-relative). Pure, so extract (full transcript) and distill (legacy record) share it."""
+    rules = rules or _DEFAULT_PRIVATE_RULES
+    names = {_command_name(n) for n in rules["private_commands"]}
+    if any(_command_name(n) in names for n in list(commands) + list(skills)):
+        return True
+    prefixes = [p.replace("\\", "/") for p in rules["private_path_prefixes"]]
+    for fp in paths:
+        fp = str(fp).replace("\\", "/")
+        if any(fp.startswith(p) or "/" + p in fp for p in prefixes):
+            return True
+    return False
+
+
+def withhold_private(rec):
+    """Reduce an evidence record to metadata: ids, timestamps, counts, tool names and status,
+    tokens. Every turn's text becomes a placeholder; tool inputs, errors, files, PR refs, the
+    title and the final message are dropped (all of them can carry what the user said)."""
+    rec = dict(rec)
+    rec["private"] = True
+    rec["title"] = "[private session]"
+    rec["files_touched"] = []
+    rec["pr_refs"] = []
+    rec["final"] = PRIVATE_WITHHELD
+    turns = []
+    for turn in rec["turns"]:
+        t = {k: v for k, v in turn.items() if k not in ("text", "truncated", "errors", "tools")}
+        if "text" in turn:
+            t["text"] = PRIVATE_WITHHELD
+        if turn.get("tools"):
+            t["tools"] = [{k: v for k, v in tl.items() if k in ("name", "ok", "ms", "error_class")} for tl in turn["tools"]]
+        turns.append(t)
+    rec["turns"] = turns
+    return rec
+
+
 # Secret masking for stored tool inputs. The guard hooks' masker (log_tool_use._mask) is the one
 # source of truth. The installed copy (~/scripts/system-journal/) has no sibling ../hooks, so the
 # vault's hooks directory is tried first, then the script-relative one. The module is loaded by
@@ -287,11 +355,12 @@ def session_id_of(path):
 
 # ----------------------------------------------------------------------------- extraction
 
-def extract_session(path):
+def extract_session(path, private_rules=None):
     sid = session_id_of(path)
     project = os.path.basename(os.path.dirname(path))
     turns = []
     files, cmds, tool_counts, models = [], [], {}, {}
+    skill_names, touched = [], []   # for the private-session rule (every path any tool touched)
     first_ts = last_ts = None
     title = cwd = git_branch = None
     user_turns = assistant_turns = error_count = subagent_runs = 0
@@ -396,6 +465,9 @@ def extract_session(path):
                             fp = None
                             if isinstance(inp, dict):
                                 fp = inp.get("file_path") or inp.get("notebook_path")
+                                if name == "Skill":
+                                    skill_names.append(inp.get("skill") or inp.get("name"))
+                                touched.extend(v for v in (inp.get(k) for k in _PATH_KEYS) if isinstance(v, str))
                             if isinstance(fp, str) and fp and name in ("Edit", "Write", "NotebookEdit", "MultiEdit"):
                                 entry["file"] = fp
                                 files.append(fp)
@@ -436,7 +508,7 @@ def extract_session(path):
         t["cache_read"] += int(u.get("cache_read_input_tokens") or 0)
         t["cache_creation"] += int(u.get("cache_creation_input_tokens") or 0)
 
-    return {
+    rec = {
         "schema": SCHEMA,
         "session_id": sid,
         "project": project,
@@ -458,6 +530,9 @@ def extract_session(path):
         "turns": turns,
         "final": cap(re.sub(r"\s+", " ", final_text).strip(), MAX_FINAL_CHARS)[0],
     }
+    if session_is_private(cmds, skill_names, touched, private_rules):
+        return withhold_private(rec)
+    return rec
 
 
 def evidence_path(vault, started, sid):
@@ -500,6 +575,7 @@ def main():
         print(f"extract: vault not found at {args.vault}", file=sys.stderr)
         return 2
 
+    private_rules = load_private_rules(args.vault)
     state = load_state()
     now = time.time()
     done = skipped = kept = 0
@@ -526,7 +602,7 @@ def main():
             if unchanged or fresh:
                 skipped += 1
                 continue
-        rec = extract_session(path)
+        rec = extract_session(path, private_rules)
         if rec is None:
             if not args.out:
                 updates[sid] = {"size": st.st_size, "mtime": st.st_mtime, "empty": True}
