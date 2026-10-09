@@ -64,7 +64,7 @@
       <li><strong>Current facts and history, kept apart.</strong> Every client page has one place for what is true now and one for what happened.</li>
       <li><strong>Nightly self-healing.</strong> Duplicates, contradictions, and stale facts are found and flagged. Duplicate detection runs in-process, so your notes are never sent to a third-party embedding service; routines run in Claude's cloud on your private repository.</li>
       <li><strong>A knowledge graph</strong> rebuilt from your notes, so context is easy to find.</li>
-      <li><strong>The System Journal.</strong> Every session leaves a small evidence record, and the telemetry report shows where the system wastes effort, so improvements are evidence-based.</li>
+      <li><strong>The System Journal.</strong> Every session leaves a small evidence record, and the telemetry report shows where the system wastes effort, so you can see what to change.</li>
       <li><strong>Session telemetry.</strong> It shows where the system wastes effort, and <code>/opportunity-scan</code> works on any session.</li>
       <li><strong>The same hooks everywhere,</strong> in the cloud and on your computer.</li>
       <li><strong>Recall with a trust order.</strong> When it looks something up, it knows which sources to believe first.</li>
@@ -95,11 +95,11 @@
   </div>
 
   <h2>For whoever introduces it</h2>
-  <p class="intro"><strong>Your Claude system now keeps itself honest: it blocks credential leaks, it notices when its own notes contradict each other, and it records every session so improvements are based on evidence, not memory.</strong></p>
+  <p class="intro"><strong>Your Claude system now keeps itself honest: it blocks credential leaks, it notices when its own notes contradict each other, and it records every session so there is evidence to work from, not memory.</strong></p>
   <ul>
     <li><strong>Safety.</strong> Guard hooks block reading credentials and destructive commands, and every action is logged with secrets masked. Your repository is private.</li>
     <li><strong>Accuracy.</strong> Each fact has one current home and one history. A nightly pass finds duplicates, contradictions, and stale facts, same-subject merges wait for your decision, and removals are staged, never deleted.</li>
-    <li><strong>Improvement.</strong> Each session is recorded, and <code>/opportunity-scan</code> answers what would have prevented a problem, so the system improves from evidence.</li>
+    <li><strong>Improvement.</strong> Each session is recorded, and <code>/opportunity-scan</code> answers what change would have prevented a bad session. Automatic self-tuning from repeated friction is planned as a step in the nightly Vault Hygiene run.</li>
   </ul>
 
   <footer>Questions: ask your agent; it answers from <code>System/</code>. White-glove setup is available.</footer>

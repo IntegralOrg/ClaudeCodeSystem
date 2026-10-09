@@ -104,7 +104,7 @@ ClaudeCodeSystem/
 ├── Resources/Reference/                # Local Routines Registry, How We Think About AI Agents
 ├── cowork-commands/                    # CoWork versions of the commands (YAML frontmatter, manual upload)
 ├── docs/
-│   ├── index.html                      # The one-page front door (GitHub Pages)
+│   ├── index.html                      # The one-page front door (front door page)
 │   ├── DEVELOPING.md                   # Maintainer notes for this template
 │   ├── vault-design-guide.md           # How to build the vault (folder structure, inbox, templates)
 │   ├── integration-architecture.md     # How Claude connects to your tools
