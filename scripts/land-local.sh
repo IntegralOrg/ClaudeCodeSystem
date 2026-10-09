@@ -9,6 +9,12 @@
 # conflict abort the rebase, keep the local commit, leave the working tree untouched, log, and let
 # the next Stop retry. Never force, never reset --hard. 60 s throttle (--final bypasses).
 # Single-flight lock (a lock older than 10 minutes is stale and removed).
+#
+# --pull (SessionStart hook): pull-only mode so a session opens on the latest main. Same guards as a
+# normal run (cloud, template origin, work tree, branch main, mid-operation, lock), then fetch and
+# `merge --ff-only` and nothing else: never commits, pushes, stashes, resets, or touches the working
+# tree beyond a clean fast-forward. A refused fast-forward (dirty files overlap, or local commits)
+# logs one line and leaves the next landing to reconcile. Ignores and never updates the 60 s throttle stamp.
 # Never prints to stdout: every git call's output goes to _generated/landing-git.log, and only
 # log() writes _generated/landing.log (timestamped lines). landing_health.py reads that log.
 STATE_DEFAULT_ROOT="$HOME/.claude-land"
@@ -17,6 +23,7 @@ STALE_LOCK_SECS=600
 LOG_MAX_LINES=4000
 LOG_KEEP_LINES=2000
 FINAL=0; [ "${1:-}" = "--final" ] && FINAL=1
+PULL=0; [ "${1:-}" = "--pull" ] && PULL=1
 
 # Session id: hook stdin JSON first (local hooks often have no env var), then the env var, then "local".
 HOOK_JSON=$(cat 2>/dev/null || true)
@@ -71,7 +78,7 @@ if [ -n "$LAND_LOCAL_STATE" ]; then STATE="$LAND_LOCAL_STATE"; else
   KEY=$(printf '%s' "$REPO" | shasum 2>/dev/null | cut -c1-12); STATE="$STATE_DEFAULT_ROOT/${KEY:-default}"; fi
 mkdir -p "$STATE" 2>/dev/null
 STAMP="$STATE/last-run"
-if [ "$FINAL" -eq 0 ] && [ -f "$STAMP" ]; then
+if [ "$FINAL" -eq 0 ] && [ "$PULL" -eq 0 ] && [ -f "$STAMP" ]; then
   age=$(( $(date +%s) - $(mtime_of "$STAMP" || echo 0) ))
   [ "$age" -lt "$THROTTLE_SECS" ] && { log "throttled (${age}s since last run)"; exit 0; }
 fi
@@ -85,7 +92,7 @@ if ! mkdir "$STATE/lock" 2>/dev/null; then
   fi
 fi
 trap 'rmdir "$STATE/lock" 2>/dev/null' EXIT
-touch "$STAMP"
+[ "$PULL" -eq 1 ] || touch "$STAMP"
 
 # Never commit while an operation is half done: conflict markers would land on main.
 GITDIR=$(git rev-parse --git-dir 2>>"$GITLOG")
@@ -98,6 +105,20 @@ if [ "$midop" -eq 1 ]; then log "skipped: repository is mid-merge/rebase/cherry-
 
 SID8=$(printf '%s' "$SID" | cut -c1-8)
 git fetch -q origin main >>"$GITLOG" 2>&1 || { log "fetch failed"; exit 0; }
+
+# --pull: fast-forward only, then stop (see the header).
+if [ "$PULL" -eq 1 ]; then
+  BEFORE=$(git rev-parse HEAD 2>>"$GITLOG")
+  if git merge --ff-only -q origin/main >>"$GITLOG" 2>&1; then
+    N=$(git rev-list --count "$BEFORE..HEAD" 2>>"$GITLOG" || echo 0)
+    if [ "${N:-0}" -gt 0 ]; then log "pull: fast-forwarded $N commit(s)"; else log "pull: up to date"; fi
+  else
+    if [ "$(git rev-list --count origin/main..HEAD 2>>"$GITLOG")" -gt 0 ]; then WHY="local commits not on main"
+    else WHY="unsaved edits overlap incoming changes"; fi
+    log "pull: cannot fast-forward now ($WHY); the next landing reconciles"
+  fi
+  exit 0
+fi
 
 # 1. Bring in other machines' work. ff-only refuses when dirty files overlap or local commits exist; we never revert.
 if ! git merge --ff-only -q origin/main >>"$GITLOG" 2>&1; then

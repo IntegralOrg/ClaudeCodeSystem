@@ -11,7 +11,7 @@ updated: 2026-10-08
 
 1. **You talk to Claude** (in Claude Desktop, or in a cloud session on the web or your phone).
 2. **Files change.** A task goes into `Inbox/`, a client page gets a new line, the daily note grows.
-3. **The landing hook saves the work.** When Claude finishes a turn, a hook commits the changes and puts them on `main`, the one branch that counts. In a cloud session the cloud landing script does it; on a computer, `scripts/land-local.sh` does it. You never see Git.
+3. **The landing hook saves the work.** When Claude finishes a turn, a hook commits the changes and puts them on `main`, the one branch that counts. In a cloud session the cloud landing script does it; on a computer, `scripts/land-local.sh` does it. A local session also pulls the latest from GitHub when it starts (fast-forward only, never over your unsaved edits). You never see Git.
 4. **Routines read the repository on a schedule** (below) and write their results back as files.
 5. **The record is files too:** the daily note in `Work/Daily/`, and the hygiene report in `_generated/vault-hygiene/`.
 
