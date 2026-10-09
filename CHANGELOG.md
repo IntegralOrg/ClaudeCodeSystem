@@ -6,6 +6,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-09] - Docs match what ships
+
+### Fixed
+- **`scripts/land-local.sh`** no longer prints a "No such file or directory" error on a vault's first landing (the log cap read a log that did not exist yet).
+- **`System/Routines.md`** -- said three routines ship; two do (End of Day and Vault Hygiene).
+- **`docs/index.html` and `scripts/system-journal/README.md`** -- no longer claim the system improves from evidence or reviews itself weekly. Every session is recorded, and `/opportunity-scan` answers what change would have prevented a bad session; automatic self-tuning from repeated friction is planned as a step in the nightly Vault Hygiene run.
+- **`README.md` and the 2026-10-08 onboarding entry** -- no longer say the front door is on GitHub Pages (hosting to be decided).
+
+---
+
 ## [2026-10-08] - Updating: take the new version without losing your work
 
 ### Added
@@ -44,7 +54,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Push channel** -- EOD ends with a status line and reaches the owner by email (Gmail connector) or an all-day calendar event when Vault Hygiene is stale or a key or connector is missing.
 - **`scripts/land-local.sh` and `scripts/hooks/landing_health.py`** -- every local session lands on `main` from the Stop hook (ff-only pull, commit, push; throttle; lock; never force); repeated landing failures are announced at the next session start.
 - **`scripts/hooks/guard_vault_path.py`** -- warns every session while the vault sits in iCloud, OneDrive, Dropbox, or Google Drive.
-- **`docs/index.html`** -- the front door on GitHub Pages: Use this template, then open in Claude.
+- **`docs/index.html`** -- the front door page (hosting to be decided): Use this template, then open in Claude.
 - **Tests** -- repo layout and autosync guard, retired commands, editor-trace gate, setup hooks, check-keys, land-local, landing health, System docs, front door.
 - **`scripts/hooks/routine_health.py`** -- at session start, says when End of Day, Vault Hygiene, or Monthly Review has not run, or a routine is still not live; the connector-free push channel.
 

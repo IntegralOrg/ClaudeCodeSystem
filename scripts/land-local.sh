@@ -37,6 +37,7 @@ GITLOG="$REPO/_generated/landing-git.log"
 # Cap a log file: past LOG_MAX_LINES lines keep the last LOG_KEEP_LINES.
 cap_log() {
   local n
+  [ -f "$1" ] || return 0
   n=$(wc -l < "$1" 2>/dev/null | tr -d ' ')
   if [ "${n:-0}" -gt "$LOG_MAX_LINES" ]; then
     tail -n "$LOG_KEEP_LINES" "$1" > "$REPO/_generated/landing.tmp.log" 2>/dev/null \
