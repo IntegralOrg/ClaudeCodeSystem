@@ -357,7 +357,9 @@ def test_pull_fetch_failure_logs_fetch_failed(world):
     assert "fetch failed" in (a / "_generated" / "landing.log").read_text()
 
 
-def test_session_start_runs_the_pull_first():
+def test_session_start_runs_the_pull():
     s = json.loads((Path(__file__).resolve().parents[2] / ".claude" / "settings.json").read_text())
-    first = s["hooks"]["SessionStart"][0]["hooks"][0]
-    assert first["command"] == 'bash "$CLAUDE_PROJECT_DIR/scripts/land-local.sh" --pull' and first["timeout"] == 30
+    # Start-up hooks run in parallel; what matters is that the pull is wired (it finishes before the first turn).
+    hooks = [h for g in s["hooks"]["SessionStart"] for h in g["hooks"]]
+    pull = [h for h in hooks if h["command"] == 'bash "$CLAUDE_PROJECT_DIR/scripts/land-local.sh" --pull']
+    assert len(pull) == 1 and pull[0]["timeout"] == 30

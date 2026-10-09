@@ -10,11 +10,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - **`scripts/land-local.sh --pull`** -- a pull-only mode for a local session's start: fetch, then fast-forward to `origin/main` and stop. A cloud routine that landed overnight is already in the folder when the first turn reads it. Same guards as a normal landing (cloud, template origin, branch `main`, mid-merge, lock); never commits, pushes, stashes, or resets; if the fast-forward is refused (unsaved edits overlap, or local commits exist) it logs one line and the next landing reconciles. Prints nothing; logs to `_generated/landing.log`.
-- **SessionStart hook** -- runs `land-local.sh --pull` first, so `session_context.py` and the health notices see the fresh state.
+- **SessionStart hook** -- runs `land-local.sh --pull`. Start-up hooks run in parallel, but all of them finish before the first turn, so the first turn reads the pulled files; the start-up notes from `session_context.py` and the health hooks may describe the state from just before the pull.
 
 ### In an existing vault
 1. Take `scripts/land-local.sh` from the template.
-2. In `.claude/settings.json`, add this as the first hook in the `SessionStart` hooks array: `{"type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/land-local.sh\" --pull", "timeout": 30}`.
+2. In `.claude/settings.json`, add this to the `SessionStart` hooks array: `{"type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/land-local.sh\" --pull", "timeout": 30}`.
 
 ---
 
