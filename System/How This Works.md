@@ -36,7 +36,7 @@ Their definitions are in `System/routines/`; whether each is live is in `System/
 
 The committed settings let Claude run every Bash command without asking first, so a session can work without stopping at each step. The only brake on that is the **guard** hook (`scripts/hooks/guard_secrets.py`). It blocks reading the credentials file, force pushes, hard resets, recursive force deletes outside temporary folders, and SQL drops. It is not a sandbox: a plain `rm -r` passes, and so does anything the guard was not written to recognise. Your protection against a bad day is the Git history (everything is recoverable from it) plus your own attention to what Claude says it is about to do.
 
-Another small hook keeps each note's `updated:` date current on every edit (`scripts/hooks/bump_updated.py`), so a note's date tells you when it last changed.
+Another small hook keeps a note's `updated:` date current on every edit (`scripts/hooks/bump_updated.py`), so the date tells you when it last changed. It only touches Markdown notes that already have one `updated:` line in their frontmatter, and it skips system and generated folders.
 
 ## What a merge conflict looks like here
 

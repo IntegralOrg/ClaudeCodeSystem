@@ -35,7 +35,7 @@ SKIP_DIRS = {".git", "_generated", ".claude", "node_modules", ".superpowers", ".
 MAX_FRONTMATTER_LINES = 60
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 KEY_RE = re.compile(r"^updated[ \t]*:")
-LINE_RE = re.compile(r"^(updated:)([ \t]*)(\"[^\"]*\"|'[^']*'|[^\s#\"']*)([ \t]*#.*?)?([ \t]*)(\r?\n|\r)?$",
+LINE_RE = re.compile(r"^(updated:)([ \t]*)(\"[^\"]*\"|'[^']*'|[^\s#\"']*)([ \t]+#.*?)?([ \t]*)(\r?\n|\r)?$",
                      re.DOTALL)
 
 

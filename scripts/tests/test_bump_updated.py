@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 HOOK = Path(__file__).resolve().parents[1] / "hooks" / "bump_updated.py"
 TODAY = "2026-10-09"
 
@@ -172,6 +174,7 @@ def test_no_trailing_newline_and_unicode_body_preserved(tmp_path):
     assert f.read_text(encoding="utf-8") == body.replace("2025-01-01", TODAY)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows does not keep POSIX file modes")
 def test_preserves_file_mode(tmp_path):
     f = make(tmp_path, "note.md", NOTE)
     f.chmod(0o640)
@@ -224,3 +227,10 @@ def test_fails_open_on_non_utf8_file(tmp_path):
     f = make(tmp_path, "note.md", data)
     assert_silent(run_hook(tmp_path, edit(f)))
     assert f.read_bytes() == data
+
+
+def test_hash_without_space_is_part_of_the_value_not_a_comment(tmp_path):
+    body = "---\nupdated: 2025-01-01#v2\n---\nbody\n"
+    f = make(tmp_path, "note.md", body)
+    run_hook(tmp_path, edit(f))
+    assert f.read_text(encoding="utf-8") == body
