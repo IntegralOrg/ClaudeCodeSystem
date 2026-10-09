@@ -14,13 +14,17 @@ coming back across sessions, and so any claim can be checked against what was ac
 This template ships the **capture** half only. There is no reflection command and no Themes
 writer yet; the audit tier is generated locally but is not shipped anywhere. `themes-inject.py`
 is included but stays inert until a `_generated/Themes.md` exists (nothing here writes one).
+Today the capture hooks record each session as it ends (a capture can be throttled or fail,
+so the record is near-complete, not guaranteed), and `/opportunity-scan` answers what change
+would have prevented a bad session; automatic self-tuning from repeated friction is planned as a step
+inside the nightly Vault Hygiene run.
 
 ## The read rule (entropy guard)
 
 | Tier | Who reads it | Where |
 |------|--------------|-------|
 | Evidence (deterministic, per session) | A human or agent checking or re-deriving a line | `_generated/system-journal/evidence/<YYYY-MM>/<session_id>.json` |
-| Journal (distilled, one line per session) | A weekly review, whole, never a working session | `_generated/system-journal/<YYYY-MM>.<host>.jsonl` (local) and `cloud/<date>.<sid8>.json` (containers) |
+| Journal (distilled, one line per session) | A review step, whole, never a working session | `_generated/system-journal/<YYYY-MM>.<host>.jsonl` (local) and `cloud/<date>.<sid8>.json` (containers) |
 | Themes (capped render) | Every session at startup (once a reflection step writes it) | `_generated/Themes.md` |
 
 A working session never loads the journal or the evidence at startup. When a session needs

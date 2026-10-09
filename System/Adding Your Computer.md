@@ -47,4 +47,4 @@ Without asking you between steps, the agent:
 
 ## What changes afterwards
 
-You can work in Claude Desktop on your own machine. Each time Claude finishes a turn, `scripts/land-local.sh` commits and puts the work on `main`, so the cloud routines and your other devices see it. If saving ever fails, the next session opens with a note saying so (see `System/How This Works.md`).
+You can work in Claude Desktop on your own machine. Each time Claude finishes a turn, `scripts/land-local.sh` commits and puts the work on `main`, so the cloud routines and your other devices see it. A local session also pulls the latest from GitHub when it starts (fast-forward only, never over your unsaved edits). If saving ever fails, the next session opens with a note saying so (see `System/How This Works.md`).

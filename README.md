@@ -70,7 +70,7 @@ A vault created from this template ends up with:
 - **Folders** for clients, projects, daily notes, personal notes, and reference, plus a client page for each client or project you named.
 - **Two scheduled routines** (End of Day, Vault Hygiene) defined in `System/routines/` and recorded in `System/Routines.md`.
 - **Guard hooks and an action log** wired in the committed `.claude/settings.json`, the same in the cloud and on your computer.
-- **The System Journal** capturing every session, and **session telemetry** showing where the system wastes effort.
+- **The System Journal** capturing sessions as they end, and **session telemetry** showing where the system wastes effort.
 - **A guidance library** in `System/` that your agent answers questions from.
 - **Slash commands** for morning review, end-of-day processing, handoffs, and other workflows.
 
@@ -104,7 +104,7 @@ ClaudeCodeSystem/
 ├── Resources/Reference/                # Local Routines Registry, How We Think About AI Agents
 ├── cowork-commands/                    # CoWork versions of the commands (YAML frontmatter, manual upload)
 ├── docs/
-│   ├── index.html                      # The one-page front door (GitHub Pages)
+│   ├── index.html                      # The one-page front door (front door page)
 │   ├── DEVELOPING.md                   # Maintainer notes for this template
 │   ├── vault-design-guide.md           # How to build the vault (folder structure, inbox, templates)
 │   ├── integration-architecture.md     # How Claude connects to your tools

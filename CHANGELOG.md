@@ -14,6 +14,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### In an existing vault
 1. Take `scripts/hooks/bump_updated.py` from the template.
 2. Add the PostToolUse hook to `.claude/settings.json`: a new entry in the `PostToolUse` array with matcher `Edit|MultiEdit|Write` and the command `python3 "$CLAUDE_PROJECT_DIR/scripts/hooks/bump_updated.py"` (timeout 10, not async).
+## [2026-10-09] - Sessions start up to date
+
+### Added
+- **`scripts/land-local.sh --pull`** -- a pull-only mode for a local session's start: fetch, then fast-forward to `origin/main` and stop. A cloud routine that landed overnight is already in the folder when the first turn reads it. Same guards as a normal landing (cloud, template origin, branch `main`, mid-merge, lock); never commits, pushes, stashes, or resets; if the fast-forward is refused (unsaved edits overlap, or local commits exist) it logs one line and the next landing reconciles. Prints nothing; logs to `_generated/landing.log`.
+- **SessionStart hook** -- runs `land-local.sh --pull`. Start-up hooks run in parallel, but all of them finish before the first turn, so the first turn reads the pulled files; the start-up notes from `session_context.py` and the health hooks may describe the state from just before the pull.
+
+### In an existing vault
+1. Take `scripts/land-local.sh` from the template.
+2. In `.claude/settings.json`, add this to the `SessionStart` hooks array: `{"type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/land-local.sh\" --pull", "timeout": 30}`.
+## [2026-10-09] - Docs match what ships
+
+### Fixed
+- **`scripts/land-local.sh`** no longer prints a "No such file or directory" error on a vault's first landing (the log cap read a log that did not exist yet).
+- **`System/Routines.md`** -- said three routines ship; two do (End of Day and Vault Hygiene).
+- **`docs/index.html` and `scripts/system-journal/README.md`** -- no longer claim the system improves from evidence or reviews itself weekly. Every session is recorded, and `/opportunity-scan` answers what change would have prevented a bad session; automatic self-tuning from repeated friction is planned as a step in the nightly Vault Hygiene run.
+- **`README.md` and the 2026-10-08 onboarding entry** -- no longer say the front door is on GitHub Pages (hosting to be decided).
 
 ---
 
@@ -55,7 +71,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Push channel** -- EOD ends with a status line and reaches the owner by email (Gmail connector) or an all-day calendar event when Vault Hygiene is stale or a key or connector is missing.
 - **`scripts/land-local.sh` and `scripts/hooks/landing_health.py`** -- every local session lands on `main` from the Stop hook (ff-only pull, commit, push; throttle; lock; never force); repeated landing failures are announced at the next session start.
 - **`scripts/hooks/guard_vault_path.py`** -- warns every session while the vault sits in iCloud, OneDrive, Dropbox, or Google Drive.
-- **`docs/index.html`** -- the front door on GitHub Pages: Use this template, then open in Claude.
+- **`docs/index.html`** -- the front door page (hosting to be decided): Use this template, then open in Claude.
 - **Tests** -- repo layout and autosync guard, retired commands, editor-trace gate, setup hooks, check-keys, land-local, landing health, System docs, front door.
 - **`scripts/hooks/routine_health.py`** -- at session start, says when End of Day, Vault Hygiene, or Monthly Review has not run, or a routine is still not live; the connector-free push channel.
 
