@@ -27,10 +27,14 @@ Their definitions are in `System/routines/`; whether each is live is in `System/
 ## Where things live
 
 - `Work/`: clients, projects, and daily notes.
-- `Personal/`: anything private to you.
+- `Personal/`: anything private to you. `Personal/Journal/` is kept by Vent (below).
 - `Resources/`: reference material, how-tos, notes worth keeping.
 - `System/`: these guidance files and the routine definitions. Claude answers questions about the system from here.
 - `_generated/`: files the machinery writes (hygiene reports, the landing log, alert state). Read them; do not hand-edit them.
+
+## Vent, a private journal
+
+Type `/vent` when you want to get something out of your head. Vent asks what you are thinking, writes your exact words down, keeps the good, the bad, and the plain facts side by side, and offers to work through it when you are ready. Your entries live in `Personal/Journal/` in your own private repository, and the nightly hygiene run never merges, moves, or rewrites them. Vent never decides anything for you: a big call you want to make while upset gets written down with a date and looked at again on a better day.
 
 ## The brakes, stated plainly
 

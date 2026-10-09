@@ -71,13 +71,13 @@ _GENERIC_VOCAB = {
         "tasks", "routines", "documentation", "email", "slack", "calendar", "transcripts",
         "vault-hygiene", "knowledge-graph", "claude-code", "hooks", "mcp", "skills", "subagents",
         "github", "deploy", "testing", "sales", "proposals", "hiring", "team",
-        "personal", "health", "finance", "family", "relationships",
+        "personal", "health", "finance", "family", "relationships", "vent",
     ],
     "sensitive_tags": [
         "personal", "health", "medical", "therapy", "relationships", "family",
-        "finance", "taxes", "legal-personal", "mental-health",
+        "finance", "taxes", "legal-personal", "mental-health", "vent",
     ],
-    "sensitive_path_prefixes": ["Personal/", "Personal\\"],
+    "sensitive_path_prefixes": ["Personal/", "Personal\\", "Personal/Journal/"],
 }
 
 

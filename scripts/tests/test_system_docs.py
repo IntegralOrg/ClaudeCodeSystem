@@ -195,3 +195,39 @@ def test_vault_audit_init_seeds_the_template_root_files():
         text = (ROOT / folder / "vault-audit.md").read_text(encoding="utf-8")
         has(text, "README.md", "CHANGELOG.md", "LICENSE", "SETUP_PENDING", ".env.example", ".gitattributes", "`docs`", "`System`", "`Templates`",
             "duplicate_frontmatter_keys")
+
+
+def test_vent_skill_ships_in_every_system_and_is_generic():
+    skill = (ROOT / ".claude" / "skills" / "vent" / "SKILL.md").read_text(encoding="utf-8")
+    head = skill.split("---")[1]
+    assert re.search(r"^name: vent$", head, re.M) and re.search(r"^description: .+", head, re.M)
+    has(skill, "Personal/Journal/", "988", "Don't decide today")
+    assert ("ob" + "sidian") not in skill.lower() and chr(0x2014) not in skill
+    # a skill with no scripts is mirrored for CoWork, body identical
+    mirror = (ROOT / "cowork-commands" / "vent.md").read_text(encoding="utf-8")
+    assert mirror == skill
+    assert not (ROOT / ".claude" / "skills" / "vent" / "home.txt").exists()
+    has(read("How This Works"), "/vent", "Personal/Journal/", "never decides anything for you")
+    has((ROOT / "README.md").read_text(encoding="utf-8"), "/vent")
+
+
+def test_journal_folder_is_a_record_folder_by_default():
+    for folder in (".claude/commands", "cowork-commands"):
+        text = (ROOT / folder / "vault-audit.md").read_text(encoding="utf-8")
+        has(text, "Personal/Journal", "no_merge: true", "/vent")
+
+
+def test_vent_sessions_stay_out_of_the_audit_tier():
+    import importlib.util, json
+    spec = importlib.util.spec_from_file_location("distill_for_vent_test", ROOT / "scripts" / "system-journal" / "distill.py")
+    distill = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(distill)
+    vocab = json.loads((ROOT / "scripts" / "system-journal" / "vocab.json").read_text(encoding="utf-8"))
+    for v in (vocab, distill._GENERIC_VOCAB):
+        assert "vent" in v["sensitive_tags"] and "vent" in v["systems"]
+        assert "Personal/Journal/" in v["sensitive_path_prefixes"]
+        tags, prefixes = set(v["sensitive_tags"]), tuple(v["sensitive_path_prefixes"])
+        by_tag = {"systems": ["vent"], "files_touched": []}
+        by_path = {"systems": ["documentation"], "files_touched": [str(ROOT / "Personal/Journal/Log.md")]}
+        assert distill.sensitivity(by_tag, str(ROOT), tags, prefixes)[0]
+        assert distill.sensitivity(by_path, str(ROOT), tags, prefixes)[0]
