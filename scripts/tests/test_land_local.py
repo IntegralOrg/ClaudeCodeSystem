@@ -233,3 +233,133 @@ def test_no_origin_means_no_op(world, tmp_path):
     lone = tmp_path / "lone"; subprocess.run(["git", "init", "-q", "-b", "main", str(lone)], check=True)
     (lone / "a.md").write_text("a\n"); p = land(world, lone, "--final")
     assert p.returncode == 0 and "no origin" in (lone / "_generated" / "landing.log").read_text()
+
+
+# --- --pull: SessionStart pull-only mode -------------------------------------------------------
+
+def push_from_b(w, name, text):
+    b = w["b"]; (b / name).write_text(text); land(w, b, "--final")
+
+
+def test_pull_fast_forwards_a_commit_pushed_from_another_clone(world):
+    a = world["a"]
+    push_from_b(world, "Overnight.md", "routine output\n")
+    p = land(world, a, "--pull")
+    assert p.returncode == 0 and p.stdout == ""
+    assert (a / "Overnight.md").read_text() == "routine output\n"
+    assert git(a, "rev-parse", "HEAD") == origin_tip(world)
+    assert "pull: fast-forwarded 1 commit(s)" in (a / "_generated" / "landing.log").read_text()
+    p = land(world, a, "--pull")
+    assert "pull: up to date" in (a / "_generated" / "landing.log").read_text().splitlines()[-1]
+
+
+def test_pull_with_overlapping_dirty_file_changes_nothing(world):
+    a = world["a"]
+    push_from_b(world, "README.md", "# brain\nfrom b\n")
+    (a / "README.md").write_text("# brain\nunsaved local edit\n")
+    head = git(a, "rev-parse", "HEAD")
+    p = land(world, a, "--pull")
+    assert p.returncode == 0 and p.stdout == ""
+    assert (a / "README.md").read_text() == "# brain\nunsaved local edit\n"
+    assert git(a, "rev-parse", "HEAD") == head
+    log = (a / "_generated" / "landing.log").read_text()
+    assert "pull: cannot fast-forward now (" in log and "the next landing reconciles" in log
+
+
+def test_pull_with_local_commits_changes_nothing(world):
+    a = world["a"]
+    (a / "Mine.md").write_text("m\n"); git(a, "add", "-A"); git(a, "commit", "-q", "-m", "local")
+    push_from_b(world, "Theirs.md", "t\n")
+    head = git(a, "rev-parse", "HEAD")
+    p = land(world, a, "--pull")
+    assert p.returncode == 0 and p.stdout == "" and git(a, "rev-parse", "HEAD") == head
+    assert not (a / "Theirs.md").exists()
+    assert "pull: cannot fast-forward now (local commits not on main)" in (a / "_generated" / "landing.log").read_text()
+
+
+def test_pull_never_commits_or_pushes_even_with_dirty_files(world):
+    a = world["a"]
+    push_from_b(world, "Other.md", "o\n")
+    (a / "Dirty.md").write_text("dirty\n"); (a / "README.md").write_text("# brain\nedited\n")
+    tip = origin_tip(world); head = git(a, "rev-parse", "HEAD")
+    p = land(world, a, "--pull")
+    assert p.returncode == 0 and p.stdout == ""
+    assert git(a, "rev-list", "--count", f"{head}..HEAD") == "1"  # only the fast-forward moved HEAD
+    assert git(a, "rev-parse", "HEAD") == tip and origin_tip(world) == tip
+    assert not git(a, "log", "--grep=land", "--format=%H", f"{tip}..HEAD")
+    status = git(a, "status", "--porcelain")
+    assert "Dirty.md" in status and "README.md" in status  # still unsaved, still dirty
+    assert "Dirty.md" not in landed(a)
+
+
+def test_pull_leaves_the_throttle_stamp_alone(world):
+    a = world["a"]
+    land(world, a, "--pull")
+    assert not (world["state"] / a.name / "last-run").exists()
+    (a / "one.md").write_text("1\n"); land(world, a)          # stamps the throttle
+    stamp = world["state"] / a.name / "last-run"; old = time.time() - 3600; os.utime(stamp, (old, old))
+    land(world, a, "--pull")
+    assert abs(stamp.stat().st_mtime - old) < 2
+    (a / "two.md").write_text("2\n"); land(world, a)           # stale stamp: a normal run is not throttled
+    assert "two.md" in landed(a)
+
+
+def test_pull_ignores_a_fresh_throttle_stamp(world):
+    a = world["a"]
+    (a / "one.md").write_text("1\n"); land(world, a)
+    push_from_b(world, "Late.md", "l\n")
+    land(world, a, "--pull")  # inside 60 s of the last run
+    assert (a / "Late.md").exists()
+    assert "throttled" not in (a / "_generated" / "landing.log").read_text()
+
+
+def test_pull_exits_silently_inside_a_cloud_container(world):
+    a = world["a"]
+    push_from_b(world, "Late.md", "l\n")
+    p = land(world, a, "--pull", extra_env={"LAND_LOCAL_FORCE_LOCAL": "", "LAND_LOCAL_FORCE_CLOUD": "1"})
+    assert p.returncode == 0 and p.stdout == "" and not (a / "_generated" / "landing.log").exists()
+    assert not (a / "Late.md").exists()
+
+
+def test_pull_skips_the_template_origin_off_main_and_mid_merge(world):
+    a = world["a"]
+    push_from_b(world, "Late.md", "l\n")
+    git(a, "checkout", "-q", "-b", "side")
+    land(world, a, "--pull")
+    assert "on branch side, not main" in (a / "_generated" / "landing.log").read_text() and not (a / "Late.md").exists()
+    git(a, "checkout", "-q", "main")
+    (a / ".git" / "MERGE_HEAD").write_text("x\n")
+    land(world, a, "--pull")
+    assert "mid-merge/rebase/cherry-pick/revert" in (a / "_generated" / "landing.log").read_text() and not (a / "Late.md").exists()
+    (a / ".git" / "MERGE_HEAD").unlink()
+    git(a, "remote", "set-url", "origin", "https://github.com/IntegralOrg/ClaudeCodeSystem.git")
+    land(world, a, "--pull")
+    assert "template repository" in (a / "_generated" / "landing.log").read_text()
+
+
+def test_pull_respects_the_lock_and_removes_a_stale_one(world):
+    a = world["a"]
+    push_from_b(world, "Late.md", "l\n")
+    state = world["state"] / a.name; state.mkdir(parents=True); lock = state / "lock"; lock.mkdir()
+    land(world, a, "--pull")
+    assert "locked" in (a / "_generated" / "landing.log").read_text() and not (a / "Late.md").exists()
+    old = time.time() - 3600; os.utime(lock, (old, old))
+    land(world, a, "--pull")
+    assert "stale lock removed" in (a / "_generated" / "landing.log").read_text() and (a / "Late.md").exists()
+    assert not lock.exists()
+
+
+def test_pull_fetch_failure_logs_fetch_failed(world):
+    a = world["a"]
+    git(a, "remote", "set-url", "origin", str(world["origin"]) + "-missing")
+    p = land(world, a, "--pull")
+    assert p.returncode == 0 and p.stdout == ""
+    assert "fetch failed" in (a / "_generated" / "landing.log").read_text()
+
+
+def test_session_start_runs_the_pull():
+    s = json.loads((Path(__file__).resolve().parents[2] / ".claude" / "settings.json").read_text())
+    # Start-up hooks run in parallel; what matters is that the pull is wired (it finishes before the first turn).
+    hooks = [h for g in s["hooks"]["SessionStart"] for h in g["hooks"]]
+    pull = [h for h in hooks if h["command"] == 'bash "$CLAUDE_PROJECT_DIR/scripts/land-local.sh" --pull']
+    assert len(pull) == 1 and pull[0]["timeout"] == 30
