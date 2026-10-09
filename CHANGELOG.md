@@ -9,6 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [2026-10-09] - Docs match what ships
 
 ### Fixed
+- **`scripts/land-local.sh`** no longer prints a "No such file or directory" error on a vault's first landing (the log cap read a log that did not exist yet).
 - **`System/Routines.md`** -- said three routines ship; two do (End of Day and Vault Hygiene).
 - **`docs/index.html` and `scripts/system-journal/README.md`** -- no longer claim the system improves from evidence or reviews itself weekly. Every session is recorded, and `/opportunity-scan` answers what change would have prevented a bad session; automatic self-tuning from repeated friction is planned as a step in the nightly Vault Hygiene run.
 - **`README.md` and the 2026-10-08 onboarding entry** -- no longer say the front door is on GitHub Pages (hosting to be decided).
