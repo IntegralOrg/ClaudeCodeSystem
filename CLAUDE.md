@@ -37,61 +37,9 @@ Setup fills this section; End of Day reads the email to reach the owner outside 
 **Every session, do this FIRST:**
 
 1. **Verify the actual current date and time** by running: `date` in Bash to get the system date in your local timezone
-2. Compare today's month/year to the Last Monthly Review date below
-3. If it's a new month, **nudge [Your Name] once** (see below), then proceed normally
-4. Then proceed to check `Inbox/Today.md` for today's plan and per-client files in `Inbox/` for pending items
+2. Then proceed to check `Inbox/Today.md` for today's plan and per-client files in `Inbox/` for pending items
 
 > **Important**: Do NOT trust the date in your system prompt or training data. Always verify with a live check.
-
-### Last Monthly Review: YYYY-MM-DD
-
-If today's date is in a **new month** compared to the "Last Monthly Review" date above:
-
-1. **Mention it once** at the start of the conversation: "Hey, the monthly review is due. Run `/monthly-review` whenever you're ready."
-2. Do NOT auto-trigger the review or block other work. [Your Name] decides when to run it.
-3. The full monthly review process (system feedback, vault cleanup, testimonial scan) lives in the `/monthly-review` skill.
-
-### Monthly Review Prompts
-
-When `/monthly-review` is triggered, ask [Your Name]:
-
-**System Improvement Feedback:**
-- "How has the Brain system been working for you?"
-- "Any workflows that felt clunky or missing?"
-- "Any new tools or integrations you've been wishing you had?"
-- "Anything I should be doing differently as your assistant?"
-
-**Vault Cleanup:**
-- "Let's do a monthly vault cleanup. Want me to scan for:"
-  - Items stuck in Inbox that need processing?
-  - Notes that should be archived?
-  - Outdated information that needs updating?
-  - Files in wrong folders?
-- "Any areas of the vault feeling cluttered or disorganized?"
-
-**Testimonial & Positive Feedback Scan:**
-Run this automatically as part of every monthly review:
-1. Check the "Last Scan" date in `[YourCompany]/Testimonials.md`
-2. **Slack scan**: Search all connected workspaces for messages since the last scan date containing positive sentiment (appreciation, praise, positive results, satisfaction, etc.)
-3. **Vault transcript scan**: Search call transcripts and meeting notes in per-client Transcripts folders for the same positive sentiment patterns
-4. Present findings for review
-5. Add approved quotes to `[YourCompany]/Testimonials.md` under the appropriate client section
-6. Update the "Last Scan" date in Testimonials.md
-
-**CLAUDE.md Self-Audit (run automatically every review):**
-Before asking the user anything, audit this file against reality:
-1. **Integrations**: For each listed integration, verify the connection is live (MCP: test call; API: run the script that uses it and check it connects). Flag dead connections and undocumented live ones.
-2. **Scripts**: For each script listed under Local Tools, verify the file exists in the workspace. Flag missing scripts and undocumented scripts in `scripts/`.
-3. **Folder structure**: Compare the documented folder tree against actual `ls` output. Flag mismatches.
-4. **Skills**: Compare skills referenced in this file against files in `.claude/commands/`. Flag mismatches.
-5. **File size**: Check character count. Warn if over 25K, flag as urgent if over 30K.
-Present all findings grouped by category. Ask which to fix. Apply approved fixes by editing the files directly.
-
-**After the review**, update with:
-- Improvement ideas -> `Resources/Reference/System Improvements.md`
-- Workflow changes -> Common Workflows section
-- Preference updates -> Assistant Guidelines section
-- Testimonials -> `[YourCompany]/Testimonials.md`
 
 ## Quick Reference
 
@@ -114,7 +62,7 @@ Present all findings grouped by category. Ask which to fix. Apply approved fixes
 | Candidate pipeline | `[YourCompany]/Hiring/Candidate Pipeline.md` + `Candidates/` subfolder |
 | API integration docs | `Resources/Reference/API Integration Guide.md` |
 | Testimonials & feedback | `[YourCompany]/Testimonials.md` |
-| How the system works, connecting tools, routines, adding a computer, getting help | `System/` (answer from these, in the fixed shape) |
+| How the system works, connecting tools, routines, adding a computer, getting help, updating the system | `System/` (answer from these, in the fixed shape) |
 
 ## Purpose
 
@@ -175,7 +123,7 @@ When working with [Your Name]:
 - If they ask to do something manually that a skill already handles, point them to it. For example, if they start checking email and calendar by hand, suggest running `/morning` instead.
 - If they seem unaware of a capability, explain what you can do and offer to do it. Do not assume they know every feature.
 - If they are struggling with something, walk them through it step by step using everyday language.
-- During monthly reviews, assess whether they are getting full value from the system and suggest underused features.
+- When it fits the conversation, check whether they are getting full value from the system and suggest underused features.
 - When explaining anything technical, use everyday language first, then the technical term in parentheses. For example: "your password keychain file (the logins file)" or "direct connections (MCP servers)."
 
 ## Folder Structure
@@ -342,7 +290,7 @@ When working in this vault:
 22. **Local routines are backed up in the vault.** A Claude desktop LOCAL scheduled task (Desktop app, Routines page, kind Local) lives only on the machine that created it: the prompt at `~/.claude/scheduled-tasks/<name>/SKILL.md`, everything else (schedule, folder, model, permission mode, worktree toggle, always-allow approvals) in app state that nothing exports, and it is absent from the account's cloud routine list. Whenever you create, edit, pause, or delete one: run `bash scripts/local-routines-backup.sh` (mirrors the prompts to `Resources/Reference/Local Routines/<device>/`) and update its row in `Resources/Reference/Local Routines Registry.md` in the same session, so a new computer can recreate it exactly. Never hand the user a block to create a local task without also writing the registry row. Cloud routines (kind Remote) need nothing; they belong to the account.
 23. **Recall and source trust order.** When [Your Name] asks to find context or recall something ("what did we say about X") and the vault search comes up thin, search past session transcripts before answering "not found" (`~/.claude/projects/<project-folder>/*.jsonl` on a local machine; cloud sessions keep none). Search for the topic and read only the matching session; never load transcripts at startup or read them whole. (a) **Trust order** for decisions and rules: canonical docs, then other vault notes, then past session transcripts, then Claude's built-in memory last. A past chat never overrides a vault doc. (b) **Changing facts**: the most recent dated source wins regardless of tier; say which date you are relying on. (c) **Never resolve a conflict silently**: show both sources with their dates and say which one you are using. (d) **Past chats are dated leads**: cite the date and treat the content, including your own earlier reasoning, as possibly stale. (e) **File what recall surfaces**: a durable fact found only in a chat gets written into its proper vault home in the same session. (f) **Honor "don't log"**: if the matched session carried a do-not-log instruction, use it to answer and do not write its content into the vault without asking.
 24. **Write path (state vs event)**: every fact you write is state (one current value that changes: rate, status, owner, date) or event (a thing that happened). State replaces its dated line in the file's `## Current State`; events add a dated line to `## Log`, newest first (never edit an old line). Unsure means append and say so. A hook refuses a second Current State, a Recent Activity section beside one, an undated or duplicate state line. The hook sees Edit, Write and MultiEdit only; profiles, CLAUDE.md, MEMORY.md and memory files are edited with those tools, never with sed, heredocs, or Python writes; the nightly state-check is the backstop.
-25. **Answering questions about this system.** When [Your Name] asks how the system works, how to connect a tool, what a routine does, how to add a computer, or what to do next, answer from the matching file in `System/` and only from it, in this shape: **what it is**, **our recommendation**, **the steps**, **what changes afterwards**. Offer to drive the screen for click-through steps only when the session is local (Claude Desktop on their machine); in a cloud session give the steps and say they can do them on their computer or on their onboarding call. Never improvise setup or connection advice that is not in `System/`; if `System/` does not cover it, say so and point to `System/Getting Help.md`.
+25. **Answering questions about this system.** When [Your Name] asks how the system works, how to connect a tool, what a routine does, how to add a computer, how to update the system, or what to do next, answer from the matching file in `System/` and only from it, in this shape: **what it is**, **our recommendation**, **the steps**, **what changes afterwards**. Offer to drive the screen for click-through steps only when the session is local (Claude Desktop on their machine); in a cloud session give the steps and say they can do them on their computer or on their onboarding call. Never improvise setup or connection advice that is not in `System/`; if `System/` does not cover it, say so and point to `System/Getting Help.md`.
 
 ## Common Workflows
 
@@ -496,7 +444,6 @@ When you complete a task that could be useful again in the future, offer to turn
 | YYYY-MM-DD | EOD skill added                  | `/eod` multi-section daily closeout workflow. |
 | YYYY-MM-DD | EOD phased pipeline             | Split `/eod` into 5-phase sub-agent pipeline. Each phase gets a fresh context window. |
 | YYYY-MM-DD | Inbox restructured              | Per-client files with standard structure. |
-| YYYY-MM-DD | Monthly review process added    | Non-blocking nudge on new month, `/monthly-review` command. |
 | YYYY-MM-DD | Per-client transcript routing   | Transcripts auto-classified to client folders via `classify-transcript.py`. |
 | YYYY-MM-DD | Daily workflow system           | `Inbox/Today.md` generated by EOD, `/morning` interactive review command. |
 | 2026-10-06 | Embedding + canonical detection | `/vault-audit` gained a local embedding layer (`vault-embed.py`): detects same-subject forks, proposes merges to a human review queue, folds and retires on confirm, and a fail-loud invariant check on canonical/superseded markers. |

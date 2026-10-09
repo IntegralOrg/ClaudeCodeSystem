@@ -391,15 +391,6 @@ Interactive command with `AskUserQuestion` at every decision point:
 | Time blocks | Google Calendar MCP | Create deep work blocks |
 | Send-off | Text output | Confirm plan, announce first priority |
 
-#### `/monthly-review` (Monthly Review)
-
-| Step | Integration | What It Does |
-|---|---|---|
-| System feedback | AskUserQuestion | Collect improvement ideas |
-| Vault cleanup | Vault scan | Surface stuck, stale, or misplaced items |
-| Testimonial scan | Slack API + vault search | Find positive client feedback |
-| Apply updates | Vault writes | Route improvements to appropriate files |
-
 #### Other Skills
 
 | Command | What It Does |

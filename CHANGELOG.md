@@ -6,6 +6,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-08] - Updating: take the new version without losing your work
+
+### Added
+- **`/update`** (both command folders) and **`System/Updating.md`** -- an existing vault takes the newest version of the system in one pass: clone the template, read the CHANGELOG entries since the vault's own, sort the files, apply, one commit, a short report. Adopt by default; keep the vault's version only when it is ahead or the change would break something the owner relies on, and say which in one line. Never stops to ask the owner which parts to take.
+- **`scripts/template-diff.py`** -- sorts every file against the template's whole history: unedited older template files are taken without judgment, so the agent only deliberates on files the owner actually changed. Never lists or touches the owner's own files, never re-adds `SETUP_PENDING`.
+- **README** -- the copy-paste update prompt for vaults older than `/update`.
+
+### Changed
+- **CHANGELOG convention** -- an entry that removes or renames something a vault already has, or changes a file the owner fills in, carries a `### In an existing vault` list; updates follow it.
+
+### In an existing vault
+1. In `CLAUDE.md`, add "updating the system" to the topics answered from `System/` (the support-rule row and Guideline "Answering questions about this system").
+
+---
+
+## [2026-10-08] - Monthly Review retired
+
+### Removed
+- **Monthly Review** -- the `/monthly-review` command (both command folders), its routine definition `System/routines/monthly-review.md`, its section in `System/Routines.md`, the new-month nudge and monthly prompts in `CLAUDE.md`, and the health hook's "has not run" check. Retired for lack of use; nightly Vault Hygiene keeps the vault clean.
+
+### In an existing vault
+1. Delete `.claude/commands/monthly-review.md`, `cowork-commands/monthly-review.md`, and `System/routines/monthly-review.md`. If you had edited any of them, move what you added somewhere it still serves you first (an `/update` run does this for you).
+2. Remove the `## Monthly Review` section from `System/Routines.md`.
+3. In `CLAUDE.md`, remove the "Last Monthly Review" startup step and block and the "Monthly Review Prompts" section.
+4. Turn off the Monthly Review routine in your Claude account (Routines page, or `update_trigger` with `enabled: false` from a cloud session).
+5. Keep anything already written under `Work/Monthly/`; those are your records.
+
+---
+
 ## [2026-10-08] - Cloud-first onboarding: the template is the vault, setup runs itself
 
 ### Added

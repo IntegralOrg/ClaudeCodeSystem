@@ -15,6 +15,12 @@ You need a GitHub account and a Claude Max plan.
 3. Put it on your computer: `System/Adding Your Computer.md` (Claude Desktop, GitHub Desktop, clone to `~/Brain`).
 Questions: ask your agent. It answers from `System/`.
 
+**Updating an existing vault.** In a session on your vault, type `/update`. If your vault is older than that command, paste this instead:
+
+> Update my system from https://github.com/IntegralOrg/ClaudeCodeSystem. Clone it to a temporary folder, then follow `System/Updating.md` from that clone.
+
+The agent takes the new version in full, keeps everything you have built or changed that is ahead of it, and reports what changed in a few lines.
+
 Connection steps for each tool (calendar, email, tasks, calls, chat) are in [Connecting Tools](System/Connecting%20Tools.md).
 
 ## Architecture
@@ -51,7 +57,7 @@ Connection steps for each tool (calendar, email, tasks, calls, chat) are in [Con
 **The daily loop:**
 1. **You work with Claude** (in Claude Desktop, or in a cloud session on the web or your phone): drafting, research, tasks, notes.
 2. **Your work is saved for you.** When Claude finishes a turn, a Stop hook lands the changes on `main`: `scripts/cloud-land.sh` in the cloud, `scripts/land-local.sh` on your computer. You never run Git.
-3. **Routines run on a schedule** from the definitions in `System/routines/`: End of Day (weeknights), Vault Hygiene (nightly), Monthly Review (the 1st). Which are live is recorded in `System/Routines.md`.
+3. **Routines run on a schedule** from the definitions in `System/routines/`: End of Day (weeknights) and Vault Hygiene (nightly). Which are live is recorded in `System/Routines.md`.
 4. **You are told when something is wrong**, even with no connectors: at the start of every session two hooks speak first. `landing_health.py` says when saves have been failing; `routine_health.py` says when a routine has not run when it should.
 
 **Keys are one human step.** Routines name the keys they need; `python3 scripts/check-keys.py` reports which names are missing and never prints a value.
@@ -61,8 +67,8 @@ Connection steps for each tool (calendar, email, tasks, calls, chat) are in [Con
 A vault created from this template ends up with:
 
 - **A `CLAUDE.md` filled in for you** (name, role, company, time zone, tools, week shape, first jobs) that Claude reads every session.
-- **Folders** for clients, projects, daily notes, monthly reviews, personal notes, and reference, plus a client page for each client or project you named.
-- **Three scheduled routines** (End of Day, Vault Hygiene, Monthly Review) defined in `System/routines/` and recorded in `System/Routines.md`.
+- **Folders** for clients, projects, daily notes, personal notes, and reference, plus a client page for each client or project you named.
+- **Two scheduled routines** (End of Day, Vault Hygiene) defined in `System/routines/` and recorded in `System/Routines.md`.
 - **Guard hooks and an action log** wired in the committed `.claude/settings.json`, the same in the cloud and on your computer.
 - **The System Journal** capturing every session, and **session telemetry** showing where the system wastes effort.
 - **A guidance library** in `System/` that your agent answers questions from.
@@ -92,7 +98,8 @@ ClaudeCodeSystem/
 │   ├── Routines.md                     # Which routines are live, ids, schedules, how to create one by hand
 │   ├── Adding Your Computer.md         # Claude Desktop, GitHub Desktop, clone to ~/Brain
 │   ├── Getting Help.md                 # Where to ask, what to send
-│   └── routines/                       # Definitions: eod.md, vault-hygiene.md, monthly-review.md
+│   ├── Updating.md                     # How the vault takes a new version of the system
+│   └── routines/                       # Definitions: eod.md, vault-hygiene.md
 ├── Templates/Client Note.md            # Client profile skeleton
 ├── Resources/Reference/                # Local Routines Registry, How We Think About AI Agents
 ├── cowork-commands/                    # CoWork versions of the commands (YAML frontmatter, manual upload)
@@ -108,6 +115,7 @@ ClaudeCodeSystem/
 │   ├── cloud-land.sh                   # Cloud sessions: land edits on main (Stop hook)
 │   ├── land-local.sh                   # Local sessions: land edits on main (Stop hook)
 │   ├── check-keys.py                   # Which key names each routine needs and which are missing
+│   ├── template-diff.py                # Sorts vault files against the template for an update
 │   ├── envload.py / with-env.py        # Load credentials for scripts, or for a one-off command
 │   ├── vault-audit.py / vault-embed.py # Nightly hygiene and same-subject detection
 │   ├── graph-render.py                 # Render the knowledge graph from frontmatter
@@ -128,7 +136,8 @@ ClaudeCodeSystem/
 | [Routines](System/Routines.md) | Which routines are live, their schedules and ids, how to create one by hand, what to do when one is stale |
 | [Connecting Tools](System/Connecting%20Tools.md) | Per-tool connection click paths: Gmail, Google Calendar, Slack, Fathom, ClickUp, and Claude plugins |
 | [Adding Your Computer](System/Adding%20Your%20Computer.md) | Claude Desktop, GitHub Desktop, and cloning the vault to `~/Brain` |
-| [Vault Design Guide](docs/vault-design-guide.md) | Folder structure, inbox system, CLAUDE.md design, skills, integrations, monthly reviews, step-by-step build guide |
+| [Updating](System/Updating.md) | Taking a new version of the system without losing what you built |
+| [Vault Design Guide](docs/vault-design-guide.md) | Folder structure, inbox system, CLAUDE.md design, skills, integrations, step-by-step build guide |
 | [Integration Architecture](docs/integration-architecture.md) | How Claude connects to your tools: direct connections, tool credentials, custom scripts, scheduled automation |
 | [Daily Workflow](docs/daily-workflow.md) | Today.md structure, /morning interactive review, EOD 5-phase pipeline, scheduled automation, tracking list pattern, carry-forward system |
 
@@ -217,7 +226,7 @@ The system is designed for one person. You could adapt it for a small team, but 
 Its next run starts fresh, and `Work/Daily/<date>.md` records which routines ran. See "If a routine is stale or not live" in `System/Routines.md`.
 
 **Can I run the routines on a schedule?**
-They already are: setup creates End of Day, Vault Hygiene, and Monthly Review as scheduled routines in your Claude account (definitions in `System/routines/`, status in `System/Routines.md`). They run in the cloud and push their results, so nothing on your computer has to be on. To create or repair one by hand, follow "Create a routine by hand" in `System/Routines.md`.
+They already are: setup creates End of Day and Vault Hygiene as scheduled routines in your Claude account (definitions in `System/routines/`, status in `System/Routines.md`). They run in the cloud and push their results, so nothing on your computer has to be on. To create or repair one by hand, follow "Create a routine by hand" in `System/Routines.md`.
 
 ## License
 

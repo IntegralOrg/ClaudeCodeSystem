@@ -29,15 +29,6 @@ Output: `Work/Daily/<date>.md`, including a **Routine health** section.
 
 Output: `_generated/vault-hygiene/audit-log.md` (the newest `## YYYY-MM-DD` heading is the last run).
 
-## Monthly Review
-- live_since: not live
-- schedule: the 1st of the month at 8 AM your time (`0 8 1 * *` local; created as the UTC equivalent)
-- needs: nothing
-- routine id: not created yet
-- environment id: not created yet
-
-Output: `Work/Monthly/YYYY-MM-DD Monthly Review.md` (full date of the run).
-
 ## How setup creates them
 
 In a cloud session the agent uses the tools `mcp__Claude_Code_Remote__create_trigger`, `list_triggers`, `get_trigger`, `update_trigger`, and `delete_trigger`. `create_trigger` takes a name, a cron expression (or `run_once_at` for a single run), the prompt, and a repository source. Two facts matter: the `connectors` parameter is refused for some organizations, so connectors are attached by hand afterwards (see `System/Connecting Tools.md`); and a routine created without a repository source runs in an empty container with no vault, so setup passes this repository's URL and then calls `get_trigger` to confirm the repository is listed as a source (under `session_request.config`); the same check applies to a routine that already existed and is reused. If a source is missing and cannot be repaired with `update_trigger`, setup deletes that routine and uses the by-hand steps below, noting "created by hand" in its section. Every routine is created with `persist_session: false` (each run is a fresh session) and on an **environment** whose Claude GitHub app covers this repository. If those tools are not available (a local session usually does not have them), use "Create a routine by hand" below.
@@ -48,17 +39,17 @@ Do this once per routine, in a browser on claude.ai.
 
 1. Go to **claude.ai**, open **Routines**, and click **New**.
 2. If there is no environment yet, create one when asked (an **environment** is the container each run starts in, and holds the environment variables, your keys). If asked to install the **Claude GitHub app**, install it and grant it this repository (`brain`, or whatever you named it). Without the GitHub app on this repository the routine cannot read or save the vault.
-3. Name: copy it from the routine's file in `System/routines/` (`End of Day`, `Vault Hygiene`, or `Monthly Review`).
+3. Name: copy it from the routine's file in `System/routines/` (`End of Day` or `Vault Hygiene`).
 4. Schedule: the cron expression from that file, converted to UTC for your time zone (see "Schedules are in UTC" above).
 5. Repository: choose `brain` (this vault repository, whatever you named it), branch `main`. A routine with no repository runs in an empty container, so do not skip this step.
-6. Prompt: the `prompt:` line from that file (`/eod`, `/vault-audit`, or `/monthly-review`).
+6. Prompt: the `prompt:` line from that file (`/eod` or `/vault-audit`).
 7. Connectors: the ones listed under `connectors:` in that file (End of Day: Gmail and Google Calendar).
 8. Environment: the one you created or chose. Keys go in its **Environment variables** (see `System/Connecting Tools.md`).
 9. Save. Then record the routine's id and the environment id in the matching section above, and leave `live_since: not live` until its first run succeeds.
 
 ## If a routine is stale or not live
 
-There are two channels. The session-start note from `routine_health.py` says, with no connector needed, when End of Day or Monthly Review has not run when it should. End of Day's **Routine health** section in `Work/Daily/<date>.md` records Vault Hygiene staleness and any missing keys or connectors (a missing connector shows as `connector-missing`), and the same reasons are pushed outside the vault: emailed to you when Gmail is connected, otherwise a "Brain needs you: <reason>" all-day event on your calendar. A reason is sent at most once a week.
+There are two channels. The session-start note from `routine_health.py` says, with no connector needed, when End of Day has not run when it should. End of Day's **Routine health** section in `Work/Daily/<date>.md` records Vault Hygiene staleness and any missing keys or connectors (a missing connector shows as `connector-missing`), and the same reasons are pushed outside the vault: emailed to you when Gmail is connected, otherwise a "Brain needs you: <reason>" all-day event on your calendar. A reason is sent at most once a week.
 
 There are two fixes:
 

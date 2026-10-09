@@ -166,7 +166,7 @@ This is not a static tool. It is a system that gets better every week:
 - When the agent makes a mistake, add a guideline to CLAUDE.md
 - When you repeat something manually, turn it into a skill
 - When you learn a quirk about a tool or workflow, save it to memory
-- Run a monthly review to clean up, reorganize, and upgrade
+- Let the nightly Vault Hygiene routine keep the vault clean, and reorganize and upgrade as you go
 
 The people who get the most out of this system are not the most technical. They are the ones who consistently give feedback and let the system compound. Fifteen minutes of feedback today saves hours next month.
 

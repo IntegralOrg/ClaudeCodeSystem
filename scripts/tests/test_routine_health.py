@@ -70,15 +70,6 @@ def test_hygiene_stale_reports(tmp_path):
     assert rc == 0 and "Routine Vault Hygiene has not run since 2026-10-10" in text and "EOD" not in text
 
 
-def test_monthly_review_stale_reports_and_unknown_is_silent(tmp_path):
-    fresh(tmp_path)
-    assert run_hook(tmp_path) == (0, "")  # no monthly output at all: unknown, not stale
-    (tmp_path / "Work" / "Monthly").mkdir(parents=True)
-    (tmp_path / "Work" / "Monthly" / "2026-08-01.md").write_text("# review\n")
-    rc, text = run_hook(tmp_path)
-    assert "Routine Monthly Review has not run since 2026-08-01" in text
-
-
 def test_never_run_routine_without_live_since_is_silent(tmp_path):
     routines_file(tmp_path, "# Routines\n")
     assert run_hook(tmp_path) == (0, "")
@@ -88,10 +79,10 @@ def test_routine_not_live_after_setup_reports(tmp_path):
     fresh(tmp_path)
     daily(tmp_path, TODAY - timedelta(days=3), "# Day\nSetup complete: vault is ready.\n")
     daily(tmp_path, TODAY - timedelta(days=1))
-    routines_file(tmp_path, "# Routines\n\n## End of Day\n- live_since: 2026-10-12\n\n## Vault Hygiene\n- live_since: not live\n\n## Monthly Review\n- live_since: 2026-10-12\n")
+    routines_file(tmp_path, "# Routines\n\n## End of Day\n- live_since: 2026-10-12\n\n## Vault Hygiene\n- live_since: not live")
     rc, text = run_hook(tmp_path)
     assert "Routine Vault Hygiene is still not live 3 days after setup" in text
-    assert "Routine EOD" not in text and "Routine Monthly Review" not in text
+    assert "Routine EOD" not in text
 
 
 def test_not_live_stays_silent_within_two_days_of_setup(tmp_path):
@@ -116,17 +107,17 @@ def setup_and_routines(root, text, days=4):
 
 
 def test_heading_with_parenthetical_matches(tmp_path):
-    setup_and_routines(tmp_path, "# Routines\n\n## Vault Hygiene (nightly)\n- live_since: not live\n\n## End of Day\n- live_since: 2026-10-11\n\n## Monthly Review\n- live_since: 2026-10-11\n")
+    setup_and_routines(tmp_path, "# Routines\n\n## Vault Hygiene (nightly)\n- live_since: not live\n\n## End of Day\n- live_since: 2026-10-11")
     rc, text = run_hook(tmp_path)
     assert "Routine Vault Hygiene is still not live 4 days after setup" in text
-    assert "Routine EOD" not in text and "Routine Monthly Review" not in text
+    assert "Routine EOD" not in text
 
 
 def test_numbered_and_marked_up_heading_matches(tmp_path):
-    setup_and_routines(tmp_path, "# Routines\n\n## 1. **End of Day**\n- live_since: not live\n\n## 2. `Vault Hygiene`\n- live_since: 2026-10-11\n\n## 3. _Monthly Review_\n- live_since: 2026-10-11\n")
+    setup_and_routines(tmp_path, "# Routines\n\n## 1. **End of Day**\n- live_since: not live\n\n## 2. `Vault Hygiene`\n- live_since: 2026-10-11")
     rc, text = run_hook(tmp_path)
     assert "Routine EOD is still not live 4 days after setup" in text
-    assert "Vault Hygiene is still" not in text and "Monthly Review is still" not in text
+    assert "Vault Hygiene is still" not in text
 
 
 def test_name_alias_heading_matches(tmp_path):
@@ -135,55 +126,38 @@ def test_name_alias_heading_matches(tmp_path):
 
 
 def test_later_routines_bullet_is_not_attributed_to_an_earlier_one(tmp_path):
-    setup_and_routines(tmp_path, "# Routines\n\n## Vault Hygiene\n- live_since: not live\n- note: see Monthly Review, live_since: 2026-10-01\n\n## Monthly Review\n- live_since: 2026-10-11\n\n## End of Day\n- live_since: 2026-10-11\n")
+    setup_and_routines(tmp_path, "# Routines\n\n## Vault Hygiene\n- live_since: not live\n- note: see End of Day, live_since: 2026-10-01\n\n## End of Day\n- live_since: 2026-10-11\n")
     rc, text = run_hook(tmp_path)
-    assert "Routine Vault Hygiene is still not live" in text and "Monthly Review is still" not in text
+    assert "Routine Vault Hygiene is still not live" in text and "Routine EOD is still" not in text
     # a section without its own live_since never borrows from the next section
-    setup_and_routines(tmp_path, "# Routines\n\n## Vault Hygiene\n- schedule: nightly\n\n## Monthly Review\n- live_since: 2026-10-11\n\n## End of Day\n- live_since: 2026-10-11\n")
+    setup_and_routines(tmp_path, "# Routines\n\n## Vault Hygiene\n- schedule: nightly\n\n## End of Day\n- live_since: 2026-10-11\n")
     assert "Routine Vault Hygiene is still not live" in run_hook(tmp_path)[1]
 
 
 def test_only_the_first_live_since_in_a_section_counts(tmp_path):
-    setup_and_routines(tmp_path, "# Routines\n\n## Vault Hygiene\n- live_since: not live\n- live_since: 2026-10-11\n\n## Monthly Review\n- live_since: 2026-10-11\n\n## End of Day\n- live_since: 2026-10-11\n")
+    setup_and_routines(tmp_path, "# Routines\n\n## Vault Hygiene\n- live_since: not live\n- live_since: 2026-10-11\n\n## End of Day\n- live_since: 2026-10-11\n")
     assert "Routine Vault Hygiene is still not live" in run_hook(tmp_path)[1]
 
 
-def test_month_only_monthly_file_counts_as_the_last_day_of_the_month(tmp_path):
-    fresh(tmp_path)
-    (tmp_path / "Work" / "Monthly").mkdir(parents=True)
-    (tmp_path / "Work" / "Monthly" / "2026-09.md").write_text("# review\n")
-    today = date(2026, 11, 5)
-    audit(tmp_path, today); daily(tmp_path, today - timedelta(days=1))
-    assert "Routine Monthly Review has not run since 2026-09-30" in run_hook(tmp_path, today=today)[1]
-    assert run_hook(tmp_path, today=date(2026, 11, 4))[1] == ""
-
-
-def test_full_date_monthly_file_name_convention(tmp_path):
-    fresh(tmp_path)
-    (tmp_path / "Work" / "Monthly").mkdir(parents=True)
-    (tmp_path / "Work" / "Monthly" / "2026-10-01 Monthly Review.md").write_text("# review\n")
-    assert run_hook(tmp_path) == (0, "")
-
-
-MONTHLY_DEF = '---\nname: monthly-review\ntitle: Monthly Review\nschedule: "0 8 1 * *"\n---\n'
+MONTHLY_DEF = '---\nname: quarterly-board-pack\ntitle: Board Pack\nschedule: "0 8 1 * *"\n---\n'
 DAILY_DEF = '---\nname: vault-hygiene\ntitle: Vault Hygiene\nschedule: "0 1 * * *"\n---\n'
 
 
 def routine_defs(root):
     (root / "System" / "routines").mkdir(parents=True, exist_ok=True)
-    (root / "System" / "routines" / "monthly-review.md").write_text(MONTHLY_DEF)
+    (root / "System" / "routines" / "quarterly-board-pack.md").write_text(MONTHLY_DEF)
     (root / "System" / "routines" / "vault-hygiene.md").write_text(DAILY_DEF)
 
 
 def monthly_world(root, today):
-    """Setup on 2026-10-08; every routine live except Monthly Review."""
+    """Setup on 2026-10-08; every routine live except a client-added monthly one (Board Pack)."""
     routine_defs(root)
     audit(root, today); daily(root, today - timedelta(days=1))
     daily(root, date(2026, 10, 8), "# Day\nSetup complete.\n")
-    routines_file(root, "# Routines\n\n## End of Day\n- live_since: 2026-10-09\n\n## Vault Hygiene\n- live_since: 2026-10-09\n\n## Monthly Review\n- live_since: not live\n")
+    routines_file(root, "# Routines\n\n## End of Day\n- live_since: 2026-10-09\n\n## Vault Hygiene\n- live_since: 2026-10-09\n\n## Board Pack\n- live_since: not live\n")
 
 
-def test_monthly_review_not_live_allowance_runs_past_the_first_of_next_month(tmp_path):
+def test_monthly_routine_not_live_allowance_runs_past_the_first_of_next_month(tmp_path):
     monthly_world(tmp_path, date(2026, 10, 13))
     assert run_hook(tmp_path, today=date(2026, 10, 13)) == (0, "")  # 5 days after setup, but monthly: silent
     for f in (tmp_path / "_generated").rglob("*.md"):
@@ -193,14 +167,24 @@ def test_monthly_review_not_live_allowance_runs_past_the_first_of_next_month(tmp
     assert run_hook(tmp_path, today=d) == (0, "")  # first run was the 1st; allowance ends the 3rd
     d = date(2026, 11, 3)
     audit(tmp_path, d); daily(tmp_path, d - timedelta(days=1))
-    assert "Routine Monthly Review is still not live 26 days after setup" in run_hook(tmp_path, today=d)[1]
+    assert "Routine Board Pack is still not live 26 days after setup" in run_hook(tmp_path, today=d)[1]
 
 
 def test_daily_routine_still_reported_after_two_days_while_monthly_waits(tmp_path):
     monthly_world(tmp_path, date(2026, 10, 13))
-    routines_file(tmp_path, "# Routines\n\n## End of Day\n- live_since: 2026-10-09\n\n## Vault Hygiene\n- live_since: not live\n\n## Monthly Review\n- live_since: not live\n")
+    routines_file(tmp_path, "# Routines\n\n## End of Day\n- live_since: 2026-10-09\n\n## Vault Hygiene\n- live_since: not live\n\n## Board Pack\n- live_since: not live\n")
     text = run_hook(tmp_path, today=date(2026, 10, 13))[1]
-    assert "Routine Vault Hygiene is still not live" in text and "Monthly Review" not in text
+    assert "Routine Vault Hygiene is still not live" in text and "Board Pack" not in text
+
+
+def test_leftover_monthly_review_section_is_ignored(tmp_path):
+    """A vault that has not updated yet still has a Monthly Review heading (not live) and no routine file:
+    the hook must not nag about it, and an old Work/Monthly folder is not a staleness signal either."""
+    setup_and_routines(tmp_path, "# Routines\n\n## End of Day\n- live_since: 2026-10-11\n\n## Vault Hygiene\n- live_since: 2026-10-11\n\n## Monthly Review\n- live_since: not live\n")
+    assert run_hook(tmp_path) == (0, "")
+    (tmp_path / "Work" / "Monthly").mkdir(parents=True)
+    (tmp_path / "Work" / "Monthly" / "2026-08-01 Monthly Review.md").write_text("# review\n")
+    assert run_hook(tmp_path) == (0, "")
 
 
 def test_routine_health_section_missing_lines_are_reported(tmp_path):
