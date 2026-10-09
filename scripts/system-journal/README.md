@@ -14,8 +14,9 @@ coming back across sessions, and so any claim can be checked against what was ac
 This template ships the **capture** half only. There is no reflection command and no Themes
 writer yet; the audit tier is generated locally but is not shipped anywhere. `themes-inject.py`
 is included but stays inert until a `_generated/Themes.md` exists (nothing here writes one).
-Today every session is recorded and `/opportunity-scan` answers what change would have
-prevented a bad session; automatic self-tuning from repeated friction is planned as a step
+Today the capture hooks record each session as it ends (a capture can be throttled or fail,
+so the record is near-complete, not guaranteed), and `/opportunity-scan` answers what change
+would have prevented a bad session; automatic self-tuning from repeated friction is planned as a step
 inside the nightly Vault Hygiene run.
 
 ## The read rule (entropy guard)
