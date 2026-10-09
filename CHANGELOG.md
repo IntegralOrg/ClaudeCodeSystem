@@ -12,12 +12,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **`/vent`** (`.claude/skills/vent/SKILL.md`, mirrored as `cowork-commands/vent.md`) -- a private journaling skill. It asks "What are you thinking?", saves the exact words, records good, bad, and plain facts side by side, learns who you are from what you say, and offers to work things through. It builds its own `Personal/Journal/` on first run, holds off big decisions until enough entries are on file, and gives the crisis line if you mention hurting yourself. Entries live in your own private repository.
 - **Hygiene**: `Personal/Journal/` is a `no_merge` record folder by default (Vault Audit Init, both command folders), so the nightly run never merges, moves, or rewrites an entry.
 - **System Journal**: `vocab.json` (and the built-in default in `distill.py`) now lists the `vent` tag as sensitive and `Personal/Journal/` as a sensitive path, so a Vent session is dropped whole from the audit tier.
+- **System Journal privacy**: a Vent session is recorded only as a private stub. `extract.py` keeps metadata only for a session that runs `/vent`, calls the `vent` skill, or touches `Personal/Journal/` (every turn's text becomes `[withheld: private session]`, tool inputs and outputs are dropped, `"private": true` is set), and `distill.py` writes a minimal line for it without calling the model. The rule is configurable in `vocab.json` (`private_commands`, `private_path_prefixes`).
 - **`System/How This Works.md`** and **README** describe Vent.
 
 ### In an existing vault
 1. Take `.claude/skills/vent/` and `cowork-commands/vent.md` from the template. (If you use CoWork, upload `cowork-commands/vent.md` through Customize.)
 2. In `_generated/vault-hygiene/vault-schema.md`, add to `folders` (if it is not already covered): `- path: Personal/Journal`, `purpose: Private journal kept by the /vent skill`, `no_merge: true`.
 3. In `scripts/system-journal/vocab.json`, add `"vent"` to `systems` and `sensitive_tags`, and `"Personal/Journal/"` to `sensitive_path_prefixes` (or take the template's file if you have not edited it).
+4. Take `scripts/system-journal/extract.py`, `scripts/system-journal/distill.py`, and `scripts/system-journal/vocab.json` from the template (or add `"private_commands": ["vent"]` and `"private_path_prefixes": ["Personal/Journal/"]` to your own `vocab.json`; set the prefix to wherever your Vent entries live). Sessions recorded before this change keep their words in the evidence file until you run `extract.py --force`.
 
 ---
 

@@ -130,7 +130,7 @@ The scripts carry no hardcoded owner identity; everything resolves at runtime.
   uses the repo root it runs in.
 - **Vocabulary.** The `systems` controlled list and the sensitivity rules live in
   `scripts/system-journal/vocab.json` (keys `systems`, `sensitive_tags`,
-  `sensitive_path_prefixes`). `distill.py` loads it from `<vault>/scripts/system-journal/vocab.json`;
+  `sensitive_path_prefixes`, `private_commands`, `private_path_prefixes`). `distill.py` loads it from `<vault>/scripts/system-journal/vocab.json`;
   when the file is absent it falls back to a built-in generic default (still routes personal
   lines out of the audit tier). Edit `vocab.json` to extend the vocabulary; no code change
   needed.
@@ -201,6 +201,10 @@ words), `shipped[]`, `decisions[]`, `open_loop`, `systems[]` (**controlled vocab
 ## Telemetry (`telemetry-stats.py`)
 
 Aggregates the evidence files; no transcript, no network, same script in every vault built from the template. `python3 scripts/system-journal/telemetry-stats.py --since-days 7 --group-by tool|repo|session|model|day [--json]` or `--session <id>` for one session (errors, ten slowest calls, tokens). `evidence/1` calls count as `unknown`; a call whose result has not arrived is `pending` and excluded from the error rate. Growth is sized, not archived: git history keeps every blob, so the fields were kept to about 25 to 45 bytes per call and 200 bytes per session, and old files are never re-extracted. The extractor loads its secret masker from `scripts/hooks/log_tool_use.py` (the vault path first, then script-relative); when none loads, every stored tool input becomes `[input withheld: secret masker not found]` with one warning in `run.log`. Evidence bytes therefore depend on the masker version, which qualifies "deterministic": the same transcript plus the same masker gives the same bytes. `ms` runs from the tool call to its result and includes any time a human spent approving the call. Reader: `/opportunity-scan`.
+
+## Private sessions
+
+Vent sessions are recorded only as a private stub: the system notes that a session happened, never what was said. A session is **private** when it runs a command listed in `private_commands` (default `vent`), calls the Skill tool for one, or has any tool touch a path under `private_path_prefixes` (default `Personal/Journal/`), all set in `vocab.json`. For a private session `extract.py` writes the evidence record with metadata only (ids, timestamps, counts, tool names with `ok`/`ms`/`error_class`, tokens), replaces every turn's text with `[withheld: private session]`, drops tool inputs, errors, files, PR refs, the title and the final message, and sets `"private": true`. `distill.py` never calls the model for it: it writes a line with the usual keys, `ask: "[private session]"`, `outcome: "private"`, empty lists, `systems: ["vent"]`, and `"private": true`, and always drops it from the audit tier. The line is kept so counts and freshness stay right. A record extracted before this rule still holds the words until it is re-extracted (`extract.py --force`); `distill.py` stubs it either way. A session that only mentions the prefix in a shell command is not private.
 
 ## Audit tier
 

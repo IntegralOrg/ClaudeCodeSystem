@@ -34,7 +34,7 @@ Their definitions are in `System/routines/`; whether each is live is in `System/
 
 ## Vent, a private journal
 
-Type `/vent` when you want to get something out of your head. Vent asks what you are thinking, writes your exact words down, keeps the good, the bad, and the plain facts side by side, and offers to work through it when you are ready. Your entries live in `Personal/Journal/` in your own private repository, and the nightly hygiene run never merges, moves, or rewrites them. Vent never decides anything for you: a big call you want to make while upset gets written down with a date and looked at again on a better day.
+Type `/vent` when you want to get something out of your head. Vent asks what you are thinking, writes your exact words down, keeps the good, the bad, and the plain facts side by side, and offers to work through it when you are ready. Your entries live in `Personal/Journal/` in your own private repository, and the nightly hygiene run never merges, moves, or rewrites them. Vent never decides anything for you: a big call you want to make while upset gets written down with a date and looked at again on a better day. Vent sessions are recorded only as a private stub: the system notes that a session happened, never what was said.
 
 ## The brakes, stated plainly
 
