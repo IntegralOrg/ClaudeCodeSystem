@@ -195,6 +195,7 @@ Check-in shape (lighter, Facts not needed):
 
 Tag goes at the end of the header line, same spot for both shapes. Then:
 - Recount and rewrite the Status line. If the Patterns rule just opened, flip Patterns to `open` and tick its reminder.
+- Re-check what is due now that the entry exists: if this entry opened the Patterns rule or brought the count to a multiple of 10 (look-back), that becomes the item for Step 6, unless Step 1 already picked something higher on its list.
 - File anything you learned into `Profile.md` (Filing rule above). Check Patterns counts.
 - Confirm in one line: "Logged. 7 entries (good 2 / rough 4 / normal 1). 3 unprocessed."
 
@@ -292,7 +293,7 @@ Same time every day, three minutes. The point is the streak, not the depth. Run 
 1. "Day, 1 to 10?"
 2. "One good thing. One rough thing."
 3. "Body: sleep, food, anything else?"
-4. Tag it from the score, don't ask: 7 or more is good, 3 or less is rough, the rest normal. Not-deciding line. Log it. Status line. File anything learned. Done. Skip the process offer unless something in it was clearly live.
+4. Save their exact answers to `Raw/YYYY-MM-DD.md` first (same as Step 3). Then tag it from the score, don't ask: 7 or more is good, 3 or less is rough, the rest normal. Not-deciding line. Log it. Status line. File anything learned. Done. Skip the process offer unless something in it was clearly live.
 
 Missed a day: "Welcome back." No guilt, no makeup entry. Streak restarts and that's fine.
 
