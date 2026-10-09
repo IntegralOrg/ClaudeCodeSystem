@@ -36,6 +36,8 @@ Their definitions are in `System/routines/`; whether each is live is in `System/
 
 The committed settings let Claude run every Bash command without asking first, so a session can work without stopping at each step. The only brake on that is the **guard** hook (`scripts/hooks/guard_secrets.py`). It blocks reading the credentials file, force pushes, hard resets, recursive force deletes outside temporary folders, and SQL drops. It is not a sandbox: a plain `rm -r` passes, and so does anything the guard was not written to recognise. Your protection against a bad day is the Git history (everything is recoverable from it) plus your own attention to what Claude says it is about to do.
 
+Another small hook keeps each note's `updated:` date current on every edit (`scripts/hooks/bump_updated.py`), so a note's date tells you when it last changed.
+
 ## What a merge conflict looks like here
 
 Markdown files use `merge=union`, which means that when two sessions change the same lines of the same file, Git keeps both versions instead of stopping. You never get a blocked save, and you never lose a line. The cost is that you can see a repeated line, and a file's frontmatter (the block between the `---` lines at the top) can gain a duplicate line such as two `updated:` entries. The autosync workflow repairs those duplicates when it merges branches. A duplicate left by a local rebase is not repaired automatically: Vault Hygiene's frontmatter check reports it, and it is fixed by hand.

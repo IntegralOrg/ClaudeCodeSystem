@@ -6,6 +6,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-09] - Notes keep their own updated date
+
+### Added
+- **`scripts/hooks/bump_updated.py`** -- a PostToolUse hook on Edit, MultiEdit and Write. When a Markdown note's frontmatter already has an `updated:` line, the hook sets it to today after the edit, so the date can be trusted to tell fresh notes from stale ones. It never adds the key, never touches the body, keeps line endings and a trailing comment, leaves a note alone when it has duplicate `updated:` lines, and skips `_generated/`, `.claude/`, `.git/`, `node_modules/`, `.superpowers/` and `.handoffs/`. Silent, and fails open.
+
+### In an existing vault
+1. Take `scripts/hooks/bump_updated.py` from the template.
+2. Add the PostToolUse hook to `.claude/settings.json`: a new entry in the `PostToolUse` array with matcher `Edit|MultiEdit|Write` and the command `python3 "$CLAUDE_PROJECT_DIR/scripts/hooks/bump_updated.py"` (timeout 10, not async).
+
+---
+
 ## [2026-10-08] - Updating: take the new version without losing your work
 
 ### Added

@@ -7,6 +7,7 @@ Stdlib-only Python 3 (3.11+). Each hook reads the Claude Code JSON payload on st
 | `guard_secrets.py` | PreToolUse | Blocks credential files, env dumps, naming `.env`, destructive commands |
 | `log_tool_use.py` | PostToolUse, PostToolUseFailure | Appends one masked JSONL row per call to `_generated/agent-actions/` |
 | `guard_state_writes.py` | PreToolUse (Edit, Write, MultiEdit) | Keeps `## Current State` / `## Log` structure in state-bearing files |
+| `bump_updated.py` | PostToolUse (Edit, MultiEdit, Write) | Sets a note's existing top-level `updated:` frontmatter date to today after every edit (never adds the key, never touches the body, skips duplicates, `_generated/`, `.claude/` and the template repo). `BUMP_UPDATED_TODAY=YYYY-MM-DD` overrides the date for tests |
 | `guard_vault_path.py` | SessionStart | Warns when the vault is inside a synced folder (iCloud, OneDrive, Dropbox, Google Drive) |
 | `setup_pending.py` | SessionStart | Starts setup while SETUP_PENDING exists (silent in the template repo) |
 | `landing_health.py` | SessionStart | Reports repeated local landing failures from `_generated/landing.log` (silent when the last attempt succeeded) |
