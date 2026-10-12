@@ -5,7 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SELF = Path(__file__).resolve()
-SKIP_DIRS = {".git", "node_modules", ".pytest_cache", "__pycache__", ".venv"}
+SKIP_DIRS = {".git", "node_modules", ".pytest_cache", "__pycache__", ".venv", ".superpowers"}  # .superpowers: git-ignored agent scratch, never shipped
 EXTS = {".md", ".py", ".sh", ".json", ".yml", ".yaml", ".html", ".txt", ".example", ".toml", ".cfg", ".css", ".js", ".ps1", ".csv"}
 NAMES = {".gitignore", ".gitattributes", "LICENSE", ".gitkeep"}
 # Built from pieces so this file is not its own first hit.

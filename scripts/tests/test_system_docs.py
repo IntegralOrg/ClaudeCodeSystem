@@ -274,3 +274,43 @@ def test_drive_screen_hands_back_and_requests_permissions():
         "responsibility_get_pid_responsible_for_pid", "com.anthropic.claudefordesktop")
     ref = (skill / "references" / "driving-agents.md").read_text(encoding="utf-8")
     has(ref, "Claude Code", "Nothing to install")
+
+
+def test_claude_md_carries_the_setup_trigger_for_a_clean_machine():
+    text = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+    paras = text.split("\n\n")
+    assert "maintaining the template" in paras[1]          # maintainer paragraph stays first
+    trigger = paras[2]
+    has(trigger, "SETUP_PENDING", "System/Setup Procedure.md", "## 0. Where you are",
+        "whatever the first message says", "hooks may not run")
+
+
+def test_setup_procedure_routes_and_runs_both_sessions():
+    text = read("Setup Procedure")
+    i0, ia, ib, i1 = (text.index("## 0. Where you are"), text.index("## Part A"),
+                      text.index("## Part B"), text.index("## 1. Open, then learn"))
+    assert i0 < ia < ib < i1
+    part_a, part_b = text[ia:ib], text[ib:i1]
+    has(part_a, "xcode-select --install", "winget install --id Git.Git -e --scope user", "9PNRBTZXMB4Z",
+        "move-home.sh", "move-home.ps1", "screenctl.py request", "_generated/setup/answers.md",
+        "Click Trust, then press Enter", "Downloads", "in the background", "while")
+    has(part_b, "github.py install-gh", "github.py login-start", "github.py login-wait", "github.py connect",
+        "github.py verify", "REPO_EXISTS", "scripts/land-local.sh", "Claude GitHub app", "Trash")
+    assert "land-local.sh --final" not in part_a + part_b     # keeps the existing order test meaningful
+    for t in ("DEST_NOT_EMPTY", "SYNCED_PATH", "GIT_MISSING"):
+        assert t in part_a, t
+    fails = text[text.index("## When a step fails"):]
+    has(fails, "help_report.py", "once", "keep going", "handback", "onboarding contact")
+    assert "gh auth" not in part_a + part_b      # the person never sees gh commands; the agent uses github.py
+
+
+def test_adding_your_computer_points_desktop_starters_back():
+    has(read("Adding Your Computer"), "If you started on your computer", "already")
+
+
+def test_setup_parts_skip_the_second_welcome_and_can_rename_the_repo():
+    text = read("Setup Procedure")
+    part_a = text[text.index("## Part A"):text.index("## Part B")]
+    part_b = text[text.index("## Part B"):text.index("## 1. Open, then learn")]
+    has(part_a, "skip its opening line")
+    has(part_b, "skip its opening line", "connect --name")

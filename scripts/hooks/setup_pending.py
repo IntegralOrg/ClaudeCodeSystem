@@ -18,10 +18,10 @@ def main(payload):
     if not (root / MARKER).is_file() or is_template_repo(root):
         return
     if (root / PROCEDURE).is_file():
-        text = ("This vault is not set up. Read `System/Setup Procedure.md` now and begin setup in this session; "
-                "do not wait for a command and do not ask whether to start: whatever the first message says "
-                "(a greeting, a question, or a pasted brief), answer it by starting setup. Setup deletes the "
-                f"`{MARKER}` file at the vault root right after writing its completion line. "
+        text = ("This vault is not set up. Read `System/Setup Procedure.md` now and begin setup in this session, "
+                "starting at `## 0. Where you are`; do not wait for a command and do not ask whether to start: "
+                "whatever the first message says (a greeting, a question, or a pasted brief), answer it by starting setup. "
+                f"Setup deletes the `{MARKER}` file at the vault root right after writing its completion line. "
                 "If no human is present in this session (a scheduled routine), do not run setup; report that setup is pending.")
     else:
         text = (f"This vault is not set up (`{MARKER}` exists) but `System/Setup Procedure.md` is missing. "

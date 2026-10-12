@@ -409,16 +409,34 @@ if OS == "Windows":
         r = run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps])
         return r.returncode == 0
 
-    def notify(title: str, text: str) -> bool:
-        # A sound, not a toast: toasts need an app identity PowerShell lacks.
-        r = run(["powershell.exe", "-NoProfile", "-Command",
-                 "[System.Media.SystemSounds]::Asterisk.Play()"])
-        return r.returncode == 0
-
     def _ps_quote(s: str) -> str:
         # A single-quoted PowerShell literal; the only escape is '' for '.
         # A username like O'Brien puts an apostrophe into %TEMP%.
         return "'" + s.replace("'", "''") + "'"
+
+    # Stop on the first error: PowerShell 5.1 otherwise carries on after a failed Show(), plays the sound, and
+    # exits 0, so the hand-back would report "notified" for a toast that never appeared.
+    _TOAST = r"""
+$ErrorActionPreference = 'Stop'
+[Windows.UI.Notifications.ToastNotificationManager,Windows.UI.Notifications,ContentType=WindowsRuntime] | Out-Null
+[Windows.Data.Xml.Dom.XmlDocument,Windows.Data.Xml.Dom.XmlDocument,ContentType=WindowsRuntime] | Out-Null
+$x = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent('ToastText02')
+$t = $x.GetElementsByTagName('text')
+$t[0].AppendChild($x.CreateTextNode(__TITLE__)) | Out-Null
+$t[1].AppendChild($x.CreateTextNode(__TEXT__)) | Out-Null
+$id = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe'
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($id).Show([Windows.UI.Notifications.ToastNotification]::new($x))
+[System.Media.SystemSounds]::Asterisk.Play()
+"""
+
+    def notify(title: str, text: str) -> bool:
+        # Windows refuses most background attempts to take the foreground (the
+        # taskbar button flashes instead), so the toast is the reliable half of
+        # the hand-back. Windows PowerShell 5.1, not pwsh: .NET 5+ dropped the
+        # built-in WinRT projection this needs.
+        ps = _TOAST.replace("__TITLE__", _ps_quote(title)).replace("__TEXT__", _ps_quote(text))
+        r = run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps])
+        return r.returncode == 0
 
     def get_clipboard() -> str:
         # Deliberately NOT through stdout. PowerShell writes stdout in the

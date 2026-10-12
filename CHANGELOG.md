@@ -6,6 +6,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-10] - Start on your computer: download, open in Claude, and setup does the rest
+
+### Added
+- **`scripts/setup/move-home.sh` and `move-home.ps1`**: copy the downloaded folder to `~/Brain` (`%USERPROFILE%\Brain` on Windows), refuse cloud-synced folders and folders that already hold files, make it a Git repository, and open it in Claude with a link that fills in the next message. Built-in tools only, so they run before Python exists; a rerun after a crash picks up where it stopped.
+- **`scripts/setup/github.py`**: installs the GitHub CLI into your own folder (no admin rights), signs in with one browser approval (the one-time code is copied for you), creates the private `brain` repository or reuses an empty one, never pushes over a repository that has files, and points Git at it.
+- **`scripts/setup/help_report.py`**: when a setup step fails twice, writes a report into `Inbox/` with any key or token hidden, for you to send to your onboarding contact.
+- **Setup Procedure**: section 0 routes cloud, downloaded-copy, and home sessions; Part A (tools, the questions while the tools install, Mac screen permissions, move home) and Part B (clean up the download, GitHub, the Claude GitHub app); "When a step fails".
+
+### Changed
+- **`CLAUDE.md`** carries the setup trigger, because a clean computer cannot run the session-start hooks until its tools are installed.
+- **Front door and README**: download first; "Use this template" stays for starting without a computer.
+- **Windows**: `.gitattributes` keeps shell and Python scripts at LF line endings (a Windows clone would otherwise break them); the screen-control hand-back shows a toast.
+
+### In an existing vault
+1. Take `scripts/setup/`, `System/Setup Procedure.md`, `System/Getting Help.md`, `System/Adding Your Computer.md`, `.gitattributes`, and `.claude/skills/drive-screen/` from the template.
+2. In your `CLAUDE.md`, add the **Setup comes first** paragraph from the template's `CLAUDE.md`, after the first paragraph.
+3. On Windows, run `git add --renormalize .` and commit once after taking `.gitattributes`.
+
+---
+
 ## [2026-10-10] - Smoother first run: quick questions, the right Mac permissions, and a hand-back from screen control
 
 ### Changed

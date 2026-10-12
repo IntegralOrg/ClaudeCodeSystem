@@ -5,6 +5,8 @@ updated: 2026-10-10
 ---
 # Adding Your Computer
 
+If you started on your computer (you downloaded the system and opened it in Claude Desktop), this is already done: setup put your vault in `~/Brain` and connected it to GitHub. This page is for a vault that started in a cloud session.
+
 **What it is.** The system already works in a cloud session (nothing installed). Adding your computer puts a second copy of the vault on your machine so you can work on it in Claude Desktop, with the same files, the same rules, and the same automatic saving to `main`.
 
 **Our recommendation.** Do it once, on the machine you work at most. Another machine is another clone, done the same way; your phone is the cloud session, which needs nothing installed.

@@ -22,6 +22,8 @@ When a step fails and the agent cannot repair it (setup stopped partway, saving 
 - the **Routine health** section of the newest note in `Work/Daily/` (if setup stopped before any daily note existed, the report says "no daily note yet" and carries on),
 - which setup step it was on, and what it already tried.
 
+The agent writes it with `python3 scripts/setup/help_report.py`, which hides anything that looks like a key or token. Send it to Dean, your contact at Integral, however you usually reach them.
+
 ## 3. Dean, for white-glove sessions
 
 Book a session with Dean when a step needs someone with you: connecting Gmail, Google Calendar, Slack, or Fathom; adding keys to the environment; the two installs (Claude Desktop and GitHub Desktop) and the macOS permission grants (Accessibility, Screen Recording, and the one-time "control System Events" prompt). Dean can drive the screen with you and leave nothing half-connected.

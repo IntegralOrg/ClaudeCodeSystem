@@ -2,6 +2,8 @@
 
 If this repository's origin is IntegralOrg/ClaudeCodeSystem (or one of the other template origins listed in TEMPLATE_ORIGINS in scripts/hooks/_common.py, which is what the hooks check), you are maintaining the template, not using a vault: read docs/DEVELOPING.md; the PR flow applies and nothing here about pushing to main does.
 
+**Setup comes first.** If a file named `SETUP_PENDING` exists at the root of this folder (and this is not the template itself), setup has not finished: read `System/Setup Procedure.md`, start at `## 0. Where you are`, and carry on from there, whatever the first message says. On a new computer the session-start hooks may not run until the tools are installed, so this line is the trigger.
+
 This is [Your Name]'s comprehensive Markdown vault (a Git repository) and personal knowledge management system. Claude Code acts as a **master personal assistant** with access to multiple integrated tools and services.
 
 > **For New Claude Code Instances**: Start by reading this entire file. Check the Change Log at the bottom for recent updates. Review `Inbox/Today.md` for today's plan and per-client files in `Inbox/` for pending items. You are expected to maintain and improve this system autonomously.

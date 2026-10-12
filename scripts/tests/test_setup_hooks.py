@@ -98,3 +98,10 @@ def test_more_sync_folder_names_detected(tmp_path):
         d = tmp_path / part / "Brain"; d.mkdir(parents=True)
         _, out, _ = run_hook("guard_vault_path.py", d)
         assert label in context_of(out), part
+
+
+def test_marker_points_at_section_zero(tmp_path):
+    v = git_repo(tmp_path / "v")
+    (v / "SETUP_PENDING").write_text("x"); (v / "System").mkdir(); (v / "System" / "Setup Procedure.md").write_text("#")
+    rc, out, _ = run_hook("setup_pending.py", v)
+    assert rc == 0 and "## 0. Where you are" in context_of(out)

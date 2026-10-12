@@ -7,7 +7,52 @@ updated: 2026-10-10
 
 You are reading this because `SETUP_PENDING` exists at the vault root. Run every step below in this session, in order, without asking permission between steps. Ask the user only the questions written here. The order at the end matters: after the keys step, write the completion line, delete `SETUP_PENDING`, land, and only then run the demo, so an interrupted hand-off never restarts setup.
 
-First, know where you are: a **cloud session** runs in a container (home directory `/root`, nothing on the user's computer); a **local session** runs in Claude Desktop on their machine. Step 4, step 6, and step 7 differ by that.
+## 0. Where you are
+
+Check, in this order, and go to the first that fits:
+
+- **A cloud session** (home directory `/root`, nothing on the person's computer): skip Part A and Part B; run sections 1 to 7 (the cloud branches).
+- **A local session in a folder with no `.git`** (usually inside `Downloads`): this is the downloaded copy. Run **Part A**.
+- **A local session in the vault's home** (`~/Brain` on a Mac, `%USERPROFILE%\Brain` on Windows, with `.git`): run **Part B**, then sections 1 to 7 for whatever is not done yet.
+
+Every step below starts with a check and skips itself when the check passes, so any session can pick up where an earlier one stopped. The person never types a command: you run everything and tell them, in one plain sentence, the one thing to click.
+
+## Part A: the first session, in the downloaded folder
+
+**A1. Welcome.** Say, in these words: "Welcome. I'll set up your system now. It takes about twenty minutes, and I'll need you for a few clicks: an installer, two permission switches on a Mac, and one approval on GitHub. Before we start, check the button next to Send says **Auto**; if not, click it and choose Auto." If macOS asks whether Claude Code may access the Downloads folder, tell them to click **Allow**. Hook errors in this first session are expected until the tools are installed; do not mention them unless asked.
+
+**A2. Computer tools.** Check: on a Mac, `xcode-select -p` succeeds; on Windows, `git --version` and `python3 --version` both answer (look in `%LOCALAPPDATA%\Programs\Git\cmd\git.exe` too).
+- Mac: run `xcode-select --install` and say: "A box just opened: click **Install**, then **Agree**. It takes five to fifteen minutes; we'll talk while it runs." Then wait in the background (`until xcode-select -p >/dev/null 2>&1; do sleep 15; done`, run in the background, up to 45 minutes).
+- Windows (PowerShell): run `winget install --id Git.Git -e --scope user --accept-package-agreements --accept-source-agreements` and `winget install 9PNRBTZXMB4Z --source msstore --accept-package-agreements --accept-source-agreements` (Python 3.13 from the Microsoft Store, which provides `python3`), in the background. If Windows asks "Do you want to allow this app to make changes", tell them to click **Yes**. If `winget` is not found, run `Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe` and retry.
+
+**A3. The questions, while A2 runs.** Check: `_generated/setup/answers.md` exists. Otherwise run section 1 now, during the wait (skip its opening line: A1 already welcomed them), and write every field to `_generated/setup/answers.md` (one `- field: value` line each), so the answers travel with the move.
+
+**A4. Screen permissions (Mac only).** Check, once A2 is done: `python3 .claude/skills/drive-screen/scripts/screenctl.py doctor` prints `DOCTOR_OK`. Otherwise run `python3 .claude/skills/drive-screen/scripts/screenctl.py request` and say: "System Settings just opened. Turn on **Claude Code** in this list, then do the same in Screen Recording. It's listed as Claude Code, not Claude." The grants take effect in the next session, which A6 opens anyway. Windows: nothing to do.
+
+**A5. Move home.** The script does its own checks. Run it with the owner's name and email from the answers:
+- Mac: `bash scripts/setup/move-home.sh --name "<name>" --email "<email>" --no-open`
+- Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup\move-home.ps1 -Name "<name>" -Email "<email>" -NoOpen`
+
+It prints `HOME_READY <folder>` and `OPEN_URL <link>` (or `ALREADY_HOME` on a rerun). On `DEST_NOT_EMPTY`, ask where to put it instead (offer `Brain-2` beside it) and rerun with `--dest` (Windows: `-Dest`). On `SYNCED_PATH`, choose a folder outside cloud-synced folders. On `GIT_MISSING`, A2 has not finished: wait for it.
+
+**A6. Open the new home.** Say: "I'm opening your Brain in a new Claude window. Click Trust, then press Enter." Then open the `OPEN_URL` link (`open "<link>"` on a Mac, `Start-Process "<link>"` on Windows), and say this session is finished and the new window carries on. If the link does nothing, tell them: "In Claude, choose **Code**, then **Select folder**, pick the **Brain** folder in your home folder, click Trust, and send 'continue'."
+
+## Part B: in the vault's home
+
+**B1. Ready check.** Check: the folder is the home and `.git` exists. On a Mac run `screenctl.py doctor`; if it is not `DOCTOR_OK`, run `screenctl.py request`, give the A4 sentence again, and carry on: screen control is only needed for click-through steps. When macOS asks once whether Claude Code may control System Events, say "Click OK."
+
+**B2. Clean up.** Check: the downloaded copy still exists (a folder in `Downloads` with `SETUP_PENDING` and no `.git`). Compare it with the home (same file list, ignoring `.git` and `_generated`), then move it, and its zip if there is one, to the Trash (Mac: `mv` it into `~/.Trash/`; Windows: `[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory` with `SendToRecycleBin`, after `Add-Type -AssemblyName Microsoft.VisualBasic`). Never delete it outright.
+
+**B3. GitHub.** Check: `python3 scripts/setup/github.py verify` prints `REACHABLE`. Otherwise:
+1. Ask whether they have a GitHub account. If not, open github.com/signup and say: "Make a free account on the page that just opened, and tell me when you're in."
+2. `python3 scripts/setup/github.py install-gh` (prints `GH_READY`).
+3. `python3 scripts/setup/github.py login-start`: it copies a one-time code and opens GitHub; give them its `SAY` sentence exactly. Then run `python3 scripts/setup/github.py login-wait` in the background and wait for `SIGNED_IN`.
+4. `python3 scripts/setup/github.py connect`: it creates the private repository `brain` and saves to it (`CONNECTED`). On `REPO_EXISTS` or `REPO_NOT_PRIVATE`, tell them a repository with that name already exists, ask for another name (suggest `brain-2`), and run `python3 scripts/setup/github.py connect --name <that name>`; never push over a repository that has files. On `ORIGIN_UNVERIFIED` (this folder already points at a repository that cannot be confirmed as theirs and private), push nothing and follow "When a step fails".
+5. Run the landing script now (`bash scripts/land-local.sh` with the `--final` flag) and confirm the last line of `_generated/landing.log` is "landed on main" or "nothing to push". On Windows, if `bash` is not found in this session, run it through Git's own copy: `& "$env:LOCALAPPDATA\Programs\Git\bin\bash.exe" scripts/land-local.sh` with the `--final` flag (or `$env:ProgramFiles\Git\bin\bash.exe` for a machine-wide Git).
+
+**B4. Claude GitHub app.** Open `https://github.com/apps/claude/installations/new` and say: "Choose your account, pick **Only select repositories**, choose **brain**, and click Install." Routines need it to read and save the vault from the cloud. Its proof is the first routine run (a routine stays "not live" until its first run reports).
+
+Then continue with section 1 (skip its opening line, and skip any field already in `_generated/setup/answers.md`), section 2 (build the vault from the answers), section 3 (routines: in Claude Desktop use the `/schedule` tools when the session has them; otherwise "Create a routine by hand" in `System/Routines.md`, offering to drive the screen through it), and sections 4 to 7. Delete `_generated/setup/answers.md` when you write the completion line.
 
 ## 1. Open, then learn who this is for
 
@@ -93,3 +138,12 @@ Two-minute demo on the user's own data: capture one task they mentioned into `In
 
 - **Cloud session:** say, in these words: "Tools like email and calendar connect on your call with Dean; ask me any time and I will walk you through it. Next we put this on your computer." Then follow `System/Adding Your Computer.md`.
 - **Local session:** say that tools like email and calendar connect on the onboarding call (and you can walk them through any of it now). You are already on their computer, so skip the hand-off: run the first-local-session checks from `System/Adding Your Computer.md` step 4.
+
+## When a step fails
+
+Retry a failing step once. If it fails again:
+
+1. Say plainly what failed and that it is not their fault, in one or two sentences.
+2. With the Write tool, put the exact error line in `_generated/setup/error.txt` and what you tried in `_generated/setup/tried.txt` (never paste error text into a command: a `$(...)` inside it would run). Then run `python3 scripts/setup/help_report.py --step '<step name>' --error-file _generated/setup/error.txt --tried-file _generated/setup/tried.txt` (add `--details-file` with the `doctor` output when screen control is involved). It writes a report into `Inbox/` with any key or token hidden; give them its `SAY` sentence, which asks them to send it to their onboarding contact. Without Python yet (Part A, before A2 finishes), write the same report with the Write tool instead.
+3. Keep going with every step that does not depend on the failed one; the next session's checks pick the failed step up again.
+4. If you were driving the screen, end with `screenctl.py handback` first, so they are looking at Claude when you tell them.
