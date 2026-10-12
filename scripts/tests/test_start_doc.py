@@ -76,6 +76,9 @@ def test_start_asks_the_questions_during_the_wait_and_opens_the_home_with_python
     has(home, "Programs\\Git\\cmd\\git.exe", "[uri]::EscapeDataString", "urllib.parse.quote", "$env:USERPROFILE\\Brain")
     # a Store python3 installed during this session may be invisible to it: use the alias path, else let the new window do the clicks
     has(home, "WindowsApps\\python3.exe", "do not wait for it")
+    # a failed Python install is told apart from an invisible alias before any "the new window sees python3" promise
+    has(home, "winget list --id 9PNRBTZXMB4Z", "the install failed")
+    assert home.index("winget list --id 9PNRBTZXMB4Z") < home.index("do not wait for it")
     # the Claude window is picked by id from `list`, never by the title "Claude" (the front-door tab also has it)
     has(home, "screenctl.py list", "--id", "Claude#")
     assert '--title "Claude"' not in home
