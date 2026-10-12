@@ -25,8 +25,12 @@ def test_index_html_has_one_start_button_that_opens_claude_in_the_home_folder():
     qs = parse_qs(url.query)
     assert qs["folder"] == ["~"]
     assert qs["q"] == [start_line_from_readme()]       # the button and the README carry the same line
-    assert RAW_START in qs["q"][0] and DOWNLOAD in qs["q"][0] and "Brain/System/Start.md" in qs["q"][0]
-    assert len(qs["q"][0]) < 1000
+    line = qs["q"][0]
+    assert RAW_START in line and DOWNLOAD in line and "Brain/System/Start.md" in line
+    assert len(line) < 1000
+    assert "curl -L" in line and "Invoke-WebRequest" in line and "read the whole file" in line   # never a paraphrasing fetch
+    assert "already exists" in line and "ask me" in line                                        # the foreign-folder guard, even on the fallback
+    assert "<title>Your Claude System</title>" not in html      # a page title with "Claude" collides with the Claude window
     assert html.count("Start in Claude") >= 3           # two buttons and the step that names it
 
 
@@ -48,5 +52,8 @@ def test_readme_get_started_is_three_steps_with_the_line_and_both_fallbacks():
     missing = [n for n in ("Max", "Trust", "Enter", "copy the line", DOWNLOAD, "ClaudeCodeSystem-main", "inside it",
                            "Use this template", "claude.ai/code", "send any message", "Start in Claude") if n not in block]
     assert not missing, missing
+    step2 = [l for l in block.splitlines() if l.startswith("2.")][0]
+    assert step2.index("copy the line") < step2.index("Start in Claude")     # GitHub renders no button; the line comes first
+    assert "(docs/index.html)" not in text                                     # a link to raw HTML source helps nobody
     assert RAW_START in start_line_from_readme()
     assert "integralorg.github.io" not in text

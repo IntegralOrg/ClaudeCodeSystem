@@ -80,12 +80,20 @@ function listWindows() {
   }
   return found;
 }
-function accessibilityDenied() {
+function systemEventsState() {
   // Process names are readable without the grant; window attributes are not.
-  // Finder always has readable windows when the grant is in place.
-  try { se.applicationProcesses.byName('Finder').windows.length; return false; }
-  catch (e) { return true; }
+  // Finder always has readable windows when the grant is in place. Two different
+  // refusals look alike from here: no Accessibility grant, and the person
+  // clicking Don't Allow on the "control System Events" prompt (error -1743),
+  // which switching Accessibility on cannot cure.
+  try { se.applicationProcesses.byName('Finder').windows.length; return 'ok'; }
+  catch (e) {
+    var msg = String(e.message || e);
+    return (e.errorNumber === -1743 || msg.indexOf('-1743') >= 0 || msg.indexOf('Not authorized') >= 0) ? 'automation' : 'accessibility';
+  }
 }
+var AUTOMATION_HELP = 'macOS did not allow this app to control System Events (error -1743). The person clicks OK on that prompt, or switches Claude Code on under Automation in System Settings > Privacy & Security.';
+function accessibilityDenied() { return systemEventsState() !== 'ok'; }
 function resolve(title) {
   if (!title) die('NO_TITLE', '--title is required for this action');
   var t = String(title).toLowerCase();
@@ -93,7 +101,9 @@ function resolve(title) {
     return w.title.toLowerCase().indexOf(t) >= 0 || w.proc.toLowerCase().indexOf(t) >= 0;
   });
   if (!hits.length) {
-    if (accessibilityDenied()) die('NO_ACCESSIBILITY', 'System Events is not allowed assistive access. Run: screenctl.js request');
+    var state = systemEventsState();
+    if (state === 'automation') die('AUTOMATION_DENIED', AUTOMATION_HELP);
+    if (state === 'accessibility') die('NO_ACCESSIBILITY', 'System Events is not allowed assistive access. Run: screenctl.js request');
     die('NOT_FOUND', 'no visible window title or app name contains "' + title + '"');
   }
   if (hits.length > 1) die('AMBIGUOUS', '"' + title + '" matches ' + hits.length + ' visible windows. Pass a longer --title.');
@@ -121,6 +131,9 @@ function pngSize(path) {
 function shot(f) {
   if (!f.out) die('NO_OUT', '--out is required for shot');
   var win = resolve(f.title);
+  // Without the grant the capture still exits 0 and writes a picture of the
+  // wallpaper, so the grant is checked first, never inferred from the file.
+  if (!$.CGPreflightScreenCaptureAccess()) die('NO_SCREEN_RECORDING', 'Screen Recording is not granted to this session. A switch turned on during this session takes effect in a new one: tell the person what to click instead of reading the screen.');
   focus(win);
   delay(1.0);
   sh('/usr/sbin/screencapture -x -o -R' + [win.x, win.y, win.w, win.h].join(',') + ' ' + q(f.out));
@@ -214,9 +227,11 @@ function doctor() {
   var rec = $.CGPreflightScreenCaptureAccess();
   out('screen_recording: ' + (rec ? 'ok' : 'DENIED - run `screenctl.js request`, then switch Claude Code on in System Settings > Privacy & Security > Screen Recording'));
   ok = ok && rec;
-  var axd = accessibilityDenied();
-  out('accessibility: ' + (axd ? 'DENIED - run `screenctl.js request`, then switch Claude Code on in System Settings > Privacy & Security > Accessibility' : 'ok'));
-  ok = ok && !axd;
+  var state = systemEventsState();
+  out('accessibility: ' + (state === 'ok' ? 'ok'
+      : state === 'automation' ? 'AUTOMATION_DENIED - ' + AUTOMATION_HELP
+      : 'DENIED - run `screenctl.js request`, then switch Claude Code on in System Settings > Privacy & Security > Accessibility'));
+  ok = ok && state === 'ok';
   var n = 0;
   try { n = listWindows().length; } catch (e) {}
   out('windows_visible: ' + n);

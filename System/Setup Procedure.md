@@ -11,7 +11,7 @@ You are reading this because `SETUP_PENDING` exists at the vault root. Run every
 
 Check, in this order, and go to the first that fits:
 
-- **A session with no vault** (no `CLAUDE.md` in the folder you are in, usually the home folder, because the person pressed the start button or pasted the start line): follow `System/Start.md` instead of this file. Fetch it from `https://raw.githubusercontent.com/IntegralOrg/ClaudeCodeSystem/main/System/Start.md`, or read `Brain/System/Start.md` once the download in its step 2 is done. Come back to this file in the session it opens.
+- **A session with no vault** (no `CLAUDE.md` in the folder you are in, usually the home folder, because the person pressed the start button or pasted the start line): follow `System/Start.md` instead of this file. Download it with `curl -L` (`Invoke-WebRequest` on Windows) from `https://raw.githubusercontent.com/IntegralOrg/ClaudeCodeSystem/main/System/Start.md` into a temporary folder and read the whole file (a summarising fetch can change its commands), or read `Brain/System/Start.md` once the download in its step 2 is done. Come back to this file in the session it opens.
 - **A cloud session** (home directory `/root`, nothing on the person's computer): skip Part A and Part B; run sections 1 to 7 (the cloud branches).
 - **A local session in a folder with no `.git`** (usually inside `Downloads`): this is the downloaded copy. Run **Part A**.
 - **A local session in the vault's home** (`~/Brain` on a Mac, `%USERPROFILE%\Brain` on Windows, with `.git`): run **Part B**, then sections 1 to 7 for whatever is not done yet.

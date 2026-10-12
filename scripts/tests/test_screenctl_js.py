@@ -19,7 +19,8 @@ def osa(*args):
 def test_file_exists_names_the_six_commands_and_needs_no_python():
     text = JS.read_text(encoding="utf-8")
     assert "var COMMANDS = ['doctor', 'request', 'shot', 'click', 'key', 'handback'];" in text
-    for token in ("DOCTOR_OK", "HANDED_BACK", "SHOT:", "CLICKED", "SENT:", "NO_ACCESSIBILITY",
+    for token in ("DOCTOR_OK", "HANDED_BACK", "SHOT:", "CLICKED", "SENT:", "NO_ACCESSIBILITY", "NO_SCREEN_RECORDING",
+                  "AUTOMATION_DENIED", "-1743",
                   "CAPTURE_FAILED", "com.anthropic.claudefordesktop", "CGRequestScreenCaptureAccess",
                   "AXIsProcessTrustedWithOptions", "screencapture"):
         assert token in text, token
@@ -53,6 +54,10 @@ def test_shot_refuses_when_no_png(tmp_path):
     p = osa("shot", "--title", "no-such-window-xyz", "--out", str(tmp_path / "a.png"))
     assert p.returncode == 1 and ("NOT_FOUND" in p.stdout or "NO_ACCESSIBILITY" in p.stdout)
     assert "SHOT:" not in p.stdout and not (tmp_path / "a.png").exists()
+    # the grant is checked before any capture: the preflight call sits ahead of screencapture in the source
+    src = JS.read_text(encoding="utf-8")
+    shot_src = src[src.index("function shot("):src.index("function clickByName(")]
+    assert shot_src.index("CGPreflightScreenCaptureAccess") < shot_src.index("screencapture")
 
 
 @mac_only
