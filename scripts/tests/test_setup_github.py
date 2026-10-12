@@ -36,6 +36,8 @@ FAKE_GH = textwrap.dedent(r'''
         if not r: sys.exit(1)
         print(json.dumps({"isEmpty": r["empty"], "visibility": r["visibility"]})); sys.exit(0)
     if a[:2] == ["repo", "create"]:
+        if s.get("create_error"):
+            print(s["create_error"], file=sys.stderr); sys.exit(1)
         bare, src = s["bare"], a[a.index("--source") + 1]   # always act on --source, never on the cwd
         s["created"] = a[2]; json.dump(s, open(st, "w"))
         subprocess.run(["git", "init", "-q", "--bare", "-b", "main", bare], check=True)
@@ -180,3 +182,21 @@ def test_connect_rerun_pushes_to_its_own_private_origin(world):
     setstate(world, signed_in=True, repos={str(bare): {"empty": False, "visibility": "PRIVATE"}})
     rc, out = run(world, "connect")
     assert rc == 0 and out.splitlines()[-1].startswith("CONNECTED"), out
+
+
+def test_connect_stops_on_an_organization_policy_without_retrying(world):
+    setstate(world, signed_in=True, bare=str(world["tmp"] / "bare.git"),
+             create_error="HTTP 403: Repository creation is restricted by organization policy")
+    rc, out = run(world, "connect")
+    assert rc == 3 and out.startswith("ORG_POLICY"), out
+    assert "PUSH_FAILED" not in out
+    assert not (world["tmp"] / "bare.git").exists()        # nothing was created or pushed
+
+
+def test_is_org_policy_matches_the_known_messages_only():
+    for msg in ("GraphQL: Resource not accessible by integration",
+                "HTTP 403: SAML enforcement: you must re-authorize",
+                "repository creation is restricted by organization policy"):
+        assert gh.is_org_policy(msg), msg
+    for msg in ("remote: Repository not found.", "could not resolve host github.com", ""):
+        assert not gh.is_org_policy(msg), msg
