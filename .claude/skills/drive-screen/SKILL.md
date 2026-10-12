@@ -25,6 +25,14 @@ and opens the right Settings pane; the person switches it on, starts a new sessi
 `doctor` again. A permission the person has to grant is never a reason to drive the
 screen: they do it by hand, with you telling them exactly what to click.
 
+**Before python3 exists** (the first minutes on a clean Mac, while the Command Line
+Tools install), `scripts/screenctl.js` stands in: `osascript -l JavaScript
+scripts/screenctl.js <command>`, with six commands only (`doctor`, `request`, `shot`,
+`click`, `key`, `handback`) and the same first-token output as the Python script.
+`click --button Install` clicks a named button through Accessibility without a
+screenshot. It exists for `System/Start.md`. The moment `python3` runs,
+`screenctl.py` takes over and nothing else in this skill changes.
+
 ## Before you drive anything: does this need the screen at all?
 
 Screen control is the slowest and least reliable way to make a computer do

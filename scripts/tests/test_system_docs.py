@@ -367,3 +367,13 @@ def test_update_ends_with_a_numbered_summary():
     code = (ROOT / ".claude" / "commands" / "update.md").read_text(encoding="utf-8")
     cowork = (ROOT / "cowork-commands" / "update.md").read_text(encoding="utf-8")
     assert cowork.split("---", 2)[2].strip() == code.strip()      # the mirror's body matches the Code version
+
+
+def test_drive_screen_names_the_pre_python_driver_and_the_changelog_ships_it():
+    skill = (ROOT / ".claude" / "skills" / "drive-screen" / "SKILL.md").read_text(encoding="utf-8")
+    has(skill, "screenctl.js", "before python3 exists", "osascript -l JavaScript", "six commands", "`screenctl.py` takes over")
+    assert (ROOT / ".claude" / "skills" / "drive-screen" / "scripts" / "screenctl.js").is_file()
+    log = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    top = log.split("## [")[1]
+    has(top, "System/Start.md", "screenctl.js", "Start in Claude", "ORG_POLICY", "Superpowers", "Wispr Flow", "What changed:",
+        "### In an existing vault")
