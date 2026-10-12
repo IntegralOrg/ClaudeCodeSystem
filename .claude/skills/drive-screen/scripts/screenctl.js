@@ -165,14 +165,20 @@ function clickByName(win, name) {
   }
   return false;
 }
+var INT = /^[+-]?\d+$/;
 function click(f) {
+  // Inputs are checked before the window is looked up, so a bad operand never
+  // reaches osascript: a flag with no operand parses as `true`, and parseInt
+  // turns "12px" into 12.
+  if (!f.button && (!INT.test(String(f.x)) || !INT.test(String(f.y)))) {
+    die('NO_COORDS', '--button NAME, or --x and --y as whole numbers, is required for click');
+  }
   var win = resolve(f.title);
   focus(win);
   if (f.button) {
     if (!clickByName(win, f.button)) die('NO_SUCH_BUTTON', 'no button named "' + f.button + '" in "' + win.title + '" (looked in the window, its sheets, and their groups)');
     out('CLICKED button "' + f.button + '"');
   } else {
-    if (f.x === undefined || f.y === undefined) die('NO_COORDS', '--button NAME, or --x and --y, is required for click');
     if (!$.CGPreflightPostEventAccess()) die('NO_ACCESSIBILITY', 'This app may not post mouse events. Run: screenctl.js request');
     var x = parseInt(f.x, 10), y = parseInt(f.y, 10);
     // AppleScript's `click at` through a shell, because the JXA form of this one

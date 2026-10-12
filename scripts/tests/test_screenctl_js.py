@@ -76,3 +76,13 @@ def test_doctor_reaches_a_verdict_without_a_bridge_error():
     assert ("DOCTOR_OK" in p.stdout) or ("DOCTOR_PROBLEMS" in p.stdout), p.stdout
     for line in ("post_events:", "screen_recording:", "accessibility:", "windows_visible:"):
         assert line in p.stdout, line
+
+
+@mac_only
+def test_click_refuses_coordinates_that_are_not_whole_integers():
+    # Checked before the window is even looked up, so a bad operand never reaches osascript.
+    for x, y in (("12px", "3"), ("abc", "3"), ("1.5", "3")):
+        p = osa("click", "--title", "no-such-window-xyz", "--x", x, "--y", y)
+        assert p.returncode == 1 and "NO_COORDS" in p.stdout and "CLICKED" not in p.stdout, (x, y, p.stdout)
+    p = osa("click", "--title", "no-such-window-xyz", "--x", "--y")     # flags with no operands
+    assert p.returncode == 1 and "NO_COORDS" in p.stdout, p.stdout
