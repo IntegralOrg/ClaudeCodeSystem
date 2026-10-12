@@ -6,15 +6,19 @@ This is the **cloud edition**: it starts in [Claude Code on the web](https://cod
 
 > **You do not need to be technical.** Claude walks you through everything step by step.
 >
-> **What you will need:** a GitHub account and a Claude Max plan (routines and cloud sessions need it). The front door for non-technical readers is [the one-page guide](https://integralorg.github.io/ClaudeCodeSystem/).
+> **What you will need:** a GitHub account and a Claude Max plan (routines and cloud sessions need it). The front door for non-technical readers is a one-page guide whose hosted address you get from whoever introduces the system.
 
 ## Get Started
 You need a Claude Max plan and a free GitHub account (setup helps you make one).
 1. Install [Claude Desktop](https://claude.com/download) and sign in.
-2. [Download your system](https://github.com/IntegralOrg/ClaudeCodeSystem/archive/refs/heads/main.zip). On Windows, right-click the zip in Downloads and choose **Extract All**; Windows makes a folder with a second `ClaudeCodeSystem-main` folder inside it, and that inner one is the folder to choose.
-3. In Claude Desktop open **Code**, choose the `ClaudeCodeSystem-main` folder (the one with `CLAUDE.md` in it; drag it in, or **Select folder**), click **Trust**, and send any message ("hi" is enough). Setup does the rest and asks you only for a few clicks.
+2. First, copy the line below, open **Code** in Claude Desktop, choose your home folder, and paste it as the first message. (If you were given the address of the front-door page, its **Start in Claude** button does the same in one press: your browser asks once, "Open Claude?", say yes, and Claude opens with the message already written.)
+3. Click **Trust**, then press **Enter**. Setup downloads your system into a folder called Brain and does the rest; it asks you only for a few clicks.
 
-No computer handy? Click **Use this template** (private, name it `brain`) and open it at claude.ai/code instead; you can add a computer later (`System/Adding Your Computer.md`).
+> Set up my Brain. Download https://raw.githubusercontent.com/IntegralOrg/ClaudeCodeSystem/main/System/Start.md with curl -L (Invoke-WebRequest on Windows) into a temporary folder, read the whole file, and follow it exactly, from the top. If that download fails: download https://github.com/IntegralOrg/ClaudeCodeSystem/archive/refs/heads/main.zip the same way, unzip it, and copy the contents of its ClaudeCodeSystem-main folder into a new folder named Brain in my home folder so that Brain/CLAUDE.md exists; if a Brain folder already exists there with files in it, stop and ask me for another name. Then read the whole of Brain/System/Start.md and follow it.
+
+By hand instead: [download the zip](https://github.com/IntegralOrg/ClaudeCodeSystem/archive/refs/heads/main.zip). On Windows, right-click it in Downloads and choose **Extract All**; Windows makes a folder with a second `ClaudeCodeSystem-main` folder inside it, and that inner one is the folder to choose. Open it in **Code**, click **Trust**, and send any message.
+
+No computer handy? Click **Use this template** (private, name it `brain`) and open it at claude.ai/code instead, and send any message; you can add a computer later (`System/Adding Your Computer.md`).
 Questions: ask your agent. It answers from `System/`.
 
 **Updating an existing vault.** In a session on your vault, type `/update`. If your vault is older than that command, paste this instead:

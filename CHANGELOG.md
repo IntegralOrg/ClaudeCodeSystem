@@ -6,6 +6,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-12] - Screen control from the first minute: one button, Trust, Enter
+
+### Added
+- **`System/Start.md`**: the procedure for a session that has no vault yet. The agent downloads and unzips the system into `~/Brain` itself (`%USERPROFILE%\Brain` on Windows), raises the Mac permission prompts and names the two switches, clicks Install and Agree on the tools installer, asks the setup questions while the install runs, makes the folder a Git repository, and opens it in a new Claude window with Trust and Enter driven. Its first lines are the guard rail for a session with no hooks.
+- **`scripts/screenctl.js`** in the drive-screen skill: six commands (`doctor`, `request`, `shot`, `click`, `key`, `handback`) for a Mac before `python3` exists, run with `osascript`. `click --button <name>` clicks a named button through Accessibility. `screenctl.py` takes over once Python is in.
+- **Front door and README**: one **Start in Claude** button that opens Claude Desktop in the home folder with the first message written (`claude://code/new?folder=~&q=`), the same line printed to copy, and the zip kept as the hand path.
+- **Setup Procedure**: "Ask the person only when" (permissions, sign-ins, administrator prompts, a step that failed twice, a missing connector; everything else the agent decides); `ORG_POLICY` from `github.py connect` stops the GitHub step with "use a personal account or ask your admin" instead of retrying; voice input (Wispr Flow) offered by name after the demo and installed on yes.
+
+### Changed
+- **Superpowers** installs in the first local session without asking (one sentence says what it is).
+- **`/update`** ends with a numbered "What changed:" list in plain language, at most six items.
+
+### In an existing vault
+1. Take `System/Start.md`, `System/Setup Procedure.md`, `System/Adding Your Computer.md`, `System/Connecting Tools.md`, `System/Updating.md`, `.claude/commands/update.md`, `cowork-commands/update.md`, `scripts/setup/github.py`, `.gitattributes`, and the whole `.claude/skills/drive-screen/` folder from the template.
+2. Nothing else: an existing vault is already past the first minute.
+
+---
+
 ## [2026-10-10] - Start on your computer: download, open in Claude, and setup does the rest
 
 ### Added

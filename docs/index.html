@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Your Claude System</title>
+<title>Start your Brain</title>
 <meta name="description" content="A private, self-maintaining assistant built on Claude.">
 <style>
   :root {
@@ -41,6 +41,7 @@
   .btn.secondary { background: transparent; color: var(--accent); }
   .btn:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   .later { margin-top: 14px; }
+  pre.line { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; font-size: 0.9rem; margin: 0 0 14px; }
   .intro { background: var(--accent-soft); border-left: 4px solid var(--accent); border-radius: 8px; padding: 14px 16px; margin: 0 0 16px; }
   a { color: var(--accent); }
   footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.95rem; }
@@ -52,7 +53,7 @@
   <p class="lede">A private, self-maintaining assistant built on Claude. Your notes and decisions live in a private repository that only you and Claude can read, and routines keep it current every night.</p>
 
   <div class="buttons">
-    <a class="btn primary" href="https://github.com/IntegralOrg/ClaudeCodeSystem/archive/refs/heads/main.zip">Download your system</a>
+    <a class="btn primary" href="claude://code/new?folder=~&amp;q=Set%20up%20my%20Brain.%20Download%20https%3A%2F%2Fraw.githubusercontent.com%2FIntegralOrg%2FClaudeCodeSystem%2Fmain%2FSystem%2FStart.md%20with%20curl%20-L%20%28Invoke-WebRequest%20on%20Windows%29%20into%20a%20temporary%20folder%2C%20read%20the%20whole%20file%2C%20and%20follow%20it%20exactly%2C%20from%20the%20top.%20If%20that%20download%20fails%3A%20download%20https%3A%2F%2Fgithub.com%2FIntegralOrg%2FClaudeCodeSystem%2Farchive%2Frefs%2Fheads%2Fmain.zip%20the%20same%20way%2C%20unzip%20it%2C%20and%20copy%20the%20contents%20of%20its%20ClaudeCodeSystem-main%20folder%20into%20a%20new%20folder%20named%20Brain%20in%20my%20home%20folder%20so%20that%20Brain%2FCLAUDE.md%20exists%3B%20if%20a%20Brain%20folder%20already%20exists%20there%20with%20files%20in%20it%2C%20stop%20and%20ask%20me%20for%20another%20name.%20Then%20read%20the%20whole%20of%20Brain%2FSystem%2FStart.md%20and%20follow%20it.">Start in Claude</a>
     <a class="btn secondary" href="https://claude.com/download">Get Claude Desktop</a>
   </div>
 
@@ -82,13 +83,16 @@
   <h2>Three steps</h2>
   <ol>
     <li>Install <a href="https://claude.com/download">Claude Desktop</a> and sign in.</li>
-    <li>Click <strong>Download your system</strong> below. On Windows, right-click the zip in Downloads and choose <strong>Extract All</strong>: you get a folder with a second <strong>ClaudeCodeSystem-main</strong> folder inside it, and that inner one is the folder to choose. A Mac unzips it for you.</li>
-    <li>In Claude Desktop open <strong>Code</strong>, choose the <strong>ClaudeCodeSystem-main</strong> folder (the one with CLAUDE.md in it; drag it in, or <strong>Select folder</strong>), click <strong>Trust</strong>, and send any message (<em>hi</em> is enough).</li>
+    <li>Press <strong>Start in Claude</strong>. Your browser asks once, "Open Claude?": say yes. Claude opens with the first message already written.</li>
+    <li>Click <strong>Trust</strong>, then press <strong>Enter</strong>. Setup does the rest and tells you the one thing to click each time it needs you.</li>
   </ol>
-  <p class="later">Setup installs what it needs, asks a few quick questions, moves your system to a folder called Brain, and connects it to GitHub. You click an installer, two permission switches for <strong>Claude Code</strong> on a Mac, and one approval on GitHub.</p>
+  <p class="later">Setup downloads your system into a folder called Brain, installs what it needs, asks a few quick questions, and connects it to GitHub. You click two permission switches for <strong>Claude Code</strong> on a Mac, an installer, and one approval on GitHub.</p>
+  <p class="later">If the button does nothing, copy the line below, open <strong>Code</strong> in Claude Desktop, choose your home folder, paste it as the first message, click <strong>Trust</strong>, and press <strong>Enter</strong>.</p>
+  <pre class="line">Set up my Brain. Download https://raw.githubusercontent.com/IntegralOrg/ClaudeCodeSystem/main/System/Start.md with curl -L (Invoke-WebRequest on Windows) into a temporary folder, read the whole file, and follow it exactly, from the top. If that download fails: download https://github.com/IntegralOrg/ClaudeCodeSystem/archive/refs/heads/main.zip the same way, unzip it, and copy the contents of its ClaudeCodeSystem-main folder into a new folder named Brain in my home folder so that Brain/CLAUDE.md exists; if a Brain folder already exists there with files in it, stop and ask me for another name. Then read the whole of Brain/System/Start.md and follow it.</pre>
+  <p class="later">Prefer to do it by hand? <a href="https://github.com/IntegralOrg/ClaudeCodeSystem/archive/refs/heads/main.zip">Download the zip</a>. On Windows, right-click it in Downloads and choose <strong>Extract All</strong>: you get a folder with a second <strong>ClaudeCodeSystem-main</strong> folder inside it, and that inner one is the folder to choose. A Mac unzips it for you. Then open <strong>Code</strong> in Claude Desktop, choose that folder, click <strong>Trust</strong>, and send any message.</p>
 
   <div class="buttons">
-    <a class="btn primary" href="https://github.com/IntegralOrg/ClaudeCodeSystem/archive/refs/heads/main.zip">Download your system</a>
+    <a class="btn primary" href="claude://code/new?folder=~&amp;q=Set%20up%20my%20Brain.%20Download%20https%3A%2F%2Fraw.githubusercontent.com%2FIntegralOrg%2FClaudeCodeSystem%2Fmain%2FSystem%2FStart.md%20with%20curl%20-L%20%28Invoke-WebRequest%20on%20Windows%29%20into%20a%20temporary%20folder%2C%20read%20the%20whole%20file%2C%20and%20follow%20it%20exactly%2C%20from%20the%20top.%20If%20that%20download%20fails%3A%20download%20https%3A%2F%2Fgithub.com%2FIntegralOrg%2FClaudeCodeSystem%2Farchive%2Frefs%2Fheads%2Fmain.zip%20the%20same%20way%2C%20unzip%20it%2C%20and%20copy%20the%20contents%20of%20its%20ClaudeCodeSystem-main%20folder%20into%20a%20new%20folder%20named%20Brain%20in%20my%20home%20folder%20so%20that%20Brain%2FCLAUDE.md%20exists%3B%20if%20a%20Brain%20folder%20already%20exists%20there%20with%20files%20in%20it%2C%20stop%20and%20ask%20me%20for%20another%20name.%20Then%20read%20the%20whole%20of%20Brain%2FSystem%2FStart.md%20and%20follow%20it.">Start in Claude</a>
     <a class="btn secondary" href="https://claude.com/download">Get Claude Desktop</a>
   </div>
 

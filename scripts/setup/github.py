@@ -9,7 +9,7 @@ Each step checks first, so any step can be re-run:
   connect      make Git use gh for github.com, create the private repo `brain` (or reuse an empty one), push
   verify       GIT_TERMINAL_PROMPT=0 git ls-remote origin
 Stdout: the first token is stable (GH_READY, CODE, SAY, SIGNED_IN, CONNECTED, REACHABLE, or a failure token).
-Exit: 0 ok, 1 failed, 2 usage, 3 needs the person.
+Exit: 0 ok, 1 failed, 2 usage, 3 needs the person (LOGIN_NEEDED, REPO_EXISTS, REPO_NOT_PRIVATE, ORIGIN_UNVERIFIED, ORG_POLICY).
 Test hooks: SETUP_NO_UI=1 (no clipboard, no browser), SETUP_GH, SETUP_BIN_DIR, SETUP_REMOTE_URL.
 """
 import argparse
@@ -57,6 +57,16 @@ def asset_name(version, system, machine):
 def helper_value(gh_path):
     # Git runs the helper through sh: forward slashes, and an apostrophe (C:/Users/O'Brien) closed and re-opened.
     return "!'" + gh_path.replace("\\", "/").replace("'", "'\\''") + "' auth git-credential"
+
+
+ORG_POLICY_MARKERS = ("resource not accessible", "saml", "organization policy", "restricted by organization",
+                      "organization has", "enterprise policy")
+
+
+def is_org_policy(err):
+    """True when gh or git failed because an organization's policy blocks the person, not because of a typo or the network."""
+    low = (err or "").lower()
+    return any(m in low for m in ORG_POLICY_MARKERS)
 
 
 def bin_dir():
@@ -225,7 +235,10 @@ def cmd_connect(a):
             r = run([gh, "repo", "create", a.name, "--private", "--source", a.vault, "--remote", "origin", "--push"],
                     cwd=a.vault, timeout=300)
             if r.returncode != 0:
-                fail("PUSH_FAILED", r.stderr.strip()[:300] or "creating the repository failed")
+                err = r.stderr.strip()[:300] or "creating the repository failed"
+                if is_org_policy(err):
+                    fail("ORG_POLICY", err, 3)
+                fail("PUSH_FAILED", err)
         else:
             info = json.loads(view.stdout or "{}")
             if info.get("visibility") != "PRIVATE":
@@ -237,7 +250,10 @@ def cmd_connect(a):
             git(a.vault, "remote", "add", "origin", url)
     push = git(a.vault, "push", "-u", "origin", "main", timeout=300)
     if push.returncode != 0:
-        fail("PUSH_FAILED", push.stderr.strip()[:300])
+        err = push.stderr.strip()[:300]
+        if is_org_policy(err):
+            fail("ORG_POLICY", err, 3)
+        fail("PUSH_FAILED", err)
     out("CONNECTED", git(a.vault, "remote", "get-url", "origin").stdout.strip())
 
 

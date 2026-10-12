@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DOCS = ["Setup Procedure", "How This Works", "Connecting Tools", "Routines", "Adding Your Computer", "Getting Help", "Updating"]
+DOCS = ["Setup Procedure", "How This Works", "Connecting Tools", "Routines", "Adding Your Computer", "Getting Help", "Updating", "Start"]
 
 
 def read(name):
@@ -98,7 +98,7 @@ def test_routines_doc_has_the_manual_path():
 
 def test_public_repo_clean_of_internal_names():
     for name in DOCS:
-        text = read(name).replace("github.com/IntegralOrg/ClaudeCodeSystem", "")  # the public template's address
+        text = read(name).replace("github.com/IntegralOrg/ClaudeCodeSystem", "").replace("githubusercontent.com/IntegralOrg/ClaudeCodeSystem", "")  # the public template's addresses
         assert "Stephen" not in text and "Integral/" not in text, name
         if name != "Getting Help":
             assert "Integral" not in text, name
@@ -314,3 +314,66 @@ def test_setup_parts_skip_the_second_welcome_and_can_rename_the_repo():
     part_b = text[text.index("## Part B"):text.index("## 1. Open, then learn")]
     has(part_a, "skip its opening line")
     has(part_b, "skip its opening line", "connect --name")
+
+
+def test_setup_procedure_routes_a_vaultless_session_to_start():
+    text = read("Setup Procedure")
+    sec0 = text[text.index("## 0. Where you are"):text.index("## Part A")]
+    first_bullet = [l for l in sec0.splitlines() if l.startswith("- ")][0]
+    has(first_bullet, "no vault", "System/Start.md")
+    has(sec0, "cloud session", "downloaded copy", "vault's home")
+
+
+def test_setup_procedure_says_when_to_ask_the_person():
+    text = read("Setup Procedure")
+    ask = text[text.index("## Ask the person only when"):text.index("## When a step fails")]
+    has(ask, "permission only they can grant", "sign-in", "consent", "administrator", "failed twice",
+        "missing from their workspace", "Everything else", "why it is needed")
+
+
+def test_setup_procedure_stops_on_an_organization_policy():
+    text = read("Setup Procedure")
+    part_b = text[text.index("## Part B"):text.index("## 1. Open, then learn")]
+    has(part_b, "ORG_POLICY", "personal GitHub account", "ask your admin")
+    line = [l for l in part_b.splitlines() if "ORG_POLICY" in l][0]
+    assert "do not retry" in line.lower()
+
+
+def test_wispr_flow_is_offered_by_name_after_the_demo():
+    setup = read("Setup Procedure")
+    sec7 = setup[setup.index("## 7. Show it working"):setup.index("## Ask the person only when")]
+    has(sec7, "Wispr Flow", "wisprflow.ai", "drive", "on yes")
+    adding = read("Adding Your Computer")
+    step4 = adding[adding.index("## 4."):adding.index("## 5.")]
+    has(step4, "Wispr Flow", "offers")
+
+
+def test_superpowers_installs_without_asking():
+    text = read("Adding Your Computer")
+    line = [l for l in text.splitlines() if "Installs the **Superpowers**" in l][0]
+    has(line, "without asking", "claude plugin marketplace add obra/superpowers-marketplace",
+        "claude plugin install superpowers@superpowers-marketplace", "Settings, Plugins", "one sentence")
+    assert "install-or-skip" not in text and "whether to install" not in text
+    has(read("Connecting Tools"), "Setup installs it for you")
+
+
+def test_update_ends_with_a_numbered_summary():
+    for rel in (".claude/commands/update.md", "cowork-commands/update.md"):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        has(text, "What changed:", "numbered", "plain language", "at most six")
+    updating = read("Updating")
+    step7 = updating[updating.index("7. **Report**"):updating.index("## What changes afterwards")]
+    has(step7, "What changed:", "numbered", "at most six", "last message")
+    code = (ROOT / ".claude" / "commands" / "update.md").read_text(encoding="utf-8")
+    cowork = (ROOT / "cowork-commands" / "update.md").read_text(encoding="utf-8")
+    assert cowork.split("---", 2)[2].strip() == code.strip()      # the mirror's body matches the Code version
+
+
+def test_drive_screen_names_the_pre_python_driver_and_the_changelog_ships_it():
+    skill = (ROOT / ".claude" / "skills" / "drive-screen" / "SKILL.md").read_text(encoding="utf-8")
+    has(skill, "screenctl.js", "before python3 exists", "osascript -l JavaScript", "six commands", "`screenctl.py` takes over")
+    assert (ROOT / ".claude" / "skills" / "drive-screen" / "scripts" / "screenctl.js").is_file()
+    log = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    top = log.split("## [")[1]
+    has(top, "System/Start.md", "screenctl.js", "Start in Claude", "ORG_POLICY", "Superpowers", "Wispr Flow", "What changed:",
+        "### In an existing vault")

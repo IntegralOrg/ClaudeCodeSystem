@@ -40,12 +40,13 @@ Without asking you between steps, the agent:
 3. Checks that this computer can reach GitHub from the command line: it runs `GIT_TERMINAL_PROMPT=0 git ls-remote origin` in the vault. If that fails, GitHub Desktop's sign-in is not visible to command-line Git, so the agent has you install **Git Credential Manager** (a download with a link, browser sign-in, no terminal) and retries; if it still fails, the last resort is `gh auth login --web && gh auth setup-git`. Then it runs `bash scripts/land-local.sh --final` and confirms the last line of `_generated/landing.log` is "landed on main" or "nothing to push".
 4. Offers to drive the screen for anything that is click-through (a connector page, a settings screen). It only starts when you say yes in that session. Before the first drive it runs the skill's check (`screenctl.py doctor`) while you are still at the keyboard; if a permission is missing it runs `screenctl.py request` and tells you exactly which switch to turn on. Any missing permission, and the one-time System Events prompt, shows up then rather than halfway through a task. When a drive ends, it brings you back to the Claude window with a sound; if you took the machine back yourself, it leaves you where you are and sends a notification instead.
 5. Runs `bash scripts/system-journal/install.sh --vault ~/Brain --write-hooks`. This is the only global write the system makes: it adds three hooks to `~/.claude/settings.json` and copies scripts to `~/scripts/system-journal/`. The end-of-session distill step runs `claude -p`, which is a paid call against your Claude account. (Skip this step if you do not want that; the vault works without it.)
-6. Installs the **Superpowers** plugin: Settings, Plugins (see "Claude plugins" in `System/Connecting Tools.md`).
+6. Installs the **Superpowers** plugin without asking, and says in one sentence what it is ("Superpowers adds the planning, brainstorming, and debugging skills I use on bigger jobs"). It runs `claude plugin marketplace add obra/superpowers-marketplace` and then `claude plugin install superpowers@superpowers-marketplace` from the session; if the `claude` command is not available in this session, it opens Settings, Plugins and installs it there, driving the screen if you have said yes to that (see "Claude plugins" in `System/Connecting Tools.md`).
 7. Lists the connectors this session can see, and tells you which are missing.
+8. Offers **Wispr Flow** by name, once ("Many people talk to this system rather than type. Wispr Flow turns speech into text anywhere on your computer. Want me to install it?"), and on yes drives the install from wisprflow.ai with the drive-screen skill. On no, it never asks again.
 
 ## 5. Optional: voice input
 
-**Wispr Flow** turns speech into typed text anywhere on your computer, which suits talking to Claude. Install it from wisprflow.ai if you like to dictate.
+**Wispr Flow** turns speech into typed text anywhere on your computer, which suits talking to Claude. The agent offers it once in your first local session (step 4 above); you can also install it any time from wisprflow.ai.
 
 ## What changes afterwards
 

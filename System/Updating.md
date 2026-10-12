@@ -34,7 +34,7 @@ Anything else is adopted.
 4. **Do the CHANGELOG steps** from step 2, in order, oldest entry first. A step that deletes a file applies only to a file the sort put in `retire`; a file in `retire-changed` follows step 3's judgment, and anything the owner added to it is moved somewhere it still serves them before the file goes. A step that needs the owner (a connector, a key, a routine in their Claude account) goes in the report instead, as one plain sentence.
 5. **Check.** Run `python3 -m compileall -q scripts` (silent means every script still parses) and confirm `.claude/settings.json` is valid JSON. A failure means a merge in step 3 broke a file; fix it. Then remove the clone (`rm -rf "$TPL"`).
 6. **Save once.** Commit everything as one commit, `Update from the template (<date of the newest CHANGELOG entry>)`, and land it the way this vault always saves (see Git in `CLAUDE.md`).
-7. **Report** in at most ten lines, in plain language: what is new for the owner (from the CHANGELOG), what was merged, what was kept and the one-line reason for each, and anything the owner has to do. Never list the files that were simply taken.
+7. **Report** in at most ten lines, in plain language: what is new for the owner (from the CHANGELOG), what was merged, what was kept and the one-line reason for each, and anything the owner has to do. Never list the files that were simply taken. End with the last message in this shape, numbered, in plain language, at most six items, one sentence each, newest change first: "What changed: 1. ... 2. ... 3. ..." A reader who sees only that message should know what is different for them.
 
 ## What changes afterwards
 
