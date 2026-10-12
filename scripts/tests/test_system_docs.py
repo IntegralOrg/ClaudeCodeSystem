@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DOCS = ["Setup Procedure", "How This Works", "Connecting Tools", "Routines", "Adding Your Computer", "Getting Help", "Updating"]
+DOCS = ["Setup Procedure", "How This Works", "Connecting Tools", "Routines", "Adding Your Computer", "Getting Help", "Updating", "Start"]
 
 
 def read(name):
@@ -98,7 +98,7 @@ def test_routines_doc_has_the_manual_path():
 
 def test_public_repo_clean_of_internal_names():
     for name in DOCS:
-        text = read(name).replace("github.com/IntegralOrg/ClaudeCodeSystem", "")  # the public template's address
+        text = read(name).replace("github.com/IntegralOrg/ClaudeCodeSystem", "").replace("githubusercontent.com/IntegralOrg/ClaudeCodeSystem", "")  # the public template's addresses
         assert "Stephen" not in text and "Integral/" not in text, name
         if name != "Getting Help":
             assert "Integral" not in text, name
