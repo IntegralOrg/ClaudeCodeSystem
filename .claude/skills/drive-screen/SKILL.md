@@ -15,9 +15,15 @@ mechanical work on all three operating systems.
 | `scripts/session_watch.py` | Reads a driven Claude Code session's transcript: is it done, what did it say, what did it touch |
 | `scripts/autodrive.py` | Runs a driven session to the end of a turn, answering its permission prompts and stopping on anything that needs a human |
 
-Run `python scripts/screenctl.py doctor` once on a new machine before anything
-else. It reports the missing binary or the ungranted permission that would
-otherwise show up as a silent no-op.
+Run `python scripts/screenctl.py doctor` before the first drive in a session, while
+the person is still at the keyboard. It reports the missing binary or the ungranted
+permission that would otherwise show up as a silent no-op, and on macOS it names
+the app the permissions belong to. If it reports a missing grant, run
+`python scripts/screenctl.py request`, which raises the system prompts for that app
+and opens the right Settings pane; the person switches it on, starts a new session
+(a running process does not pick up a new Screen Recording grant), and you run
+`doctor` again. A permission the person has to grant is never a reason to drive the
+screen: they do it by hand, with you telling them exactly what to click.
 
 ## Before you drive anything: does this need the screen at all?
 
@@ -45,11 +51,21 @@ and usable when you hand the machine back.
 cannot use their machine while it runs. Never start on inference. They have to say
 so for this session. A past instruction to "set things up" is not standing consent.
 
-**2. Announce the blackout before the first keystroke.** Say roughly how long, and
-that moving the mouse or typing will corrupt the run. There is no way around this
-on any current operating system: a synthetic keystroke goes to whatever holds
-focus, so the agent must hold it. Microsoft is building a separate agent session
-into Windows precisely because this problem has no user-space fix today.
+**2. Announce the blackout before the first keystroke, in this shape.** Fill in
+the brackets and send it as its own message, then wait for the yes:
+
+> I'm about to take over your keyboard and mouse to [the task, in a few words].
+> It should take about [N] minutes. While I work, please don't type or move the
+> mouse: anything you do goes into the window I'm working in. If you need your
+> computer back, just start using it; I'll notice at my next check, stop, and
+> tell you where I got to with a notification, leaving you where you are. When
+> I'm done, or if anything goes wrong, I'll bring you back to this window and
+> play a sound. Say yes to start.
+
+There is no way around the blackout on any current operating system: a synthetic
+keystroke goes to whatever holds focus, so the agent must hold it. Microsoft is
+building a separate agent session into Windows precisely because this problem has
+no user-space fix today.
 
 **3. Never send input without confirming focus.** `screenctl.py` re-verifies the
 foreground window by identity before every send and exits 1 if it does not match.
@@ -81,7 +97,19 @@ run mid-flight. No process kills, no window reloads, no closing a terminal you d
 not create. Add windows and tabs; never remove ones you found. If a setup genuinely
 needs a fresh process, say so and let the user do it.
 
-**8. Read results from the transcript or the log, not from pixels.** A screenshot
+**8. Every drive ends with `handback`, whatever happened.** Success, a refusal,
+an exit 1, or a spent step budget: each one ends with
+`python scripts/screenctl.py handback --text "<one line: done, or where it
+stopped>"`. It brings the Claude window back to the front (through the operating
+system's own app launcher, so it works even when driving has broken), plays a
+sound, and posts a notification. The person is reading the chat in that window; a
+"done" they cannot see leaves them hanging. If it prints `claude_in_front: NO`,
+the first line of your reply says to switch back to Claude. **The one exception
+is the person taking the machine back** (a focus check failed because they
+started using another app): end with `handback --quiet --text "<where it
+stopped>"`, which only notifies and leaves their app in front.
+
+**9. Read results from the transcript or the log, not from pixels.** A screenshot
 confirms the UI is in the state you think it is. It is not evidence of what a
 program did. Never report a result you did not read from a file. If a demo does
 not reproduce, say so: one staged beat puts every real number in doubt.
@@ -99,8 +127,9 @@ not reproduce, say so: one staged beat puts every real number in doubt.
    habit is worth more than any other for reliability.
 6. **Wait for real completion** with `session_watch.py wait` or a log, never a
    fixed sleep.
-7. **Hand back.** Close only what you opened, say what state the machine is in,
-   and say the blackout is over.
+7. **Hand back.** Close only what you opened, run `handback` (rule 8; `--quiet`
+   if the person took the machine back), then say in the chat what state the
+   machine is in and that the blackout is over.
 
 Prefer keys to clicks throughout. A keyboard shortcut is one deterministic action;
 a click is a coordinate that was true when the screenshot was taken.
@@ -117,7 +146,9 @@ python scripts/screenctl.py <action> [args]
 
 | Action | Args | Notes |
 |---|---|---|
-| `doctor` | `[--out probe.png]` | Binaries, permissions, DPI, clipboard, and a real capture. Run first |
+| `doctor` | `[--out probe.png]` | Binaries, permissions, DPI, clipboard, and a real capture. Names the app macOS grants permissions to. Run first |
+| `request` | | macOS: raises the Accessibility and Screen Recording prompts for the right app and opens the Settings pane. Run while the person is at the keyboard |
+| `handback` | `[--text] [--quiet]` | Brings Claude back to the front, plays a sound, posts a notification. Ends every drive. `--quiet` only notifies, for when the person took the machine back |
 | `list` | | Every visible window as `id<TAB>geometry<TAB>title`, minimized ones flagged |
 | `find` | `--title`\|`--id` | Resolves to one window and prints its geometry, or exits 1 |
 | `focus` | `--title` | Restores, foregrounds, then proves it by window identity |
@@ -125,7 +156,7 @@ python scripts/screenctl.py <action> [args]
 | `type` | `--title --text` | Refuses newlines. No Enter sent |
 | `paste` | `--title` + `--file`\|`--text` | Clipboard, verified, then restored. No Enter sent |
 | `key` | `--title --keys` | Named keys and chords: `enter`, `esc`, `ctrl+shift+p`, `cmd+v` |
-| `click` | `--title --x --y [--double\|--right]` | Screen coordinates. See the mapping note below |
+| `click` | `--title --x --y [--double\|--right]` | Screen coordinates. See the mapping note below. On macOS uses `cliclick` when installed, else a built-in CoreGraphics click |
 | `scroll` | `--title --amount` | Positive scrolls up. Moves the pointer onto the window first: a wheel event goes to whatever is under the mouse, not to the focused window |
 
 **Use `paste`, not `type`, for anything that must arrive verbatim.** Pasting is one
@@ -359,7 +390,9 @@ whatever the compositor had. Move the window fully on-screen before reading it.
 | `FOCUS_LOST_MIDSEND` | Focus moved while a long `type` was still going out | The message says how many characters landed. Screenshot before retrying: re-sending the whole string duplicates the part that arrived. Prefer `paste` |
 | `CLIPBOARD_MISMATCH` | Clipboard write failed | Retry. Nothing was pasted |
 | Garbled typed text | `type` used for special characters | Use `paste` |
-| Screenshot is one flat colour | On macOS, Screen Recording not granted | `doctor` says so. Grant it to the terminal app, not to python |
+| Screenshot is one flat colour | On macOS, Screen Recording not granted | `doctor` says so. Run `request`, and grant the app `doctor` names (`permissions_belong_to`), not python |
+| `TIMEOUT` naming osascript | macOS is waiting on the one-time "control System Events" prompt | Tell the person to click OK in that box, then retry |
+| `NO_ACCESSIBILITY` | Accessibility not granted to the app that hosts the session | Run `request`; in Claude Desktop the app to switch on is **Claude Code**, not Claude |
 | Clicks land consistently offset | Image scale ignored | Use `IMAGE_SCALE` from the `shot` output |
 | `wait` returns 2 | A tool call is unanswered | Screenshot, read the command, answer deliberately |
 | `NO_SESSION_DIR` | Session never started, or started elsewhere | Check the terminal's working directory |

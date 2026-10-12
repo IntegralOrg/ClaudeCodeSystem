@@ -11,7 +11,7 @@ This is the **cloud edition**: it starts in [Claude Code on the web](https://cod
 ## Get Started
 You need a GitHub account and a Claude Max plan.
 1. Click **Use this template** (private, name it `brain`).
-2. Open the new repository (`brain`) at claude.ai/code and install the Claude GitHub app on it when asked. Setup starts by itself in that first session.
+2. Open the new repository (`brain`) at claude.ai/code and install the Claude GitHub app on it when asked. Send any message ("hi" is enough) and setup starts.
 3. Put it on your computer: `System/Adding Your Computer.md` (Claude Desktop, GitHub Desktop, clone to `~/Brain`).
 Questions: ask your agent. It answers from `System/`.
 
@@ -52,7 +52,7 @@ Connection steps for each tool (calendar, email, tasks, calls, chat) are in [Con
 
 ## How It Works
 
-**Setup runs itself.** A new vault carries a `SETUP_PENDING` marker. A session-start hook sees it and tells Claude to follow `System/Setup Procedure.md`: it asks for the transcript of your discovery interview (or five short questions), builds your `CLAUDE.md`, folders, and client pages, creates your routines, checks your keys, and then deletes the marker so setup never runs twice.
+**Setup runs itself.** A new vault carries a `SETUP_PENDING` marker. A session-start hook sees it and tells Claude to follow `System/Setup Procedure.md`: it asks a few quick questions (most are a click; a brief from your onboarding team, pasted as the first message, answers them for you), builds your `CLAUDE.md`, folders, and client pages, creates your routines, checks your keys, and then deletes the marker so setup never runs twice.
 
 **The daily loop:**
 1. **You work with Claude** (in Claude Desktop, or in a cloud session on the web or your phone): drafting, research, tasks, notes.

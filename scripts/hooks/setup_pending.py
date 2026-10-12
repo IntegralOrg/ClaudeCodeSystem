@@ -19,7 +19,8 @@ def main(payload):
         return
     if (root / PROCEDURE).is_file():
         text = ("This vault is not set up. Read `System/Setup Procedure.md` now and begin setup in this session; "
-                "do not wait for a command and do not ask whether to start. Setup deletes the "
+                "do not wait for a command and do not ask whether to start: whatever the first message says "
+                "(a greeting, a question, or a pasted brief), answer it by starting setup. Setup deletes the "
                 f"`{MARKER}` file at the vault root right after writing its completion line. "
                 "If no human is present in this session (a scheduled routine), do not run setup; report that setup is pending.")
     else:

@@ -23,6 +23,9 @@ time anyone can see that happened, it already has.
   screenctl.py key    --title "..." --keys enter
   screenctl.py click  --title "..." --x 850 --y 730 [--double|--right]
   screenctl.py scroll --title "..." --amount -3
+  screenctl.py request                      # macOS: raise the permission prompts for the right app
+  screenctl.py handback --text "Done: ..."  # bring Claude back to the front and notify
+  screenctl.py handback --quiet --text ".." # notify only (the person took the machine back)
 
 Exit codes: 0 ok, 1 refused (not found / ambiguous / focus unconfirmed / bad input).
 
@@ -395,6 +398,23 @@ if OS == "Windows":
         time.sleep(0.05)
         user32.mouse_event(0x0800, 0, 0, int(amount) * 120, 0)   # WHEEL
 
+    def bring_claude_forward() -> bool:
+        # The Claude desktop app is claude.exe with a main window; the CLI shares
+        # the process name but has no window of its own, so it is filtered out.
+        unlock_foreground()
+        ps = ("$p = Get-Process -Name claude -ErrorAction SilentlyContinue | "
+              "Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1; "
+              "if (-not $p) { exit 2 }; "
+              "if ((New-Object -ComObject WScript.Shell).AppActivate($p.Id)) { exit 0 } else { exit 1 }")
+        r = run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps])
+        return r.returncode == 0
+
+    def notify(title: str, text: str) -> bool:
+        # A sound, not a toast: toasts need an app identity PowerShell lacks.
+        r = run(["powershell.exe", "-NoProfile", "-Command",
+                 "[System.Media.SystemSounds]::Asterisk.Play()"])
+        return r.returncode == 0
+
     def _ps_quote(s: str) -> str:
         # A single-quoted PowerShell literal; the only escape is '' for '.
         # A username like O'Brien puts an apostrophe into %TEMP%.
@@ -606,11 +626,163 @@ elif OS == "Darwin":
             lit = LITERAL.get(k, k).replace("\\", "\\\\").replace('"', '\\"')
             _send(f'tell application "System Events" to keystroke "{lit}"{using}')
 
+    def _cg():
+        # CoreGraphics and CoreFoundation through ctypes: always present, so a
+        # click works on a Mac with no Homebrew and no cliclick (a client's Mac).
+        import ctypes
+        cg = ctypes.CDLL("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")
+        cf = ctypes.CDLL("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
+
+        class CGPoint(ctypes.Structure):
+            _fields_ = [("x", ctypes.c_double), ("y", ctypes.c_double)]
+
+        cg.CGEventCreateMouseEvent.restype = ctypes.c_void_p
+        cg.CGEventCreateMouseEvent.argtypes = [ctypes.c_void_p, ctypes.c_uint32,
+                                               CGPoint, ctypes.c_uint32]
+        cg.CGEventSetIntegerValueField.argtypes = [ctypes.c_void_p, ctypes.c_uint32,
+                                                   ctypes.c_int64]
+        cg.CGEventSetIntegerValueField.restype = None
+        cg.CGEventPost.argtypes = [ctypes.c_uint32, ctypes.c_void_p]
+        cg.CGEventPost.restype = None
+        cg.CGPreflightPostEventAccess.restype = ctypes.c_bool
+        cg.CGPreflightScreenCaptureAccess.restype = ctypes.c_bool
+        cg.CGRequestPostEventAccess.restype = ctypes.c_bool
+        cg.CGRequestScreenCaptureAccess.restype = ctypes.c_bool
+        cf.CFRelease.argtypes = [ctypes.c_void_p]
+        return cg, cf, CGPoint
+
+    def _cg_click(x: int, y: int, button: str, double: bool) -> None:
+        cg, cf, CGPoint = _cg()
+        # A posted event without the grant is dropped in silence, and reporting
+        # CLICKED for a click that never happened is the worst failure here.
+        if not cg.CGPreflightPostEventAccess():
+            die("NO_ACCESSIBILITY", "This app may not post mouse events.",
+                _NO_ACCESSIBILITY_HELP)
+        down, up, btn = (3, 4, 1) if button == "right" else (1, 2, 0)
+        pt = CGPoint(float(x), float(y))
+
+        def post(kind: int, clicks: int) -> None:
+            ev = cg.CGEventCreateMouseEvent(None, kind, pt, btn)
+            if not ev:
+                die("CLICK_FAILED", "CoreGraphics could not create the mouse event")
+            cg.CGEventSetIntegerValueField(ev, 1, clicks)   # kCGMouseEventClickState
+            cg.CGEventPost(0, ev)                            # kCGHIDEventTap
+            cf.CFRelease(ev)
+
+        post(5, 0)                    # move first, so hover state matches the click
+        time.sleep(0.08)
+        for n in ((1, 2) if double else (1,)):
+            post(down, n)
+            time.sleep(0.04)
+            post(up, n)
+            time.sleep(0.06)
+
+    def click_backend() -> str:
+        return "cliclick" if shutil.which("cliclick") else "built-in (CoreGraphics)"
+
     def move_click(x: int, y: int, button: str = "left", double: bool = False) -> None:
-        cli = need("cliclick",
-                   "brew install cliclick   (macOS ships no coordinate-click CLI)")
-        run([cli, f"{'dc' if double else ('rc' if button == 'right' else 'c')}:"
-                  f"{int(x)},{int(y)}"])
+        cli = shutil.which("cliclick")
+        # cliclick has no right-button double-click; its `dc:` verb is always the
+        # left button, so that combination goes through CoreGraphics instead.
+        if not cli or (double and button == "right"):
+            _cg_click(x, y, button, double)
+            return
+        r = run([cli, f"{'dc' if double else ('rc' if button == 'right' else 'c')}:"
+                      f"{int(x)},{int(y)}"])
+        if r.returncode != 0:
+            die("CLICK_FAILED", r.stderr.strip()[:300] or "cliclick failed",
+                _NO_ACCESSIBILITY_HELP)
+
+    def host_app() -> str:
+        """The app macOS attributes this process's permissions to.
+
+        Not always the app on screen. Claude Desktop launches each Code session
+        through a helper that disclaims responsibility, so the grants belong to
+        the session's own "Claude Code" helper app, not to "Claude".
+        """
+        import ctypes
+        import plistlib
+        path = ""
+        try:
+            libc = ctypes.CDLL("/usr/lib/libSystem.B.dylib")
+            f = libc.responsibility_get_pid_responsible_for_pid
+            f.restype, f.argtypes = ctypes.c_int, [ctypes.c_int]
+            libc.proc_pidpath.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_uint32]
+            buf = ctypes.create_string_buffer(4096)
+            if libc.proc_pidpath(f(os.getpid()), buf, 4096) > 0:
+                path = buf.value.decode("utf-8", "replace")
+        except Exception:
+            path = ""
+        if ".app/" not in path:
+            return path or "unknown"
+        bundle = path[:path.index(".app/") + 4]          # the outermost app bundle
+        try:
+            with open(os.path.join(bundle, "Contents", "Info.plist"), "rb") as fh:
+                info = plistlib.load(fh)
+            return info.get("CFBundleDisplayName") or info.get("CFBundleName") or bundle
+        except Exception:
+            return bundle
+
+    def screen_recording_granted() -> bool:
+        return bool(_cg()[0].CGPreflightScreenCaptureAccess())
+
+    def request_permissions() -> None:
+        # Each call shows the system prompt (once) and, more usefully, adds the
+        # right app to the list in System Settings, switched off, ready to toggle.
+        import ctypes
+        cg = _cg()[0]
+        hi = ctypes.CDLL("/System/Library/Frameworks/ApplicationServices.framework/"
+                         "Frameworks/HIServices.framework/HIServices")
+        cf = ctypes.CDLL("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
+        cf.CFDictionaryCreate.restype = ctypes.c_void_p
+        cf.CFDictionaryCreate.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p),
+                                          ctypes.POINTER(ctypes.c_void_p), ctypes.c_long,
+                                          ctypes.c_void_p, ctypes.c_void_p]
+        hi.AXIsProcessTrustedWithOptions.restype = ctypes.c_bool
+        hi.AXIsProcessTrustedWithOptions.argtypes = [ctypes.c_void_p]
+        key = ctypes.c_void_p.in_dll(hi, "kAXTrustedCheckOptionPrompt")
+        yes = ctypes.c_void_p.in_dll(cf, "kCFBooleanTrue")
+        keys = (ctypes.c_void_p * 1)(key.value)
+        vals = (ctypes.c_void_p * 1)(yes.value)
+        opts = cf.CFDictionaryCreate(None, keys, vals, 1, None, None)
+        ax = hi.AXIsProcessTrustedWithOptions(opts)
+        post = cg.CGRequestPostEventAccess()
+        rec = cg.CGRequestScreenCaptureAccess()
+        print(f"accessibility: {'ok' if ax and post else 'REQUESTED'}")
+        print(f"screen_recording: {'ok' if rec else 'REQUESTED'}")
+        if not (ax and post):
+            run(["open", "x-apple.systempreferences:com.apple.preference.security"
+                         "?Privacy_Accessibility"])
+        elif not rec:
+            run(["open", "x-apple.systempreferences:com.apple.preference.security"
+                         "?Privacy_ScreenCapture"])
+
+    CLAUDE_BUNDLE_ID = "com.anthropic.claudefordesktop"
+
+    def bring_claude_forward() -> bool:
+        # `open` activates through LaunchServices: no Accessibility, no Apple
+        # Events consent, so the hand-back works even when driving has broken.
+        r = run(["open", "-b", CLAUDE_BUNDLE_ID])
+        if r.returncode != 0:
+            r = run(["open", "-a", "Claude"])
+        if r.returncode != 0:
+            return False
+        for _ in range(15):
+            time.sleep(0.2)
+            front = run(["lsappinfo", "info", "-only", "name",
+                         run(["lsappinfo", "front"]).stdout.strip()]).stdout
+            if '"Claude"' in front:
+                return True
+        return False
+
+    def notify(title: str, text: str) -> bool:
+        def esc(s: str) -> str:
+            return s.replace("\\", "\\\\").replace('"', '\\"')
+        subprocess.Popen(["afplay", "/System/Library/Sounds/Glass.aiff"],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        r = run(["osascript", "-e",
+                 f'display notification "{esc(text)}" with title "{esc(title)}"'])
+        return r.returncode == 0
 
     def scroll(win: Win, amount: int) -> None:
         # cliclick has no wheel verb, so page keys stand in. Documented rather
@@ -731,6 +903,17 @@ else:
         run([xdo, "mousemove", str(int(x)), str(int(y))])
         run([xdo, "click", "--repeat", "2" if double else "1",
              "3" if button == "right" else "1"])
+
+    def bring_claude_forward() -> bool:
+        xdo = shutil.which("xdotool")
+        if not xdo or _WAYLAND:
+            return False
+        r = run([xdo, "search", "--name", "^Claude$", "windowactivate", "--sync"])
+        return r.returncode == 0
+
+    def notify(title: str, text: str) -> bool:
+        ns = shutil.which("notify-send")
+        return bool(ns) and run([ns, title, text]).returncode == 0
 
     def scroll(win: Win, amount: int) -> None:
         xdo = need("xdotool", "sudo apt install xdotool")
@@ -1017,6 +1200,49 @@ def act_click(a) -> None:
     print("and coordinates from a stale image land somewhere else entirely.")
 
 
+def act_handback(a) -> None:
+    """End every drive here, on success and on failure alike.
+
+    The chat lives in the Claude window, and a drive ends with some other app in
+    front, so a person who is told "done" in a window they cannot see is left
+    hanging. Bring Claude back, then make a sound and a notification. Never exits
+    non-zero: the hand-back must not become one more failure to recover from.
+    """
+    text = a.text or "Done. Your computer is yours again."
+    forward = False
+    if not a.quiet:   # --quiet: the person took the machine back; leave their app in front
+        try:
+            forward = bring_claude_forward()
+        except SystemExit:
+            forward = False
+        except Exception:
+            forward = False
+    try:
+        notified = notify("Claude", text)
+    except SystemExit:
+        notified = False
+    except Exception:
+        notified = False
+    log(f"HANDBACK forward={forward} notified={notified} {text!r}")
+    print("HANDED_BACK")
+    if a.quiet:
+        print("claude_in_front: left alone (--quiet)")
+    else:
+        print(f"claude_in_front: {'yes' if forward else 'NO - say in the chat that they should switch back to Claude'}")
+    print(f"notified: {'yes' if notified else 'no'}")
+
+
+def act_request(a) -> None:
+    if OS != "Darwin":
+        print("request: nothing to do on this system (no per-app grants)")
+        return
+    print(f"permissions_belong_to: {host_app()}")
+    request_permissions()
+    print("Tell the person: in System Settings, switch on the app named above in")
+    print("Accessibility and in Screen Recording, then start a new session so the")
+    print("grants take effect, and run doctor again.")
+
+
 def act_doctor(a) -> None:
     """Prove the environment works before a run depends on it.
 
@@ -1037,12 +1263,34 @@ def act_doctor(a) -> None:
         print(f"dpi_awareness: {aw}   (2 = per-monitor aware, which is what we want)")
         ok &= (aw == 2)
     elif OS == "Darwin":
-        cc = shutil.which("cliclick")
-        print(f"cliclick: {cc or 'MISSING - brew install cliclick (needed for click)'}")
-        ok &= bool(cc)
+        print(f"permissions_belong_to: {host_app()}   (grant this app, not python)")
+        print(f"click: {click_backend()}")
+        try:
+            post = bool(_cg()[0].CGPreflightPostEventAccess())
+        except Exception:
+            post = True   # cannot tell; a refused click still exits NO_ACCESSIBILITY
+        if not post:
+            # Clicks and keystrokes are posted events. Without this grant a click
+            # is refused (or, through cliclick, silently dropped), so it is a
+            # doctor failure even when System Events still answers.
+            print("post_events: DENIED - run `screenctl.py request`, then switch the app "
+                  "above on in System Settings > Privacy & Security > Accessibility")
+            ok = False
+        else:
+            print("post_events: ok")
+        try:
+            rec = screen_recording_granted()
+        except Exception:
+            rec = True   # cannot tell; the screenshot check below still catches it
+        if not rec:
+            print("screen_recording: DENIED - run `screenctl.py request`, then switch the app "
+                  "above on in System Settings > Privacy & Security > Screen Recording")
+            ok = False
+        else:
+            print("screen_recording: ok")
         if accessibility_denied():
-            print("accessibility: DENIED - System Settings > Privacy & Security > "
-                  "Accessibility, enable the app that runs this command")
+            print("accessibility: DENIED - run `screenctl.py request`, then switch the app "
+                  "above on in System Settings > Privacy & Security > Accessibility")
             ok = False
         else:
             print("accessibility: ok")
@@ -1114,7 +1362,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("action", choices=["doctor", "list", "find", "focus", "shot",
-                                       "type", "paste", "key", "click", "scroll"])
+                                       "type", "paste", "key", "click", "scroll",
+                                       "request", "handback"])
     ap.add_argument("--title")
     ap.add_argument("--id", help="target a window by handle from `list`, for when a title is ambiguous or the app renames its own window")
     ap.add_argument("--text")
@@ -1135,12 +1384,19 @@ def main() -> int:
                          "costs several times the tokens to read no better.")
     ap.add_argument("--double", action="store_true")
     ap.add_argument("--right", action="store_true")
+    ap.add_argument("--quiet", action="store_true",
+                    help="handback: notify only, without bringing Claude to the front "
+                         "(for when the person has taken the machine back)")
     ap.add_argument("--keep-clipboard", action="store_true",
                     help="do not restore the user's clipboard after a paste")
     a = ap.parse_args()
 
     if a.action == "doctor":
         act_doctor(a)
+    elif a.action == "request":
+        act_request(a)
+    elif a.action == "handback":
+        act_handback(a)
     elif a.action == "list":
         for w in list_windows():
             print(w.line())

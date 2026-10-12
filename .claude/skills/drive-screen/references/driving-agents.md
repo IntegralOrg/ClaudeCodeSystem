@@ -47,13 +47,18 @@ usually do not:
 
 ### macOS
 
-`brew install cliclick` for coordinate clicks. macOS ships no CLI that clicks at a
-point; everything else is built in.
+Nothing to install. Clicks use `cliclick` when it is installed and a built-in
+CoreGraphics click otherwise; everything else ships with macOS.
 
 Then grant three separate permissions, in System Settings under Privacy & Security.
-**They attach to the application that runs the command** - Terminal, iTerm, the
-editor, whichever one hosts the agent - never to python, and they are dropped when
-that application updates.
+**They attach to the application macOS holds responsible for the command**, never
+to python. In Terminal, iTerm, or an editor that is the app itself. **In Claude
+Desktop it is the session's helper app, listed as "Claude Code", not "Claude"**:
+Desktop starts each session through a helper that disclaims responsibility.
+`screenctl.py doctor` prints the right name (`permissions_belong_to`), and
+`screenctl.py request` raises the prompts for that app and adds it to each list,
+switched off, ready to toggle. Grants can be dropped when that app updates;
+`doctor` before each drive catches it.
 
 | Permission | Needed for | What failure looks like |
 |---|---|---|

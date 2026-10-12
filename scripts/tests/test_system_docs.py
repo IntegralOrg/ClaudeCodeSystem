@@ -25,7 +25,7 @@ def test_all_system_docs_exist_with_frontmatter():
 
 def test_setup_procedure_covers_every_step():
     text = read("Setup Procedure")
-    has(text, "Eva", "five questions", "CLAUDE.md", "System/routines", "check-keys.py", "SETUP_PENDING",
+    has(text, "AskUserQuestion", "prepared brief", "three rounds", "CLAUDE.md", "System/routines", "check-keys.py", "SETUP_PENDING",
         "Adding Your Computer", "two-minute demo", "connect on your call", "cloud session", "local session",
         "not live", "first run", "environment")
     for line in text.splitlines():
@@ -103,7 +103,8 @@ def test_public_repo_clean_of_internal_names():
         if name != "Getting Help":
             assert "Integral" not in text, name
         if name != "Getting Help" and name != "Setup Procedure":
-            assert "Dean" not in text and "Eva" not in text, name
+            assert "Dean" not in text, name
+        assert "Eva" not in text, name
 
 
 def test_go_live_flip_edits_the_first_bullet_never_adds_one():
@@ -231,3 +232,45 @@ def test_vent_sessions_stay_out_of_the_audit_tier():
         by_path = {"systems": ["documentation"], "files_touched": [str(ROOT / "Personal/Journal/Log.md")]}
         assert distill.sensitivity(by_tag, str(ROOT), tags, prefixes)[0]
         assert distill.sensitivity(by_path, str(ROOT), tags, prefixes)[0]
+
+
+def test_setup_opens_without_eva_and_asks_with_the_picker():
+    text = read("Setup Procedure")
+    step1 = text[text.index("## 1."):text.index("## 2. Build the vault")]
+    has(step1, "Whatever the person's first message says", "Never ask whether they have a brief",
+        "up to four questions per call", "two to four options", "(Recommended)", "multi-select",
+        "readlink /etc/localtime", "IANA", "not available in this session", "plain text")
+    assert "transcript" not in step1.lower() and "Do you have" not in step1
+
+
+def test_kickoff_tells_people_to_send_a_message():
+    for rel in ("SETUP_PENDING", "README.md", "docs/index.html"):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        assert "starts by itself" not in text and "start by itself" not in text, rel
+        has(text, "send any message")
+    hook = (ROOT / "scripts" / "hooks" / "setup_pending.py").read_text(encoding="utf-8")
+    has(hook, "whatever the first message says", "pasted brief")
+    for rel in ("README.md", "docs/index.html"):
+        assert "interview transcript" not in (ROOT / rel).read_text(encoding="utf-8"), rel
+
+
+def test_mac_permissions_name_the_claude_code_helper_and_the_hand_back():
+    text = read("Adding Your Computer")
+    has(text, "**Claude Code**", "not Claude", "System Events", "screenctl.py request", "screenctl.py doctor",
+        "start a new session", "brings you back to the Claude window")
+    assert "give Claude Desktop **Accessibility**" not in text
+    has((ROOT / "docs" / "index.html").read_text(encoding="utf-8"), "Claude Code")
+    help_text = read("Getting Help")
+    has(help_text, "when the agent cannot fix it", "Inbox/", "which setup step")
+
+
+def test_drive_screen_hands_back_and_requests_permissions():
+    skill = ROOT / ".claude" / "skills" / "drive-screen"
+    text = (skill / "SKILL.md").read_text(encoding="utf-8")
+    has(text, "Every drive ends with `handback`", "back to this window and", "Say yes to start", "handback --quiet",
+        "screenctl.py request", "permissions_belong_to", "Claude Code", "CoreGraphics")
+    src = (skill / "scripts" / "screenctl.py").read_text(encoding="utf-8")
+    has(src, '"request", "handback"', "def bring_claude_forward", "def notify", "CGPreflightPostEventAccess",
+        "responsibility_get_pid_responsible_for_pid", "com.anthropic.claudefordesktop")
+    ref = (skill / "references" / "driving-agents.md").read_text(encoding="utf-8")
+    has(ref, "Claude Code", "Nothing to install")

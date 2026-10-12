@@ -1,7 +1,7 @@
 ---
 type: sop
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-10
 ---
 # Setup Procedure
 
@@ -9,14 +9,29 @@ You are reading this because `SETUP_PENDING` exists at the vault root. Run every
 
 First, know where you are: a **cloud session** runs in a container (home directory `/root`, nothing on the user's computer); a **local session** runs in Claude Desktop on their machine. Step 4, step 6, and step 7 differ by that.
 
-## 1. One opening question
+## 1. Open, then learn who this is for
 
-Say: "Welcome. I will set this up now. Do you have the transcript from your Eva interview? Paste it here, or say no and I will ask five questions."
+Whatever the person's first message says (a greeting, a question, or a pasted brief), setup starts with it. Open with one short message, in these words: "Welcome. I will set up your system now. It takes about ten minutes: a few quick questions, most of them a click, then I build everything and show it working."
 
-- **Transcript path:** read the transcript and fill the fields below from it. Ask only to confirm anything you could not find, one line each.
-- **Interview path (five questions, one at a time):** (1) your name and role; (2) your company and what it does in one sentence; (3) the tools you live in (email, calendar, chat, meetings, tasks: name the apps); (4) the shape of your week (fixed meetings, deep-work time, the day you plan); (5) the two or three things you want this system to carry for you first.
+**If the first message is a prepared brief.** Your onboarding team may give the person a prompt to paste as their first message (interview notes, a company summary, a list of answers). Read it, fill every field below that it covers, and ask only for the fields it leaves out. Never ask whether they have a brief: a person who has one pastes it.
 
-Fields: owner name, role, company, company one-liner, tools, week shape, first three jobs, time zone, and the owner's email address (the address End of Day uses to reach the owner when something needs them). Ask once, in one line each, for any of those the transcript or the five answers did not give.
+**Otherwise, ask, in three rounds.** Use the question tool (`AskUserQuestion`: up to four questions per call, two to four options each, and it always adds "Other" for a typed answer) wherever the answer is likely one of a few, and plain text for the rest. Skip any question an earlier answer already settled.
+
+1. **Plain text, one message:** "First, tell me your name and role, your company and what it does in one sentence, and the email address I should use when something needs you."
+2. **One `AskUserQuestion` call, four questions:**
+   - "Which email and calendar do you use?" Options: Google (Gmail and Google Calendar); Microsoft (Outlook).
+   - "Where does your team chat?" (multi-select) Options: Slack; Microsoft Teams; Text messages; WhatsApp.
+   - "Do you record your meetings?" Options: Fathom; Zoom; Another notetaker; No.
+   - "Where do you keep tasks today?" Options: Asana; ClickUp; Notion; Nowhere yet.
+3. **One `AskUserQuestion` call, four questions:**
+   - "Which time zone are you in?" Put the zone you detect first, marked "(Recommended)": in a local session read it from the computer (`readlink /etc/localtime` on a Mac, `tzutil /g` on Windows); a cloud session cannot see it, so offer Eastern, Central, and Pacific. Record the answer as an IANA name (for example `America/New_York`).
+   - "How does your week usually run?" Options: Meetings in the morning, focus in the afternoon; Focus in the morning, meetings in the afternoon; Meetings scattered all week; Mostly focus time.
+   - "When do you plan your week?" Options: Monday morning; Sunday evening; Friday afternoon; I do not plan the week.
+   - "What should this system carry for you first?" (multi-select) Options: My task list, from email and meetings; Prep before each meeting; A summary of my day every evening; Notes on each client.
+
+If the question tool is not available in this session, ask the same three rounds as plain text, one message per round.
+
+Fields: owner name, role, company, company one-liner, tools, week shape (including the planning day), first jobs (every one they picked, in the order they rank them; ask which comes first only if they picked more than one), time zone, and the owner's email address (the address End of Day uses to reach the owner when something needs them). Ask once, in one line each, for any of those the brief or the answers did not give.
 
 ## 2. Build the vault
 

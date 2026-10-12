@@ -6,6 +6,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-10] - Smoother first run: quick questions, the right Mac permissions, and a hand-back from screen control
+
+### Changed
+- **Setup's opening** (`System/Setup Procedure.md` step 1) no longer asks for an interview transcript. It starts on whatever the first message says. A prepared brief pasted as that message fills the answers; otherwise setup asks three short rounds, most of them a click through the question tool (multiple choice with "Other"), with the time zone read from the computer in a local session. Plain text is the fallback where the question tool is missing.
+- **Kickoff wording** (README, `docs/index.html`, `SETUP_PENDING`, the setup hook): "send any message" replaces "starts by itself", because Claude answers only after the first message.
+- **`System/Getting Help.md`**: when the agent cannot fix a failure it says so, tells you to let your onboarding contact know, and writes a report into `Inbox/` you can send as is. The interview-assistant section is gone.
+- **`System/Adding Your Computer.md`**: on a Mac, the Accessibility and Screen Recording switches belong to **Claude Code**, the helper app Claude Desktop runs each session through, not to Claude. The agent raises the prompts and names the switch; a new session picks up the grants; the one-time "control System Events" prompt is named.
+- **`drive-screen` skill**: a fixed blackout message before taking the keyboard (what, how long, how to take the machine back, and that it will bring you back); every drive, successful or not, ends with the new `screenctl.py handback`, which brings Claude to the front through the system's app launcher, plays a sound, and posts a notification. `doctor` runs before the first drive of each session and names the app the permissions belong to; the new `screenctl.py request` raises the macOS prompts for that app and opens the Settings pane.
+- **macOS clicks no longer need Homebrew**: `screenctl.py click` uses `cliclick` when it is installed and a built-in CoreGraphics click otherwise, and refuses (instead of reporting a click that never happened) when the app may not post events.
+
+### In an existing vault
+1. Take `System/Setup Procedure.md`, `System/Getting Help.md`, `System/Adding Your Computer.md`, and the whole `.claude/skills/drive-screen/` folder from the template.
+2. If your Mac's Accessibility or Screen Recording list has **Claude** switched on but not **Claude Code**, run `python3 .claude/skills/drive-screen/scripts/screenctl.py request` in a Claude Desktop session, switch on Claude Code in both lists, and start a new session.
+
+---
+
 ## [2026-10-09] - Vent ships with every system
 
 ### Added

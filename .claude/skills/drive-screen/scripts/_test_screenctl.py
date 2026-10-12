@@ -236,7 +236,8 @@ if sc.OS == "Windows":
 
 REQUIRED = {"list_windows", "foreground_id", "same_window", "raise_window",
             "unlock_foreground", "type_text", "send_chord", "move_click",
-            "scroll", "get_clipboard", "set_clipboard", "capture"}
+            "scroll", "get_clipboard", "set_clipboard", "capture",
+            "bring_claude_forward", "notify"}
 
 src = pathlib.Path(sc.__file__).read_text(encoding="utf-8")
 tree = ast.parse(src)
