@@ -314,3 +314,35 @@ def test_setup_parts_skip_the_second_welcome_and_can_rename_the_repo():
     part_b = text[text.index("## Part B"):text.index("## 1. Open, then learn")]
     has(part_a, "skip its opening line")
     has(part_b, "skip its opening line", "connect --name")
+
+
+def test_setup_procedure_routes_a_vaultless_session_to_start():
+    text = read("Setup Procedure")
+    sec0 = text[text.index("## 0. Where you are"):text.index("## Part A")]
+    first_bullet = [l for l in sec0.splitlines() if l.startswith("- ")][0]
+    has(first_bullet, "no vault", "System/Start.md")
+    has(sec0, "cloud session", "downloaded copy", "vault's home")
+
+
+def test_setup_procedure_says_when_to_ask_the_person():
+    text = read("Setup Procedure")
+    ask = text[text.index("## Ask the person only when"):text.index("## When a step fails")]
+    has(ask, "permission only they can grant", "sign-in", "consent", "administrator", "failed twice",
+        "missing from their workspace", "Everything else", "why it is needed")
+
+
+def test_setup_procedure_stops_on_an_organization_policy():
+    text = read("Setup Procedure")
+    part_b = text[text.index("## Part B"):text.index("## 1. Open, then learn")]
+    has(part_b, "ORG_POLICY", "personal GitHub account", "ask your admin")
+    line = [l for l in part_b.splitlines() if "ORG_POLICY" in l][0]
+    assert "do not retry" in line.lower()
+
+
+def test_wispr_flow_is_offered_by_name_after_the_demo():
+    setup = read("Setup Procedure")
+    sec7 = setup[setup.index("## 7. Show it working"):setup.index("## Ask the person only when")]
+    has(sec7, "Wispr Flow", "wisprflow.ai", "drive", "on yes")
+    adding = read("Adding Your Computer")
+    step4 = adding[adding.index("## 4."):adding.index("## 5.")]
+    has(step4, "Wispr Flow", "offers")

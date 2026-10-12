@@ -11,6 +11,7 @@ You are reading this because `SETUP_PENDING` exists at the vault root. Run every
 
 Check, in this order, and go to the first that fits:
 
+- **A session with no vault** (no `CLAUDE.md` in the folder you are in, usually the home folder, because the person pressed the start button or pasted the start line): follow `System/Start.md` instead of this file. Fetch it from `https://raw.githubusercontent.com/IntegralOrg/ClaudeCodeSystem/main/System/Start.md`, or read `Brain/System/Start.md` once the download in its step 2 is done. Come back to this file in the session it opens.
 - **A cloud session** (home directory `/root`, nothing on the person's computer): skip Part A and Part B; run sections 1 to 7 (the cloud branches).
 - **A local session in a folder with no `.git`** (usually inside `Downloads`): this is the downloaded copy. Run **Part A**.
 - **A local session in the vault's home** (`~/Brain` on a Mac, `%USERPROFILE%\Brain` on Windows, with `.git`): run **Part B**, then sections 1 to 7 for whatever is not done yet.
@@ -47,7 +48,7 @@ It prints `HOME_READY <folder>` and `OPEN_URL <link>` (or `ALREADY_HOME` on a re
 1. Ask whether they have a GitHub account. If not, open github.com/signup and say: "Make a free account on the page that just opened, and tell me when you're in."
 2. `python3 scripts/setup/github.py install-gh` (prints `GH_READY`).
 3. `python3 scripts/setup/github.py login-start`: it copies a one-time code and opens GitHub; give them its `SAY` sentence exactly. Then run `python3 scripts/setup/github.py login-wait` in the background and wait for `SIGNED_IN`.
-4. `python3 scripts/setup/github.py connect`: it creates the private repository `brain` and saves to it (`CONNECTED`). On `REPO_EXISTS` or `REPO_NOT_PRIVATE`, tell them a repository with that name already exists, ask for another name (suggest `brain-2`), and run `python3 scripts/setup/github.py connect --name <that name>`; never push over a repository that has files. On `ORIGIN_UNVERIFIED` (this folder already points at a repository that cannot be confirmed as theirs and private), push nothing and follow "When a step fails".
+4. `python3 scripts/setup/github.py connect`: it creates the private repository `brain` and saves to it (`CONNECTED`). On `REPO_EXISTS` or `REPO_NOT_PRIVATE`, tell them a repository with that name already exists, ask for another name (suggest `brain-2`), and run `python3 scripts/setup/github.py connect --name <that name>`; never push over a repository that has files. On `ORIGIN_UNVERIFIED` (this folder already points at a repository that cannot be confirmed as theirs and private), push nothing and follow "When a step fails". On `ORG_POLICY` (the account belongs to a GitHub organization whose policy blocks creating or pushing to a private repository), do not retry: say "This GitHub account belongs to an organization that does not allow this. Sign in with a personal GitHub account instead, or ask your admin to allow it," then follow "When a step fails" for the report and keep going with what does not need GitHub.
 5. Run the landing script now (`bash scripts/land-local.sh` with the `--final` flag) and confirm the last line of `_generated/landing.log` is "landed on main" or "nothing to push". On Windows, if `bash` is not found in this session, run it through Git's own copy: `& "$env:LOCALAPPDATA\Programs\Git\bin\bash.exe" scripts/land-local.sh` with the `--final` flag (or `$env:ProgramFiles\Git\bin\bash.exe` for a machine-wide Git).
 
 **B4. Claude GitHub app.** Open `https://github.com/apps/claude/installations/new` and say: "Choose your account, pick **Only select repositories**, choose **brain**, and click Install." Routines need it to read and save the vault from the cloud. Its proof is the first routine run (a routine stays "not live" until its first run reports).
@@ -137,7 +138,19 @@ Never ask the user to paste a value into the chat.
 Two-minute demo on the user's own data: capture one task they mentioned into `Inbox/`, render one client page, and show today's daily note. Then:
 
 - **Cloud session:** say, in these words: "Tools like email and calendar connect on your call with Dean; ask me any time and I will walk you through it. Next we put this on your computer." Then follow `System/Adding Your Computer.md`.
-- **Local session:** say that tools like email and calendar connect on the onboarding call (and you can walk them through any of it now). You are already on their computer, so skip the hand-off: run the first-local-session checks from `System/Adding Your Computer.md` step 4.
+- **Local session:** say that tools like email and calendar connect on the onboarding call (and you can walk them through any of it now). You are already on their computer, so skip the hand-off: run the first-local-session checks from `System/Adding Your Computer.md` step 4. Then offer voice input by name, once: "Many people talk to this system rather than type. Wispr Flow (wisprflow.ai) turns speech into text anywhere on your computer. Want me to install it?" On yes, open wisprflow.ai, download the installer, and drive the install with the drive-screen skill (its blackout message first); on no, move on and never ask again.
+
+## Ask the person only when
+
+Setup decides everything it can without asking. The person hears from you only for:
+
+- a permission only they can grant (the Mac privacy switches, a one-time "control System Events" prompt);
+- a sign-in, an account creation, a consent screen, or a code sent to their email or phone;
+- an administrator password or a "Do you want to allow this app to make changes" prompt, which the system shows on a screen software cannot click;
+- a step that failed twice (then "When a step fails");
+- a connector or tool that is missing from their workspace, or a choice only they can make (a folder name, a GitHub repository name that is taken).
+
+Everything else (which plugin to install, which version to take, where files go, what to call things) you decide and mention in passing. Before each sign-in or consent, say in one sentence why it is needed ("Gmail, so End of Day can read what came in today"). Never ask whether to start, whether to continue, or which of two technical choices they prefer.
 
 ## When a step fails
 

@@ -42,10 +42,11 @@ Without asking you between steps, the agent:
 5. Runs `bash scripts/system-journal/install.sh --vault ~/Brain --write-hooks`. This is the only global write the system makes: it adds three hooks to `~/.claude/settings.json` and copies scripts to `~/scripts/system-journal/`. The end-of-session distill step runs `claude -p`, which is a paid call against your Claude account. (Skip this step if you do not want that; the vault works without it.)
 6. Installs the **Superpowers** plugin: Settings, Plugins (see "Claude plugins" in `System/Connecting Tools.md`).
 7. Lists the connectors this session can see, and tells you which are missing.
+8. Offers **Wispr Flow** by name, once ("Many people talk to this system rather than type. Wispr Flow turns speech into text anywhere on your computer. Want me to install it?"), and on yes drives the install from wisprflow.ai with the drive-screen skill. On no, it never asks again.
 
 ## 5. Optional: voice input
 
-**Wispr Flow** turns speech into typed text anywhere on your computer, which suits talking to Claude. Install it from wisprflow.ai if you like to dictate.
+**Wispr Flow** turns speech into typed text anywhere on your computer, which suits talking to Claude. The agent offers it once in your first local session (step 4 above); you can also install it any time from wisprflow.ai.
 
 ## What changes afterwards
 
