@@ -346,3 +346,24 @@ def test_wispr_flow_is_offered_by_name_after_the_demo():
     adding = read("Adding Your Computer")
     step4 = adding[adding.index("## 4."):adding.index("## 5.")]
     has(step4, "Wispr Flow", "offers")
+
+
+def test_superpowers_installs_without_asking():
+    text = read("Adding Your Computer")
+    line = [l for l in text.splitlines() if "Installs the **Superpowers**" in l][0]
+    has(line, "without asking", "claude plugin marketplace add obra/superpowers-marketplace",
+        "claude plugin install superpowers@superpowers-marketplace", "Settings, Plugins", "one sentence")
+    assert "install-or-skip" not in text and "whether to install" not in text
+    has(read("Connecting Tools"), "Setup installs it for you")
+
+
+def test_update_ends_with_a_numbered_summary():
+    for rel in (".claude/commands/update.md", "cowork-commands/update.md"):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        has(text, "What changed:", "numbered", "plain language", "at most six")
+    updating = read("Updating")
+    step7 = updating[updating.index("7. **Report**"):updating.index("## What changes afterwards")]
+    has(step7, "What changed:", "numbered", "at most six", "last message")
+    code = (ROOT / ".claude" / "commands" / "update.md").read_text(encoding="utf-8")
+    cowork = (ROOT / "cowork-commands" / "update.md").read_text(encoding="utf-8")
+    assert cowork.split("---", 2)[2].strip() == code.strip()      # the mirror's body matches the Code version

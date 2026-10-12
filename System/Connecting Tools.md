@@ -287,7 +287,7 @@ If there is an error, read the message. Common fixes: "command not found" means 
 
 **What it is.** A plugin adds extra skills to Claude Desktop (reusable ways of working, such as planning and debugging). Plugins run code with your permissions, so install only the ones named here.
 
-**Our recommendation.** Install **Superpowers**. Local only, and once per machine.
+**Our recommendation.** Install **Superpowers**. Local only, and once per machine. Setup installs it for you in your first local session; the steps below are for doing it by hand.
 
 **The steps.**
 1. In Claude Desktop, open **Settings**, then **Plugins**.
