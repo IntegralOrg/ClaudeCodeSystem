@@ -14,7 +14,7 @@ Modes:
 - **`init`**: one-time bootstrap for a vault with no schema/index yet. See the Init section.
 
 Hard rules:
-- Never touch anything under a `protected` path or a non-markdown file.
+- Never touch anything under a `protected` path or a non-markdown file when tidying the vault. This command's own state is the one exception, and only these files: everything under `_generated/vault-hygiene/` (schema, index, log, trash, the tuning order and `tuning.json`), `_generated/Themes.md`, and `_generated/routine-alerts.json` (Step 5b's dedupe, shared with End of Day). Step 5b's Tier 1 edits go only to the plain-words Markdown files the "Decision tiers" section allows (`CLAUDE.md`, a command and its mirror, a `System/` page, a memory file); `record --dry-run` refuses anything else.
 - Never `rm` a vault file: removals go through the `stage` subcommand.
 - Records (files under `no_merge` folders) are never merged, split, or have their body rewritten. A pair with a record on either side is never folded: it downgrades to a label-only supersession (confirm-keep), which may add a `canonical`/`superseded_by` marker to the record's frontmatter but never touches its body.
 - Only Step 4b item 5 (`apply`) ever folds, merges, or stamps canonical/superseded markers on an authored doc, and only on a block a human has decided. (Step 2's deterministic fixes -- refiling, frontmatter backfill, stub expansion, link repointing -- also edit the vault, exactly as the structural audit always has.) The embedding subcommands other than `apply` write only under `_generated/vault-hygiene/`.

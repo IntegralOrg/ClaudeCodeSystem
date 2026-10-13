@@ -148,10 +148,11 @@ def test_one_change_per_pattern_per_night(tmp_path):
 def test_tier2_hook_pattern_is_reported_and_no_file_is_edited(tmp_path):
     blocked = [{"name": "Bash", "input": "x", "ok": False, "ms": 5, "error_class": "hook_blocked"}]
     evs = [evidence(s, d, blocked) for s, d in (("aaaa1111", "2026-10-08"), ("bbbb2222", "2026-10-10"), ("cccc3333", "2026-10-12"))]
-    lines = [line(s, d) for s, d in (("aaaa1111", "2026-10-08"), ("bbbb2222", "2026-10-10"), ("cccc3333", "2026-10-12"))]
+    lines = [line(s, d, complaints=["it forgot my time zone"]) for s, d in (("aaaa1111", "2026-10-08"), ("bbbb2222", "2026-10-10"), ("cccc3333", "2026-10-12"))]
     v = make_vault(tmp_path, lines, evs)
     before = snapshot(v)
     order = plan(v)
+    assert any(x["key"] == "journal:tasks" and x["tier"] == 1 for x in order["patterns"])   # so the target guard below is reached
     [p] = [p for p in order["patterns"] if p["source"] == "telemetry"]
     assert p["key"] == "telemetry:Bash:hook_blocked" and p["tier"] == 2
     assert p["error_class"] == "hook_blocked" and p["calls"] == 3 and p["sessions"] == 3
@@ -162,6 +163,7 @@ def test_tier2_hook_pattern_is_reported_and_no_file_is_edited(tmp_path):
     for target in ("scripts/hooks/guard.py", ".claude/settings.json", ".mcp.json"):
         bad = run(v, "record", "--key", "journal:tasks", "--tier", "1", "--target", target, "--change", "c", "--why", "w", check=False)
         assert bad.returncode == 2, target
+        assert "plain-words file" in bad.stderr, (target, bad.stderr)
     r = run(v, "record", "--key", p["key"], "--tier", "2", "--target", "Inbox/2026-10-13 report for your contact.md",
             "--change", "reported", "--why", "guard blocks recur")
     assert AUDIT_REPORTED.match(r.stdout.strip()), r.stdout
