@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """SessionStart: if local landing has failed since its last success, or has been skipping for a
 structural reason, say so at the start of the session so a machine never diverges silently from the
-repo. Reads _generated/landing.log only, and only its timestamped lines. Fails open."""
+repo. Reads _generated/landing.log only, and only its timestamped lines. Fails open.
+scripts/system-check.py imports notices(), refusal_markers() and log_lines() from here, so the
+session-start notice and the system check never disagree."""
 import json
 import re
 import sys
@@ -36,17 +38,19 @@ def disabled_note(lines):
 REFUSAL_DAYS = 3
 
 
-def cloud_refusals(root):
+def refusal_markers(root, days=REFUSAL_DAYS, today=None):
     """Markers that cloud-land.sh landed when it refused part or all of a cloud session's edits
-    (_generated/landing/cloud-refusals/<YYYY-MM-DD>-<sid8>.json), at most REFUSAL_DAYS old. The
-    marker is the only trace of edits that never reached main, so it is reported on every machine."""
+    (_generated/landing/cloud-refusals/<YYYY-MM-DD>-<sid8>.json), at most `days` old, oldest first, as
+    dicts: file, date, sid8, reason, refused (int or None), stale_at_start (int or None). The marker's
+    sample paths are never returned."""
     import os
     from datetime import date, timedelta
     d = Path(root) / "_generated" / "landing" / "cloud-refusals"
     if not d.is_dir():
         return []
-    forced = os.environ.get("LANDING_HEALTH_TODAY")
-    today = date.fromisoformat(forced) if forced else date.today()
+    if today is None:
+        forced = os.environ.get("LANDING_HEALTH_TODAY")
+        today = date.fromisoformat(forced) if forced else date.today()
     out = []
     for p in sorted(d.glob("*.json")):
         m = re.match(r"^(\d{4}-\d{2}-\d{2})-([0-9a-f]{8})\.json$", p.name)
@@ -56,36 +60,53 @@ def cloud_refusals(root):
             when = date.fromisoformat(m.group(1))
         except ValueError:
             continue
-        if not (timedelta(0) <= today - when <= timedelta(days=REFUSAL_DAYS)):
+        if not (timedelta(0) <= today - when <= timedelta(days=days)):
             continue
-        reason, n = "see the marker", ""
+        rec = {"file": p.name, "date": m.group(1), "sid8": m.group(2), "reason": "see the marker", "refused": None,
+               "stale_at_start": None}
         try:
-            rec = json.loads(p.read_text(encoding="utf-8"))
-            reason = str(rec.get("reason") or reason)
-            n = f"{int(rec.get('refused_deletions', 0)) + int(rec.get('refused_changes', 0))} "
+            data = json.loads(p.read_text(encoding="utf-8"))
+            rec["reason"] = str(data.get("reason") or rec["reason"])
+            rec["refused"] = int(data.get("refused_deletions", 0)) + int(data.get("refused_changes", 0))
+            stale = int(data.get("stale_at_start", -1))
+            rec["stale_at_start"] = stale if stale >= 0 else None
         except Exception:
             pass
-        out.append(f"Cloud session {m.group(2)} on {m.group(1)} could not save {n}change(s) to main ({reason}). Those edits are "
-                   f"not on main. Tell the user this first; the record is _generated/landing/cloud-refusals/{p.name}.")
+        out.append(rec)
     return out
 
 
-def main(payload):
-    root = Path(project_dir(payload))
-    refusals = cloud_refusals(root)
-    log = root / "_generated" / "landing.log"
+def cloud_refusals(root):
+    """Session-start lines for the refusal markers at most REFUSAL_DAYS old. The marker is the only trace
+    of edits that never reached main, so it is reported on every machine."""
+    out = []
+    for r in refusal_markers(root):
+        n = "" if r["refused"] is None else f"{r['refused']} "
+        out.append(f"Cloud session {r['sid8']} on {r['date']} could not save {n}change(s) to main ({r['reason']}). Those edits are "
+                   f"not on main. Tell the user this first; the record is _generated/landing/cloud-refusals/{r['file']}.")
+    return out
+
+
+def log_lines(root):
+    """The timestamped lines among the last 2000 of _generated/landing.log, or None when there is no log."""
+    log = Path(root) / "_generated" / "landing.log"
     if not log.is_file():
-        if refusals:
-            print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": " ".join(refusals)}}))
-        return
-    lines = [l for l in log.read_text(encoding="utf-8", errors="replace").splitlines()[-2000:] if STAMPED.match(l)]
+        return None
+    return [l for l in log.read_text(encoding="utf-8", errors="replace").splitlines()[-2000:] if STAMPED.match(l)]
+
+
+def notices(root):
+    """Every landing notice for this vault (refusals first), as the session-start message gives them."""
+    parts = cloud_refusals(root)
+    lines = log_lines(root)
+    if lines is None:
+        return parts
     failures = []
     for line in lines:
         if any(w in line for w in CLEARING_WORDS):
             failures = []
         elif any(w in line for w in FAILURE_WORDS):
             failures.append(line)
-    parts = list(refusals)
     fetch_fails = [l for l in failures if "fetch failed" in l]
     synced_skips = [l for l in failures if "rebase skipped: synced folder" in l]
     failures = [l for l in failures if "fetch failed" not in l and "rebase skipped: synced folder" not in l]
@@ -106,6 +127,11 @@ def main(payload):
     note = disabled_note(lines)
     if note:
         parts.append(note)
+    return parts
+
+
+def main(payload):
+    parts = notices(Path(project_dir(payload)))
     if parts:
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": " ".join(parts)}}))
 
