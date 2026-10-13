@@ -75,4 +75,6 @@ def test_report_mode_writes_the_routine_report_for_the_contact(tmp_path):
     text = path.read_text()
     assert "Found by: Vault Hygiene tuning" in text and "Setup stopped at" not in text
     assert "Computer:" not in text      # a Tier 2 report is names and counts only: no host platform or architecture
+    assert "Error:" not in text and "What the agent tried:" not in text
+    assert "Summary:" in text and "What the system did:" in text
     assert "# Report for your contact " in text
