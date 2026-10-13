@@ -408,5 +408,5 @@ def test_claude_md_and_guides_point_at_who_decides():
     has(read("How This Works"), "System/Who Decides.md")
     has((ROOT / "README.md").read_text(encoding="utf-8"), "Who%20Decides.md")
     log = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    entry = log.split("## [")[1]
+    entry = log.split("## [2026-10-13] - Who decides")[1].split("\n## [")[0]
     has(entry, "System/Who Decides.md", "### In an existing vault", "Decision tiers")
