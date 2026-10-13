@@ -63,6 +63,9 @@ def helper_value(gh_path):
     return "!'" + gh_path.replace("\\", "/").replace("'", "'\\''") + "' auth git-credential"
 
 
+# owner/name as GitHub spells them; rejects empty halves and anything option-shaped (a leading dash).
+REPO_PATH_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9_.][A-Za-z0-9_.-]*")
+
 ORG_POLICY_MARKERS = ("resource not accessible", "saml", "organization policy", "restricted by organization",
                       "organization has", "enterprise policy")
 
@@ -271,8 +274,11 @@ def cmd_orgs(a):
     if not signed_in(gh):
         fail("LOGIN_NEEDED", "run login-start first", 3)
     r = run([gh, "api", "user/orgs", "--paginate", "--jq", ".[].login"])
-    names = [n for n in (r.stdout or "").split() if n] if r.returncode == 0 else []
-    out("ORGS", " ".join(names))
+    if r.returncode != 0:
+        # Never pass a failure off as "no organizations": setup would then skip the question and a person who
+        # belongs to one would silently get a personal vault.
+        fail("ORGS_UNKNOWN", (r.stderr.strip() or "could not list organizations")[:300])
+    out("ORGS", " ".join(n for n in (r.stdout or "").split() if n))
 
 
 def cmd_retarget(a):
@@ -281,7 +287,7 @@ def cmd_retarget(a):
     gh = need_gh()
     if not signed_in(gh):
         fail("LOGIN_NEEDED", "run login-start first", 3)
-    if not a.to or a.to.count("/") != 1:
+    if not a.to or not REPO_PATH_RE.fullmatch(a.to):
         fail("USAGE", "retarget needs --to <owner/name>", 2)
     configure_helper(gh)
     view = run([gh, "repo", "view", a.to, "--json", "visibility"])
@@ -291,10 +297,9 @@ def cmd_retarget(a):
         fail("REPO_NOT_PRIVATE", f"github.com/{a.to} is not private; origin unchanged", 3)
     url = os.environ.get("SETUP_REMOTE_URL") or f"https://github.com/{a.to}.git"
     old = git(a.vault, "remote", "get-url", "origin")
-    if old.returncode == 0:
-        git(a.vault, "remote", "set-url", "origin", url)
-    else:
-        git(a.vault, "remote", "add", "origin", url)
+    set_r = git(a.vault, "remote", "set-url" if old.returncode == 0 else "add", "origin", url)
+    if set_r.returncode != 0:
+        fail("PUSH_FAILED", (set_r.stderr.strip() or "could not update origin")[:300])
     r = git(a.vault, "ls-remote", "origin", timeout=60)
     if r.returncode != 0:
         if old.returncode == 0:

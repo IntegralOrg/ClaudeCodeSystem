@@ -345,7 +345,7 @@ def test_setup_procedure_offers_the_company_organization_only_when_the_account_h
     text = read("Setup Procedure")
     part_b = text[text.index("## Part B"):text.index("## 1. Open, then learn")]
     has(part_b, "github.py orgs", "github owner", "Where should your vault live on GitHub?", "connect --owner",
-        "brain-<their GitHub username>", "ask nothing")
+        "brain-<their GitHub username>", "ask nothing", "ORGS_UNKNOWN", "more than three", "plain text")
     b4 = part_b[part_b.index("**B4."):]
     has(b4, "organization", "request", "owner approves")
     sec1 = text[text.index("## 1. Open, then learn"):text.index("## 2. Build the vault")]
@@ -356,7 +356,9 @@ def test_company_github_organization_doc_covers_setup_move_and_offboarding():
     text = read("Company GitHub Organization")
     has(text, "What it is", "Our recommendation", "Team plan", "Exactly two", "Two-factor", "No permission", "Admin",
         "third-party access", "GitHub CLI", "Claude GitHub app", "No branch protection", "brain-<GitHub username>",
-        "Transfer ownership", "retarget --to", "land-local.sh --final", "When someone leaves", "only `origin`")
+        "Transfer ownership", "retarget --to", "land-local.sh --final", "When someone leaves", "only `origin`",
+        "Enterprise Cloud", "create each person's vault yourself", "gitleaks git")
+    assert "install the Claude GitHub app on it themselves" not in text   # repo admins cannot; owners install it
 
 
 def test_wispr_flow_is_offered_by_name_after_the_demo():

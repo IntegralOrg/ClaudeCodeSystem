@@ -30,6 +30,8 @@ FAKE_GH = textwrap.dedent(r'''
         print("Open this URL to continue in your web browser: https://github.com/login/device", flush=True)
         time.sleep(1); s["signed_in"] = True; json.dump(s, open(st, "w")); sys.exit(0)
     if a[:2] == ["api", "user/orgs"]:
+        if s.get("orgs_error"):
+            print("HTTP 401: Bad credentials", file=sys.stderr); sys.exit(1)
         for o in s.get("orgs", []): print(o)
         sys.exit(0)
     if a[:2] == ["api", "user"]:
@@ -206,6 +208,21 @@ def test_orgs_prints_the_bare_token_when_there_are_none(world):
     setstate(world, signed_in=True)
     rc, out = run(world, "orgs")
     assert rc == 0 and out.strip() == "ORGS", out
+
+
+def test_orgs_reports_a_failed_lookup_instead_of_no_organizations(world):
+    setstate(world, signed_in=True, orgs=["acme"], orgs_error=True)
+    rc, out = run(world, "orgs")
+    assert rc == 1 and out.startswith("ORGS_UNKNOWN"), out
+
+
+@pytest.mark.parametrize("bad", ["acme", "/x", "x/", "acme/brain/extra", "-f/x", "acme/-x"])
+def test_retarget_rejects_malformed_targets_before_touching_anything(world, bad):
+    setstate(world, signed_in=True)
+    rc, out = run(world, "retarget", f"--to={bad}")       # = form, so argparse passes a leading dash through
+    assert rc == 2 and out.startswith("USAGE"), (bad, out)
+    assert subprocess.run(["git", "-C", str(world["vault"]), "remote", "get-url", "origin"],
+                          capture_output=True).returncode != 0
 
 
 def test_connect_owner_creates_in_the_organization_with_a_per_person_name(world):
