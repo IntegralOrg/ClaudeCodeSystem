@@ -6,6 +6,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-13] - The technical report is a file the owner sends on
+
+### Changed
+- **Tier 2 channel decided** (`docs/DEVELOPING.md`, "Decision tiers"; `System/Who Decides.md`; `/vault-audit` Step 5b and its mirror): anything the system must not change on its own becomes `Inbox/<date> report for your contact.md` (names and counts only, keys masked), and the system leaves one plain line asking the owner to reach out to their contact for support with that file. The owner knows who their contact is. The system never emails anyone, never names an address, and never calls a support service; the "when your email is connected it can go directly" wording is gone.
+
+### In an existing vault
+1. Take `System/Who Decides.md`, `.claude/commands/vault-audit.md`, and `cowork-commands/vault-audit.md` from the template.
+
 ## [2026-10-13] - Nightly self-tuning: the system fixes what keeps going wrong
 
 ### Added

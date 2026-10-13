@@ -23,7 +23,7 @@ Every fix is one change, logged with its reason in `_generated/vault-hygiene/aud
 
 ## What it sends to your contact
 
-Anything technical is never changed on its own and never put to you: scripts, hooks, guard rules, credentials, routines, settings files, and anything that looks like a bug in the system itself. For those, your system writes a short report with names and counts only (which routine, what kind of error, how many times, first and last date, which files) and nothing from your notes. The report goes to your onboarding contact, the same way `System/Getting Help.md` describes: it is written into `Inbox/` with one line in your daily note asking you to send it on, and when your email is connected it can go directly. A bug that every system shares is fixed once in the template and reaches you through `/update`.
+Anything technical is never changed on its own and never put to you: scripts, hooks, guard rules, credentials, routines, settings files, and anything that looks like a bug in the system itself. For those, your system writes a short report with names and counts only (which routine, what kind of error, how many times, first and last date, which files) and nothing from your notes. The report is a note in your `Inbox/` folder, written the same way `System/Getting Help.md` describes, and your system leaves one line in your daily note asking you to reach out to your contact for support with that file. It never emails anyone on your behalf. A bug that every system shares is fixed once in the template and reaches you through `/update`.
 
 ## What it never asks you
 

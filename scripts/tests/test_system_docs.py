@@ -420,7 +420,12 @@ def test_developing_has_the_decision_tiers_section():
     has(sec, "The client is never the approver", "Tier 1", "Tier 2", "apply-and-log", "never propose-and-wait",
         "audit-log.md", "routine", "error class", "count", "first and last date", "file paths",
         "help_report.py", "routine-alerts.json", "once per reason per 7 days", "`/update`",
-        "numbered list of at most six plain lines", "System/Who Decides.md")
+        "numbered list of at most six plain lines", "System/Who Decides.md",
+        "a Markdown file the owner sends on", "never emails anyone", "never names an address")
+    assert "not yet chosen" not in sec and "Gmail" not in sec
+    has(read("Who Decides"), "reach out to your contact", "never emails anyone")
+    for rel in (".claude/commands/vault-audit.md", "cowork-commands/vault-audit.md"):
+        assert "not chosen yet" not in (ROOT / rel).read_text(encoding="utf-8"), rel
     assert chr(0x2014) not in sec
 
 

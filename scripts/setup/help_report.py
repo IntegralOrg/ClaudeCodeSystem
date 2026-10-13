@@ -80,10 +80,13 @@ def main():
     now = datetime.datetime.now()
     details = tail(a.details_file) if a.details_file else ""
     body = mask(
-        (f"Found by: {a.step}\n" if a.report else f"Setup stopped at: {a.step}\n")
-        + f"Error: {a.error}\n"
-        f"What the agent tried: {a.tried}\n"
-        f"Computer: {platform.system()} {platform.release()} ({platform.machine()})\n"
+        # Report mode carries the Tier 2 package (names and counts the caller composed), so its two
+        # fields are a summary and what the system did, never an error trace.
+        (f"Found by: {a.step}\nSummary: {a.error}\nWhat the system did: {a.tried}\n" if a.report
+         else f"Setup stopped at: {a.step}\nError: {a.error}\nWhat the agent tried: {a.tried}\n")
+        # A setup failure names the computer so the contact can reproduce it. A Tier 2 report never does:
+        # its contract (docs/DEVELOPING.md, "Decision tiers") is names and counts only.
+        + ("" if a.report else f"Computer: {platform.system()} {platform.release()} ({platform.machine()})\n")
         + (f"\nDetails:\n{details}\n" if details else ""))
     title = "Report for your contact" if a.report else "Setup help request"
     text = (f"---\ntype: note\ncreated: {now:%Y-%m-%d}\n---\n# {title} {now:%Y-%m-%d %H:%M}\n\n"
