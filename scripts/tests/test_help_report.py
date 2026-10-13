@@ -74,4 +74,5 @@ def test_report_mode_writes_the_routine_report_for_the_contact(tmp_path):
     assert path.parent == tmp_path / "Inbox" and path.name.endswith(" report for your contact.md")
     text = path.read_text()
     assert "Found by: Vault Hygiene tuning" in text and "Setup stopped at" not in text
+    assert "Computer:" not in text      # a Tier 2 report is names and counts only: no host platform or architecture
     assert "# Report for your contact " in text
