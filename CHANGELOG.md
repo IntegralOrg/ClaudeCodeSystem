@@ -6,6 +6,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-13] - Nightly self-tuning: the system fixes what keeps going wrong
+
+### Added
+- **`/vault-audit` Step 5b, "Tune from the week"** (and the `cowork-commands/` mirror): every night Vault Hygiene reads the last 7 days of the System Journal and fixes friction that keeps coming back, with no one approving anything. A pattern needs 3+ sessions in the window, or 2 sessions 14+ days apart, and is grouped by root cause, never by symptom. Tier 1 fixes (a rule in `CLAUDE.md`, a command's wording, a `System/` page, a memory file) are applied the same night and logged in `_generated/vault-hygiene/audit-log.md` with the pattern key and the reason; the landing commit is the undo. Tier 2 (scripts, hooks, settings, guard rules, routines, or a fix that is unclear) is never edited: it becomes `Inbox/<date> report for your contact.md`, names and counts only, deduped once per reason per 7 days. The rule is the "Decision tiers" section of `docs/DEVELOPING.md`.
+- **`scripts/self-tune.py`** (stdlib, read-only on the journal): `plan` writes the work order, `record` checks and logs one change (and refuses a Tier 1 change to a script, hook or settings file, a pattern in its 14-day cooldown, or a second change to a pattern in one night), `themes` rewrites `_generated/Themes.md` (40 lines at most; a theme not seen for 14 days drops out), `package` prints the Tier 2 package, `summary` prints the daily note line. It skips private sessions and lines tagged with a sensitive area, never reads `Personal/`, and masks anything that looks like a key. With fewer than 3 sessions in the window nothing is applied and the audit log says "not enough sessions yet".
+- **`scripts/setup/help_report.py --report`**: the same masked report, written as a routine's report for the contact instead of a setup failure.
+- **Surfacing:** End of Day's Routine health section gets one line, "Tuned N things this week: ...", from `self-tune.py summary`; the Vault Hygiene run ends with at most six numbered plain lines saying what it changed.
+- **`CLAUDE.md` Startup Checklist** step 3: read `_generated/Themes.md` when it exists.
+- Tests: `scripts/tests/test_self_tune.py` (Tier 1 applied and recorded; Tier 2 reported with no file edited; private and sensitive sessions ignored; cooldown; a 2-session window applies nothing; the audit-log line format; no secret-looking value in any output).
+
+### Changed
+- **`scripts/system-journal/README.md`** describes the nightly tuning step; the template no longer ships "the capture half only". `themes-inject.py` now has a writer.
+
+### In an existing vault
+1. Take `scripts/self-tune.py`, `scripts/setup/help_report.py`, `scripts/system-journal/README.md`, `scripts/system-journal/themes-inject.py`, `.claude/commands/vault-audit.md`, `cowork-commands/vault-audit.md`, `.claude/commands/eod-note.md`, `cowork-commands/eod-note.md`, `System/How This Works.md`, and `docs/DEVELOPING.md` from the template.
+2. In `CLAUDE.md`, under `## Startup Checklist`, add step 3 from the template's `CLAUDE.md` (the one that starts "If `_generated/Themes.md` exists, read it").
+3. In `System/Routines.md`, under `## Vault Hygiene`, append the sentence "Vault Hygiene also tunes the system from the week's sessions: ..." from the template to the `Output:` line. Keep the section's `live_since` bullet as it is.
+
 ## [2026-10-13] - Local landing: a conflict never rewrites your files
 
 ### Fixed
