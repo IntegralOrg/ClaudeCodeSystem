@@ -466,4 +466,12 @@ def test_tuning_reaches_the_daily_note_and_the_guides():
     log = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     entry = log.split("## [2026-10-13] - Nightly self-tuning")[1].split("\n## [")[0]
     has(entry, "Step 5b", "scripts/self-tune.py", "Decision tiers", "### In an existing vault", "System/Routines.md", "Startup Checklist")
+
+
+def test_system_check_is_documented():
+    has(read("How This Works"), "/system-check", "_generated/system-check/")
+    has((ROOT / "README.md").read_text(encoding="utf-8"), "/system-check", "scripts/system-check.py")
+    log = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    entry = log.split("## [2026-10-13] - System check")[1].split("\n## [")[0]
+    has(entry, "scripts/system-check.py", "Decision tiers", "### In an existing vault", "setup: N problems", "names and counts")
     assert chr(0x2014) not in entry

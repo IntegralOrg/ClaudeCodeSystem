@@ -32,6 +32,10 @@ Hard rules:
 3. `VAULT` = vault root (directory containing CLAUDE.md). `AUDIT="python3 \"$VAULT/scripts/vault-audit.py\""`, `EMBED="python3 \"$VAULT/scripts/vault-embed.py\""`.
 4. If `_generated/vault-hygiene/vault-schema.md` is missing, stop and run Init instead.
 
+## Step 0b: System check
+
+Run `python3 "$VAULT/scripts/system-check.py" --vault "$VAULT" --today "$TODAY"`. It reads the vault only, writes `_generated/system-check/$TODAY.json` and `_generated/system-check/$TODAY.md`, and always exits 0, so it never stops this run. Carry its `problems` count (from the JSON) into the Step 6 receipt as `setup: N problems`. Then do step 3 of `.claude/commands/system-check.md` (the report of names and counts for the owner's contact, at most once per reason per 7 days through `_generated/routine-alerts.json`). Change nothing else because of a finding here: tonight's count against last night's `setup:` line in the audit log is how a fix is confirmed, and a problem that comes back is reported again, never marked done.
+
 ## Step 1: Script pass
 
 Run `scan --vault "$VAULT"` and read the JSON work order. It already purged old trash and refreshed the index (added/changed files are marked stale). The order also carries two fail-loud signals:
@@ -125,6 +129,7 @@ candidates: <meta.candidates from Step 4b's pending output; append " (embedding 
 judged: <verdicts accepted in Step 4b this run> (backlog: <meta.pending after judging>)
 proposals_open: <queue.open from the survivorship output, or 0 when skipped>
 applied: <receipt.applied from the apply step, or 0> (folded N, kept N, rejected N)
+setup: <N problems from Step 0b, or "not checked" when the script is missing>
 invariant_violations: <count from the scan output, or 0>
 stale_canonical: <count from the scan output, or 0>
 tuning: <the Step 5b audit_line, or skipped (<reason>)>

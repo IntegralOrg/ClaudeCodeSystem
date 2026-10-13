@@ -173,12 +173,10 @@ def not_live_allowance_ends(root, slug, setup):
 MISSING_OK_RE = re.compile(r"\b(none|no|nothing|nil|n/a)\b[^:\n]{0,40}\bmissing\b|\bmissing\b[^:\n]{0,40}:\s*(none|no|nothing|nil|n/a)?\s*\W*$", re.I)
 
 
-def routine_health_missing(notes):
-    """Lines of the newest daily note's `## Routine health` section that report a missing key or connector."""
-    if not notes:
-        return []
+def routine_health_lines(note):
+    """The lines of one daily note's `## Routine health` section, list markers stripped ([] if none or unreadable)."""
     try:
-        lines = notes[-1][1].read_text(encoding="utf-8", errors="replace").splitlines()
+        lines = Path(note).read_text(encoding="utf-8", errors="replace").splitlines()
     except Exception:
         return []
     out, inside = [], False
@@ -186,10 +184,18 @@ def routine_health_missing(notes):
         if re.match(r"^##\s+\S", line):
             inside = bool(re.match(r"^##\s+routine health\b", line, re.I))
             continue
-        if inside and re.search(r"\bmissing\b", line, re.I) and not MISSING_OK_RE.search(line):
+        if inside:
             text = re.sub(r"^\s*(?:[-*+]|\d+[.)])\s*", "", line).strip()
             if text:
                 out.append(text)
+    return out
+
+
+def routine_health_missing(notes):
+    """Lines of the newest daily note's `## Routine health` section that report a missing key or connector."""
+    if not notes:
+        return []
+    out = [t for t in routine_health_lines(notes[-1][1]) if re.search(r"\bmissing\b", t, re.I) and not MISSING_OK_RE.search(t)]
     return out[:5]
 
 
