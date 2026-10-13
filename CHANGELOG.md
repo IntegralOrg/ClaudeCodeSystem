@@ -6,6 +6,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-13] - System check: the system says what is wrong before you have to
+
+### Added
+- **`scripts/system-check.py`**: reads the vault alone (never the home folder or `~/.config`) and reports how it is set up and whether it is working, in eight parts: configuration (hooks, permissions and deny rules against the template, hooks pointing outside the vault, inline values in `.mcp.json`, counted, never shown), scripts that read settings from outside the vault or did not come from the template, the deterministic pieces (hook scripts load, the two landing scripts match the template, the key checker), routines and hooks working (it imports `routine_health.py` and `landing_health.py` rather than copying them), repeated error classes and rate limits from the System Journal (through `telemetry-stats.py`; private sessions are skipped), local `main` against GitHub and leftover `claude/*` branches, landing safety (cloud refusal markers, a landing that deleted more than 10 files or changed files its session never touched, numbered copies beside tracked notes, a synced folder), and connectors each routine declares that the daily notes report missing. Every finding carries a severity (blocks cloud, local only, fine) and a tier from `docs/DEVELOPING.md` "Decision tiers". It writes `_generated/system-check/<date>.json` for the maintainers and `<date>.md`, at most six numbered plain lines, the worst first, each with its fix and its `System/` page. Names only, never a value; it always exits 0.
+- **`/system-check`** (and its `cowork-commands/` mirror): runs the script, adds what only a session can see (routines in the Claude account, open pull requests), sends Tier 2 findings to the owner's contact as names and counts through `scripts/setup/help_report.py`, at most once per reason per 7 days through `_generated/routine-alerts.json`, and ends with the six-line summary.
+- **Nightly:** `/vault-audit` runs it as Step 0b and records `setup: N problems` in its receipt, and End of Day's Routine health line carries `Setup: N problems`. The next night's count is what confirms a fix held; there is no Done button. `/opportunity-scan` runs it first (step 0).
+- `scripts/hooks/landing_health.py` exposes `refusal_markers()`, `log_lines()` and `notices()`, and `routine_health.py` exposes `routine_health_lines()`, so the session-start notices and the system check share one implementation. Their behavior is unchanged.
+- Tests: `scripts/tests/test_system_check.py` (a fixture vault with planted drift, a planted secret value that never appears in any output, the six-line summary, the Tier 2 package and its dedupe, private sessions skipped).
+
+### In an existing vault
+1. Take `scripts/system-check.py`, `scripts/hooks/landing_health.py`, `scripts/hooks/routine_health.py`, `.claude/commands/system-check.md`, `cowork-commands/system-check.md`, `.claude/commands/vault-audit.md`, `.claude/commands/opportunity-scan.md`, `.claude/commands/eod.md` and their `cowork-commands/` copies, and `System/How This Works.md` from the template.
+2. Nothing to run: the next nightly Vault Hygiene run writes the first `_generated/system-check/<date>.md`.
+
 ## [2026-10-13] - Local landing: a conflict never rewrites your files
 
 ### Fixed

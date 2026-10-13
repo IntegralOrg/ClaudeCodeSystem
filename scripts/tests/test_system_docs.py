@@ -410,3 +410,12 @@ def test_claude_md_and_guides_point_at_who_decides():
     log = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     entry = log.split("## [2026-10-13] - Who decides")[1].split("\n## [")[0]
     has(entry, "System/Who Decides.md", "### In an existing vault", "Decision tiers")
+
+
+def test_system_check_is_documented():
+    has(read("How This Works"), "/system-check", "_generated/system-check/")
+    has((ROOT / "README.md").read_text(encoding="utf-8"), "/system-check", "scripts/system-check.py")
+    log = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    entry = log.split("## [2026-10-13] - System check")[1].split("\n## [")[0]
+    has(entry, "scripts/system-check.py", "Decision tiers", "### In an existing vault", "setup: N problems", "names and counts")
+    assert chr(0x2014) not in entry

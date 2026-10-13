@@ -179,6 +179,9 @@ Long-running workflows track every extracted item in a tracking list (`/tmp/eod-
 ### File Writes
 When Claude finishes a turn, the Stop hook lands your changes on `main`: `scripts/land-local.sh` on your computer, `scripts/cloud-land.sh` in the cloud. You never run Git. Git history is the rollback: every change is recoverable from it.
 
+### System Check
+`/system-check` says how the vault is set up and whether it is working, in at most six plain lines; it also runs every night inside Vault Hygiene (`scripts/system-check.py`, read-only, names only), so a fix is confirmed by the next night's run and anything technical reaches your contact as names and counts.
+
 ### Route-As-You-Go
 Every extracted item is routed to its destination file immediately, not batched for later. This prevents data loss if a step fails partway through or the process runs long.
 
