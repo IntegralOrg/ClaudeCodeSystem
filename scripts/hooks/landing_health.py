@@ -30,9 +30,50 @@ def disabled_note(lines):
     return ""
 
 
+REFUSAL_DAYS = 3
+
+
+def cloud_refusals(root):
+    """Markers that cloud-land.sh landed when it refused part or all of a cloud session's edits
+    (_generated/landing/cloud-refusals/<YYYY-MM-DD>-<sid8>.json), at most REFUSAL_DAYS old. The
+    marker is the only trace of edits that never reached main, so it is reported on every machine."""
+    import os
+    from datetime import date, timedelta
+    d = Path(root) / "_generated" / "landing" / "cloud-refusals"
+    if not d.is_dir():
+        return []
+    forced = os.environ.get("LANDING_HEALTH_TODAY")
+    today = date.fromisoformat(forced) if forced else date.today()
+    out = []
+    for p in sorted(d.glob("*.json")):
+        m = re.match(r"^(\d{4}-\d{2}-\d{2})-([0-9a-f]{8})\.json$", p.name)
+        if not m:
+            continue
+        try:
+            when = date.fromisoformat(m.group(1))
+        except ValueError:
+            continue
+        if not (timedelta(0) <= today - when <= timedelta(days=REFUSAL_DAYS)):
+            continue
+        reason, n = "see the marker", ""
+        try:
+            rec = json.loads(p.read_text(encoding="utf-8"))
+            reason = str(rec.get("reason") or reason)
+            n = f"{int(rec.get('refused_deletions', 0)) + int(rec.get('refused_changes', 0))} "
+        except Exception:
+            pass
+        out.append(f"Cloud session {m.group(2)} on {m.group(1)} could not save {n}change(s) to main ({reason}). Those edits are "
+                   f"not on main. Tell the user this first; the record is _generated/landing/cloud-refusals/{p.name}.")
+    return out
+
+
 def main(payload):
-    log = Path(project_dir(payload)) / "_generated" / "landing.log"
+    root = Path(project_dir(payload))
+    refusals = cloud_refusals(root)
+    log = root / "_generated" / "landing.log"
     if not log.is_file():
+        if refusals:
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": " ".join(refusals)}}))
         return
     lines = [l for l in log.read_text(encoding="utf-8", errors="replace").splitlines()[-2000:] if STAMPED.match(l)]
     failures = []
@@ -41,7 +82,7 @@ def main(payload):
             failures = []
         elif any(w in line for w in FAILURE_WORDS):
             failures.append(line)
-    parts = []
+    parts = list(refusals)
     fetch_fails = [l for l in failures if "fetch failed" in l]
     failures = [l for l in failures if "fetch failed" not in l]
     if fetch_fails:

@@ -88,3 +88,27 @@ def test_fetch_failed_run_is_reported_as_unreachable_not_conflict(tmp_path):
     assert rc == 0 and "cannot reach GitHub from this computer (sign-in or network); see System/Adding Your Computer.md step 4" in text
     assert "conflict" not in text.lower().replace("not a conflict", "")
     assert "resolve the conflict" not in text
+
+
+def run_hook_today(cwd, today):
+    env = dict(os.environ, CLAUDE_PROJECT_DIR=str(cwd), LANDING_HEALTH_TODAY=today)
+    p = subprocess.run([sys.executable, str(HOOK)], input="{}", capture_output=True, text=True, env=env, timeout=10)
+    return json.loads(p.stdout)["hookSpecificOutput"]["additionalContext"] if p.stdout.strip() else ""
+
+
+def test_cloud_refusal_marker_is_reported_for_three_days(tmp_path):
+    d = tmp_path / "_generated" / "landing" / "cloud-refusals"
+    d.mkdir(parents=True)
+    (d / "2026-10-13-02ba44f2.json").write_text(json.dumps({"session_id": "02ba44f2-x", "reason": "no start snapshot", "refused_deletions": 101, "refused_changes": 109}))
+    text = run_hook_today(tmp_path, "2026-10-15")
+    assert "Cloud session 02ba44f2" in text and "2026-10-13" in text and "no start snapshot" in text and "210" in text
+    assert "cloud-refusals/2026-10-13-02ba44f2.json" in text and "Tell the user" in text
+    assert run_hook_today(tmp_path, "2026-10-17") == ""
+
+
+def test_unreadable_refusal_marker_is_still_reported(tmp_path):
+    d = tmp_path / "_generated" / "landing" / "cloud-refusals"
+    d.mkdir(parents=True)
+    (d / "2026-10-13-deadbeef.json").write_text("not json")
+    text = run_hook_today(tmp_path, "2026-10-13")
+    assert "Cloud session deadbeef" in text and "Tell the user" in text

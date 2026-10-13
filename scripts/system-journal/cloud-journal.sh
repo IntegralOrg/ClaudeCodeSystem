@@ -98,9 +98,17 @@ cat >/dev/null 2>&1 || true
   # Anything new or changed under cloud/ or evidence/? (both are gitignored by the
   # default-deny .gitignore, so compare against origin/main by content, not git status.)
   git fetch -q origin main 2>&1 || { echo "fetch failed"; exit 0; }
+  # Only THIS session's files: the journal line (<date>.<sid8>.json) and the evidence record
+  # (<month>/<session id>.json). The container may hold stale copies of other sessions' records
+  # (a container restored from an old environment snapshot); copying everything under cloud/ and
+  # evidence/ overwrote fresh records on main with those stale copies on 2026-10-13.
+  SID8="${CLAUDE_CODE_SESSION_ID:0:8}"
+  OWN=()
+  for f in "$CLOUD_DIR"/*."$SID8".json "$EVIDENCE_DIR"/*/"$CLAUDE_CODE_SESSION_ID".json; do
+    [ -f "$f" ] && OWN+=("$f")
+  done
   changed=0
-  for f in "$CLOUD_DIR"/*.json "$EVIDENCE_DIR"/*/*.json; do
-    [ -f "$f" ] || continue
+  for f in "${OWN[@]}"; do
     rel="${f#$REPO/}"
     if ! git cat-file -e "origin/main:$rel" 2>/dev/null || ! git show "origin/main:$rel" 2>/dev/null | cmp -s - "$f"; then
       changed=1; break
@@ -119,12 +127,10 @@ cat >/dev/null 2>&1 || true
     TMP=$(mktemp -d /tmp/sj-wt.XXXXXX)
     rmdir "$TMP"
     if git worktree add -q --detach "$TMP" origin/main 2>&1; then
-      mkdir -p "$TMP/_generated/system-journal/cloud" "$TMP/_generated/system-journal/evidence"
-      cp "$CLOUD_DIR"/*.json "$TMP/_generated/system-journal/cloud/" 2>/dev/null
-      for m in "$EVIDENCE_DIR"/*/; do
-        [ -d "$m" ] || continue
-        mkdir -p "$TMP/_generated/system-journal/evidence/$(basename "$m")"
-        cp "$m"*.json "$TMP/_generated/system-journal/evidence/$(basename "$m")/" 2>/dev/null
+      for f in "${OWN[@]}"; do
+        rel="${f#$REPO/}"
+        mkdir -p "$TMP/$(dirname "$rel")"
+        cp "$f" "$TMP/$rel" 2>/dev/null
       done
       # If another process (e.g. cloud-land.sh) already landed these files, `git add` stages
       # nothing and `git commit` would fail and burn all three retries. Skip the commit when the

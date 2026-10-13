@@ -374,6 +374,6 @@ def test_drive_screen_names_the_pre_python_driver_and_the_changelog_ships_it():
     has(skill, "screenctl.js", "before python3 exists", "osascript -l JavaScript", "six commands", "`screenctl.py` takes over")
     assert (ROOT / ".claude" / "skills" / "drive-screen" / "scripts" / "screenctl.js").is_file()
     log = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    top = log.split("## [")[1]
-    has(top, "System/Start.md", "screenctl.js", "Start in Claude", "ORG_POLICY", "Superpowers", "Wispr Flow", "What changed:",
+    entry = log.split("## [2026-10-12]")[1].split("\n## [")[0]
+    has(entry, "System/Start.md", "screenctl.js", "Start in Claude", "ORG_POLICY", "Superpowers", "Wispr Flow", "What changed:",
         "### In an existing vault")

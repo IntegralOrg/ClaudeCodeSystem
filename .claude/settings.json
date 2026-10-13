@@ -73,6 +73,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/cloud-land.sh\" --start",
+            "timeout": 30
+          },
+          {
+            "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/land-local.sh\" --pull",
             "timeout": 30
           },
