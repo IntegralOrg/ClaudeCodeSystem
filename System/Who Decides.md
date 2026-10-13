@@ -19,7 +19,7 @@ When the same friction shows up across several sessions (it keeps forgetting a r
 - a guidance page in `System/`,
 - its own list of recurring themes in `_generated/Themes.md`.
 
-Every fix is one change, logged with its reason in `_generated/vault-hygiene/audit-log.md`, and saved as its own commit, so any one of them can be undone. The next night's run checks whether the fix held; a fix that did not hold is tried again differently, not marked done.
+Every fix is one change, logged with its reason in `_generated/vault-hygiene/audit-log.md` and saved into your vault's history by the same landing that saves your notes, so any one of them can be undone. The next night's run checks whether the fix held; a fix that did not hold is tried again differently, not marked done. This tuning step is part of the nightly run; if your system is older than it, `/update` brings it in.
 
 ## What it sends to your contact
 
