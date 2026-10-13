@@ -6,6 +6,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-13] - Local landing: a conflict never rewrites your files
+
+### Fixed
+- **`scripts/land-local.sh`** logged "working tree untouched" on a conflict, but `git rebase` checks out upstream before it can see the conflict and `git rebase --abort` rewrites the tree again, so every retry touched every file that differed. In a synced folder each touch can leave the original missing and a numbered copy beside it. Now a rejected push first predicts the merge with `git merge-tree` (no working tree involved): a predicted conflict keeps the local commit, leaves the files and `main` alone, and logs `conflict predicted: <n> file(s): <paths>`. A clean prediction rebases and pushes as before; a rebase that still conflicts (another push raced in) is aborted once, never retried in a loop.
+- **Synced folders** (iCloud, Dropbox, OneDrive, Google Drive): `land-local.sh` never rebases there. The edits are committed on the computer, `rebase skipped: synced folder` is logged, and the next session says so. Detection reuses `scripts/hooks/guard_vault_path.py`.
+- **`scripts/hooks/landing_health.py`**: the conflict notice now carries the Git Autopilot rule 6 union rule in one sentence, so the next session resolves the conflict the documented way, and a synced-folder skip gets its own notice pointing at moving the vault (`System/Adding Your Computer.md`).
+
+### Added
+- Tests in `scripts/tests/test_land_local.py` (same line edited on both sides: no rebase, every file's content, inode and mtime unchanged, log line present, also with the pre-2.38 prediction; different lines: rebase and push; a race after a clean prediction aborts once; a vault under a synced folder commits but never rebases) and `test_landing_health.py`.
+
+### In an existing vault
+1. Take `scripts/land-local.sh`, `scripts/hooks/landing_health.py` and `scripts/hooks/README.md` from the template.
+2. If the vault sits inside iCloud, Dropbox, OneDrive or Google Drive, move it out (`System/Adding Your Computer.md`, step 2); until then local edits that meet newer changes from another device stay on the computer and are reported at session start.
+
 ## [2026-10-13] - Cloud landing: land what the session changed, never what the container forgot
 
 ### Fixed
