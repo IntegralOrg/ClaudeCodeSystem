@@ -357,7 +357,8 @@ def test_company_github_organization_doc_covers_setup_move_and_offboarding():
     has(text, "What it is", "Our recommendation", "Team plan", "Exactly two", "Two-factor", "No permission", "Admin",
         "third-party access", "GitHub CLI", "Claude GitHub app", "No branch protection", "brain-<GitHub username>",
         "Transfer ownership", "retarget --to", "land-local.sh --final", "When someone leaves", "only `origin`",
-        "Enterprise Cloud", "create each person's vault yourself", "gitleaks git")
+        "Enterprise Cloud", "create each person's vault yourself", "gitleaks git . --redact", "--name-only")
+    assert "git log -p" not in text          # the pre-transfer scan never prints a credential into the conversation
     assert "install the Claude GitHub app on it themselves" not in text   # repo admins cannot; owners install it
 
 
