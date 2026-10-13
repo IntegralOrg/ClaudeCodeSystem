@@ -426,6 +426,38 @@ def test_predicted_conflict_never_rebases_or_touches_the_working_tree(tmp_path, 
 
 
 @pytest.mark.parametrize("legacy", ["", "1"])
+def test_modify_delete_conflict_is_predicted(tmp_path, legacy):
+    # No text conflict marker exists for a file one side deleted and the other edited.
+    w = seeded_world(tmp_path / "w")
+    a, b = w["a"], w["b"]
+    git(b, "rm", "-q", "data.txt"); git(b, "commit", "-q", "-m", "rm"); git(b, "push", "-q", "origin", "main")
+    edit_line(a, 4, "a")
+    tip = origin_tip(w)
+    before = tree_fingerprint(a); time.sleep(0.05)
+    p = land(w, a, "--final", extra_env={"LAND_LOCAL_LEGACY_MERGE_TREE": legacy})
+    assert p.returncode == 0 and p.stdout == ""
+    assert tree_fingerprint(a) == before and origin_tip(w) == tip and not dirty(a)
+    assert "conflict predicted: 1 file(s): data.txt" in (a / "_generated" / "landing.log").read_text()
+    assert no_rebase_in_progress(a)
+
+
+def test_synced_folder_check_failure_never_rebases(tmp_path):
+    # Fail closed: when the synced-folder check cannot run, there is no rebase.
+    w = seeded_world(tmp_path / "w")
+    a, b = w["a"], w["b"]
+    edit_line(b, 1, "b"); land(w, b, "--final")
+    edit_line(a, 7, "a")
+    tip = origin_tip(w)
+    before = tree_fingerprint(a); time.sleep(0.05)
+    p = land(w, a, "--final", extra_env={"LAND_LOCAL_HOOKS_DIR": str(tmp_path / "nowhere")})
+    assert p.returncode == 0 and p.stdout == ""
+    assert tree_fingerprint(a) == before and origin_tip(w) == tip and not dirty(a)
+    log = (a / "_generated" / "landing.log").read_text()
+    assert "rebase skipped: could not check for a synced folder" in log
+    assert no_rebase_in_progress(a)
+
+
+@pytest.mark.parametrize("legacy", ["", "1"])
 def test_different_lines_rebase_and_push(tmp_path, legacy):
     w = seeded_world(tmp_path / "w")
     a, b = w["a"], w["b"]

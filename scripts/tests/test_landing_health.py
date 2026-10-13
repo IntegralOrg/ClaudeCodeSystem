@@ -92,6 +92,12 @@ def test_rebase_skipped_in_a_synced_folder_is_reported(tmp_path):
     assert run_hook(tmp_path) == (0, "")
 
 
+def test_rebase_skipped_because_the_check_failed_is_a_plain_failure(tmp_path):
+    write_log(tmp_path, ["2026-10-08 10:00:00 rebase skipped: could not check for a synced folder (see _generated/landing-git.log)"])
+    rc, text = run_hook(tmp_path)
+    assert rc == 0 and "failed 1 times" in text and "sits in a synced folder" not in text
+
+
 def test_two_locked_lines_are_not_enough_and_success_resets(tmp_path):
     write_log(tmp_path, ["2026-10-08 10:00:00 locked: another landing is running", "2026-10-08 10:01:00 locked: another landing is running"])
     assert run_hook(tmp_path) == (0, "")

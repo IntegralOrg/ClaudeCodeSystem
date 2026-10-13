@@ -152,24 +152,28 @@ fi
 #  - Otherwise predict the merge first (git merge-tree, no working tree involved). A predicted
 #    conflict is logged with its files and the tree is left exactly as it is.
 #  - A rebase that still conflicts (another push raced in) is aborted once and never retried here.
+#  - Fail closed: when the synced-folder check or the prediction cannot run, there is no rebase.
 SCRIPT_DIR=$(cd "$(dirname "$0")" 2>/dev/null && pwd)
 [ -f "$SCRIPT_DIR/hooks/guard_vault_path.py" ] || SCRIPT_DIR="$REPO/scripts"  # $0 was relative to the old cwd
+HOOKS_DIR="${LAND_LOCAL_HOOKS_DIR:-$SCRIPT_DIR/hooks}"
+# Prints the synced service's name, or nothing when the folder is not synced. Exits non-zero when
+# the check itself cannot run (no python3, guard_vault_path.py missing): the caller then never rebases.
 synced_label() {
-  python3 - "$SCRIPT_DIR/hooks" "$REPO" 2>>"$GITLOG" <<'PY' || true
+  python3 - "$HOOKS_DIR" "$REPO" 2>>"$GITLOG" <<'PY'
 import sys
 sys.path.insert(0, sys.argv[1])
 from guard_vault_path import synced_service
 print(synced_service(sys.argv[2]) or "")
 PY
 }
-# merge-tree --write-tree needs git 2.38+; older git gets the trivial merge-tree and a marker grep.
+# merge-tree --write-tree needs git 2.38+; older git gets the trivial merge-tree, read conservatively.
 GIT_VER=$(git --version 2>/dev/null | sed -n 's/^git version \([0-9][0-9]*\)\.\([0-9][0-9]*\).*/\1 \2/p')
 GIT_MAJ=${GIT_VER% *}; GIT_MIN=${GIT_VER#* }
 MODERN_MT=0
 if [ -n "$GIT_VER" ] && { [ "$GIT_MAJ" -gt 2 ] || { [ "$GIT_MAJ" -eq 2 ] && [ "$GIT_MIN" -ge 38 ]; }; }; then MODERN_MT=1; fi
 [ -n "$LAND_LOCAL_LEGACY_MERGE_TREE" ] && MODERN_MT=0
-# Prints the files a merge of origin/main into HEAD would conflict on, one per line; prints nothing
-# when the merge is clean. Exit 2 when the prediction itself failed (treated as a conflict: no rebase).
+# Exit 0: the merge of origin/main into HEAD is clean. Exit 1: it conflicts; the conflicted files
+# are printed one per line (possibly none, when git names none). Exit 2: the prediction failed.
 predict_conflicts() {
   local out rc base
   if [ "$MODERN_MT" -eq 1 ]; then
@@ -177,31 +181,48 @@ predict_conflicts() {
     [ "$rc" -eq 0 ] && return 0
     [ "$rc" -eq 1 ] || return 2
     printf '%s\n' "$out" | sed '1d' | sed '/^$/d' | sort -u
-    return 0
+    return 1
   fi
   base=$(git merge-base HEAD origin/main 2>>"$GITLOG") || return 2
-  git merge-tree "$base" HEAD origin/main 2>>"$GITLOG" | awk '
-    /^  (base|our|their) +[0-7]+ [0-9a-f]+ / { p = $0; sub(/^  [a-z]+ +[0-7]+ [0-9a-f]+ /, "", p); cur = p; next }
-    /^[a-z]/ { cur = "" }
-    /<<<<<<< / { if (cur != "" && !(cur in seen)) { seen[cur] = 1; print cur } }'
-  return 0
+  out=$(git merge-tree "$base" HEAD origin/main 2>>"$GITLOG") || return 2
+  # Legacy output: a section header at column 0 ("changed in both", "removed in remote", ...), then
+  # "  base|our|their <mode> <sha> <path>" lines, then a diff. A text conflict shows a marker; a
+  # deletion against an edit, or a file added on both sides, shows none, so any such section counts.
+  out=$(printf '%s\n' "$out" | awk '
+    /^[a-z]/ { sect = $0; cur = ""; next }
+    /^  (base|our|their) +[0-7]+ [0-9a-f]+ / {
+      p = $0; sub(/^  [a-z]+ +[0-7]+ [0-9a-f]+ /, "", p); cur = p
+      if ((sect ~ /^removed in/ || sect ~ /^added in both/) && !(cur in seen)) { seen[cur] = 1; print cur }
+      next }
+    /<<<<<<< / { if (cur != "" && !(cur in seen)) { seen[cur] = 1; print cur } }')
+  [ -z "$out" ] && return 0
+  printf '%s\n' "$out"
+  return 1
 }
 
-SYNCED=$(synced_label)
+SYNCED=$(synced_label); src=$?
 for i in 1 2 3; do
   if git push -q origin main >>"$GITLOG" 2>&1; then log "landed on main (attempt $i)"; exit 0; fi
   git fetch -q origin main >>"$GITLOG" 2>&1
+  if [ "$src" -ne 0 ]; then
+    log "rebase skipped: could not check for a synced folder (see _generated/landing-git.log); committed on this computer, not on main yet"
+    exit 0
+  fi
   if [ -n "$SYNCED" ]; then
     log "rebase skipped: synced folder ($SYNCED); committed on this computer, not on main yet"
     exit 0
   fi
   CONFLICTS=$(predict_conflicts); prc=$?
-  if [ "$prc" -ne 0 ] || [ -n "$CONFLICTS" ]; then
-    if [ "$prc" -ne 0 ]; then
-      log "conflict predicted: could not predict the merge (see _generated/landing-git.log); not rebased, working tree untouched"
+  if [ "$prc" -eq 2 ]; then
+    log "conflict predicted: could not predict the merge (see _generated/landing-git.log); not rebased, working tree untouched"
+    exit 0
+  fi
+  if [ "$prc" -eq 1 ]; then
+    if [ -z "$CONFLICTS" ]; then
+      log "conflict predicted: git named no file (see _generated/landing-git.log); not rebased, working tree untouched"
     else
       NC=$(printf '%s\n' "$CONFLICTS" | wc -l | tr -d ' ')
-      FILES=$(printf '%s\n' "$CONFLICTS" | head -n 20 | paste -sd ',' - | sed 's/,/, /g')
+      FILES=$(printf '%s\n' "$CONFLICTS" | head -n 20 | awk 'NR > 1 { printf ", " } { printf "%s", $0 }')
       log "conflict predicted: $NC file(s): $FILES; not rebased, working tree untouched"
     fi
     exit 0

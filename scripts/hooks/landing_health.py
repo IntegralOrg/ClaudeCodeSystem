@@ -87,8 +87,8 @@ def main(payload):
             failures.append(line)
     parts = list(refusals)
     fetch_fails = [l for l in failures if "fetch failed" in l]
-    synced_skips = [l for l in failures if "rebase skipped" in l]
-    failures = [l for l in failures if "fetch failed" not in l and "rebase skipped" not in l]
+    synced_skips = [l for l in failures if "rebase skipped: synced folder" in l]
+    failures = [l for l in failures if "fetch failed" not in l and "rebase skipped: synced folder" not in l]
     if synced_skips:
         parts.append(f"Landing skipped {len(synced_skips)} time(s) since {synced_skips[0][:19]} because this vault sits in a synced folder "
                      "(iCloud, Dropbox, OneDrive or Google Drive), where updating from GitHub would rewrite files and leave copies. "
