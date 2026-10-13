@@ -3,7 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DOCS = ["Setup Procedure", "How This Works", "Connecting Tools", "Routines", "Adding Your Computer", "Company GitHub Organization",
-        "Getting Help", "Updating", "Start"]
+        "Getting Help", "Updating", "Start", "Who Decides"]
 
 
 def read(name):
@@ -400,3 +400,36 @@ def test_drive_screen_names_the_pre_python_driver_and_the_changelog_ships_it():
     entry = log.split("## [2026-10-12]")[1].split("\n## [")[0]
     has(entry, "System/Start.md", "screenctl.js", "Start in Claude", "ORG_POLICY", "Superpowers", "Wispr Flow", "What changed:",
         "### In an existing vault")
+
+
+def test_who_decides_page_is_plain_and_names_the_records():
+    text = read("Who Decides")
+    has(text, "**What it is.**", "**Our recommendation.**", "## What your system fixes on its own", "## What it sends to your contact",
+        "## What it never asks you", "_generated/vault-hygiene/audit-log.md", "Work/Daily/", "names and counts",
+        "## What changes afterwards")
+    low = text.lower()
+    assert "tier 1" not in low and "tier 2" not in low          # tiers are internal vocabulary, never on the client page
+    has(text, "never the approver", "never asks you to approve", "never shows you a queue")
+    assert "skip" not in low
+    assert chr(0x2014) not in text
+
+
+def test_developing_has_the_decision_tiers_section():
+    text = (ROOT / "docs" / "DEVELOPING.md").read_text(encoding="utf-8")
+    sec = text[text.index("## Decision tiers"):]
+    has(sec, "The client is never the approver", "Tier 1", "Tier 2", "apply-and-log", "never propose-and-wait",
+        "audit-log.md", "routine", "error class", "count", "first and last date", "file paths",
+        "help_report.py", "routine-alerts.json", "once per reason per 7 days", "`/update`",
+        "numbered list of at most six plain lines", "System/Who Decides.md")
+    assert chr(0x2014) not in sec
+
+
+def test_claude_md_and_guides_point_at_who_decides():
+    text = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+    about = text[text.index("### How I Work"):text.index("### Git Autopilot")]
+    has(about, "System/Who Decides.md", "fixes", "your contact")
+    has(read("How This Works"), "System/Who Decides.md")
+    has((ROOT / "README.md").read_text(encoding="utf-8"), "Who%20Decides.md")
+    log = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    entry = log.split("## [2026-10-13] - Who decides")[1].split("\n## [")[0]
+    has(entry, "System/Who Decides.md", "### In an existing vault", "Decision tiers")

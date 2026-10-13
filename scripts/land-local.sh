@@ -5,9 +5,11 @@
 #
 # Rules: skip while a merge/rebase/cherry-pick/revert is in progress (never commit conflict markers);
 # ff-only pull first; add -A honoring .gitignore (never -f, so the credentials file never lands);
-# commit; push; on a rejected push rebase once (Markdown union-merges via .gitattributes); on any
-# conflict abort the rebase, keep the local commit, leave the working tree untouched, log, and let
-# the next Stop retry. Never force, never reset --hard. 60 s throttle (--final bypasses).
+# commit; push; on a rejected push predict the merge with git merge-tree first and rebase only when
+# it is clean (Markdown union-merges via .gitattributes). A predicted conflict keeps the local commit,
+# never touches the working tree, and logs `conflict predicted`; inside a synced folder there is no
+# rebase at all (`rebase skipped`); a rebase that still conflicts is aborted once, never looped.
+# The next session-start notice carries all three. Never force, never reset --hard. 60 s throttle (--final bypasses).
 # Single-flight lock (a lock older than 10 minutes is stale and removed).
 #
 # --pull (SessionStart hook): pull-only mode so a session opens on the latest main. Same guards as a
@@ -142,13 +144,102 @@ else
 fi
 [ "$(git rev-list --count origin/main..HEAD 2>>"$GITLOG")" -gt 0 ] || { log "nothing to push"; exit 0; }
 
-# 3. Push; on rejection rebase once and push again; a conflict aborts and keeps the local commit.
+# 3. Push; on rejection rebase and push again, but only when the rebase cannot touch the working tree
+# for nothing. A rebase checks out upstream before it can see a conflict, and its abort rewrites the
+# tree again; in a synced folder each rewrite can leave numbered copies beside the originals.
+#  - Synced folder (iCloud, Dropbox, OneDrive, Google Drive): never rebase. The commit stays on this
+#    computer and the session-start notice says so. Detection is guard_vault_path.py's, not a copy.
+#  - Otherwise predict the merge first (git merge-tree, no working tree involved). A predicted
+#    conflict is logged with its files and the tree is left exactly as it is.
+#  - A rebase that still conflicts (another push raced in) is aborted once and never retried here.
+#  - Fail closed: when the synced-folder check or the prediction cannot run, there is no rebase.
+SCRIPT_DIR=$(cd "$(dirname "$0")" 2>/dev/null && pwd)
+[ -f "$SCRIPT_DIR/hooks/guard_vault_path.py" ] || SCRIPT_DIR="$REPO/scripts"  # $0 was relative to the old cwd
+HOOKS_DIR="${LAND_LOCAL_HOOKS_DIR:-$SCRIPT_DIR/hooks}"
+# Prints the synced service's name, or nothing when the folder is not synced. Exits non-zero when
+# the check itself cannot run (no python3, guard_vault_path.py missing): the caller then never rebases.
+synced_label() {
+  python3 - "$HOOKS_DIR" "$REPO" 2>>"$GITLOG" <<'PY'
+import sys
+sys.path.insert(0, sys.argv[1])
+from guard_vault_path import synced_service
+print(synced_service(sys.argv[2]) or "")
+PY
+}
+# merge-tree --write-tree needs git 2.38+; older git gets the trivial merge-tree, read conservatively.
+GIT_VER=$(git --version 2>/dev/null | sed -n 's/^git version \([0-9][0-9]*\)\.\([0-9][0-9]*\).*/\1 \2/p')
+GIT_MAJ=${GIT_VER% *}; GIT_MIN=${GIT_VER#* }
+MODERN_MT=0
+if [ -n "$GIT_VER" ] && { [ "$GIT_MAJ" -gt 2 ] || { [ "$GIT_MAJ" -eq 2 ] && [ "$GIT_MIN" -ge 38 ]; }; }; then MODERN_MT=1; fi
+[ -n "$LAND_LOCAL_LEGACY_MERGE_TREE" ] && MODERN_MT=0
+# Exit 0: the merge of origin/main into HEAD is clean. Exit 1: it conflicts; the conflicted files
+# are printed one per line (possibly none, when git names none). Exit 2: the prediction failed.
+predict_conflicts() {
+  local out rc base
+  if [ "$MODERN_MT" -eq 1 ]; then
+    out=$(git merge-tree --write-tree --name-only --no-messages origin/main HEAD 2>>"$GITLOG"); rc=$?
+    [ "$rc" -eq 0 ] && return 0
+    [ "$rc" -eq 1 ] || return 2
+    printf '%s\n' "$out" | sed '1d' | sed '/^$/d' | sort -u
+    return 1
+  fi
+  base=$(git merge-base HEAD origin/main 2>>"$GITLOG") || return 2
+  # The legacy merge-tree has no rename detection, so a rename on either side is an uncertain
+  # prediction: report the renamed files as conflicts and do not rebase.
+  local tip changes renamed=""
+  for tip in HEAD origin/main; do
+    changes=$(git diff --name-status --find-renames "$base" "$tip" 2>>"$GITLOG") || return 2
+    renamed="$renamed$(printf '%s\n' "$changes" | awk -F '\t' '$1 ~ /^R/ { print $2 }')
+"
+  done
+  renamed=$(printf '%s' "$renamed" | sed '/^$/d' | sort -u)
+  if [ -n "$renamed" ]; then printf '%s\n' "$renamed"; return 1; fi
+  out=$(git merge-tree "$base" HEAD origin/main 2>>"$GITLOG") || return 2
+  # Legacy output: a section header at column 0 ("changed in both", "removed in remote", ...), then
+  # "  base|our|their <mode> <sha> <path>" lines, then a diff. A text conflict shows a marker; a
+  # deletion against an edit, or a file added on both sides, shows none, so any such section counts.
+  out=$(printf '%s\n' "$out" | awk '
+    /^[a-z]/ { sect = $0; cur = ""; next }
+    /^  (base|our|their) +[0-7]+ [0-9a-f]+ / {
+      p = $0; sub(/^  [a-z]+ +[0-7]+ [0-9a-f]+ /, "", p); cur = p
+      if ((sect ~ /^removed in/ || sect ~ /^added in both/) && !(cur in seen)) { seen[cur] = 1; print cur }
+      next }
+    /<<<<<<< / { if (cur != "" && !(cur in seen)) { seen[cur] = 1; print cur } }')
+  [ -z "$out" ] && return 0
+  printf '%s\n' "$out"
+  return 1
+}
+
+SYNCED=$(synced_label); src=$?
 for i in 1 2 3; do
   if git push -q origin main >>"$GITLOG" 2>&1; then log "landed on main (attempt $i)"; exit 0; fi
   git fetch -q origin main >>"$GITLOG" 2>&1
+  if [ "$src" -ne 0 ]; then
+    log "rebase skipped: could not check for a synced folder (see _generated/landing-git.log); committed on this computer, not on main yet"
+    exit 0
+  fi
+  if [ -n "$SYNCED" ]; then
+    log "rebase skipped: synced folder ($SYNCED); committed on this computer, not on main yet"
+    exit 0
+  fi
+  CONFLICTS=$(predict_conflicts); prc=$?
+  if [ "$prc" -eq 2 ]; then
+    log "conflict predicted: could not predict the merge (see _generated/landing-git.log); not rebased, working tree untouched"
+    exit 0
+  fi
+  if [ "$prc" -eq 1 ]; then
+    if [ -z "$CONFLICTS" ]; then
+      log "conflict predicted: git named no file (see _generated/landing-git.log); not rebased, working tree untouched"
+    else
+      NC=$(printf '%s\n' "$CONFLICTS" | wc -l | tr -d ' ')
+      FILES=$(printf '%s\n' "$CONFLICTS" | head -n 20 | awk 'NR > 1 { printf ", " } { printf "%s", $0 }')
+      log "conflict predicted: $NC file(s): $FILES; not rebased, working tree untouched"
+    fi
+    exit 0
+  fi
   if ! git rebase -q origin/main >>"$GITLOG" 2>&1; then
     git rebase --abort >>"$GITLOG" 2>&1
-    log "conflict with origin/main; rebase aborted, working tree untouched, will retry next time"
+    log "conflict with origin/main after a clean prediction (a push raced in); rebase aborted once, will retry next time"
     exit 0
   fi
 done

@@ -105,6 +105,7 @@ ClaudeCodeSystem/
 │   ├── Adding Your Computer.md         # Claude Desktop, GitHub Desktop, clone to ~/Brain
 │   ├── Company GitHub Organization.md  # Vaults in a company's GitHub organization: setup, moving one in, offboarding
 │   ├── Getting Help.md                 # Where to ask, what to send
+│   ├── Who Decides.md                  # What the system fixes on its own, what goes to your contact, what it never asks you
 │   ├── Updating.md                     # How the vault takes a new version of the system
 │   └── routines/                       # Definitions: eod.md, vault-hygiene.md
 ├── Templates/Client Note.md            # Client profile skeleton
@@ -145,6 +146,7 @@ ClaudeCodeSystem/
 | [Adding Your Computer](System/Adding%20Your%20Computer.md) | Claude Desktop, GitHub Desktop, and cloning the vault to `~/Brain` |
 | [Company GitHub Organization](System/Company%20GitHub%20Organization.md) | Vaults in a company's GitHub organization: the owner's checklist, moving an existing vault in, what happens when someone leaves |
 | [Updating](System/Updating.md) | Taking a new version of the system without losing what you built |
+| [Who Decides](System/Who%20Decides.md) | What the system fixes on its own, what it sends to your contact, what it never asks you |
 | [Vault Design Guide](docs/vault-design-guide.md) | Folder structure, inbox system, CLAUDE.md design, skills, integrations, step-by-step build guide |
 | [Integration Architecture](docs/integration-architecture.md) | How Claude connects to your tools: direct connections, tool credentials, custom scripts, scheduled automation |
 | [Daily Workflow](docs/daily-workflow.md) | Today.md structure, /morning interactive review, EOD 5-phase pipeline, scheduled automation, tracking list pattern, carry-forward system |

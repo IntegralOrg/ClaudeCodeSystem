@@ -25,7 +25,7 @@ Download Claude Desktop from claude.com/download and sign in with your Claude ac
 1. Install **GitHub Desktop** (desktop.github.com). Sign in with the browser when it asks.
 2. Clone your vault repository (`brain` on your own account, or `brain-<your username>` in your company's organization; see `System/Company GitHub Organization.md`) to `~/Brain` (on Windows, `%USERPROFILE%\Brain`). GitHub Desktop's default clone location, `~/Documents/GitHub`, may be iCloud-synced when "Desktop & Documents" sync is on, so choose `~/Brain` yourself.
 
-> **Never clone it inside iCloud, OneDrive, Dropbox, or Google Drive.** Two syncers on one folder (the cloud drive and Git) produce conflict copies and can corrupt the repository. The vault warns at the start of every session until it is moved out of a synced folder.
+> **Never clone it inside iCloud, OneDrive, Dropbox, or Google Drive.** Two syncers on one folder (the cloud drive and Git) produce conflict copies and can corrupt the repository. The vault warns at the start of every session until it is moved out of a synced folder. While the folder is synced, your edits are still saved on your computer, but they may not reach GitHub, and the system tells you so at the start of the next session.
 
 ## 3. Open the folder in Claude Desktop
 

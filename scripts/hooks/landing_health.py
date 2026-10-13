@@ -11,7 +11,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import project_dir, run  # noqa: E402
 
 STAMPED = re.compile(r"^\d{4}-\d{2}-\d{2} \d\d:\d\d:\d\d ")
-FAILURE_WORDS = ("conflict", "push failed", "fetch failed", "commit failed", "mid-merge")
+FAILURE_WORDS = ("conflict", "push failed", "fetch failed", "commit failed", "mid-merge", "rebase skipped")
+UNION_RULE = ("Resolve it by Git Autopilot rule 6 in CLAUDE.md: in Markdown keep both sides (union) and then make the "
+              "frontmatter valid, the newest side wins in generated files, and structured config merges keys, keeping "
+              "main's value when the two sides cannot be ordered.")
 CLEARING_WORDS = ("landed on main", "nothing to push")  # HEAD equals origin/main: nothing is stranded
 DISABLED_RUN = 3
 
@@ -84,7 +87,13 @@ def main(payload):
             failures.append(line)
     parts = list(refusals)
     fetch_fails = [l for l in failures if "fetch failed" in l]
-    failures = [l for l in failures if "fetch failed" not in l]
+    synced_skips = [l for l in failures if "rebase skipped: synced folder" in l]
+    failures = [l for l in failures if "fetch failed" not in l and "rebase skipped: synced folder" not in l]
+    if synced_skips:
+        parts.append(f"Landing skipped {len(synced_skips)} time(s) since {synced_skips[0][:19]} because this vault sits in a synced folder "
+                     "(iCloud, Dropbox, OneDrive or Google Drive), where updating from GitHub would rewrite files and leave copies. "
+                     "The edits are saved on this computer but have not reached the repository. Tell the user this first; the fix is "
+                     "to move the vault out of the synced folder (System/Adding Your Computer.md, step 2).")
     if fetch_fails:
         parts.append(f"Landing could not fetch from GitHub {len(fetch_fails)} times since {fetch_fails[0][:19]}: cannot reach GitHub from this "
                      "computer (sign-in or network); see System/Adding Your Computer.md step 4. The edits on this computer have not "
@@ -93,7 +102,7 @@ def main(payload):
         first, last = failures[0], failures[-1]
         parts.append(f"Landing has failed {len(failures)} times since {first[:19]} (latest: {last[20:200]}). The edits on this "
                      "computer have not reached the repository. First, tell the user this, then read _generated/landing.log, "
-                     "run `git status` and `git log origin/main..HEAD --oneline`, and resolve the conflict by hand (never force, never reset --hard).")
+                     "run `git status` and `git log origin/main..HEAD --oneline`, and resolve the conflict by hand (never force, never reset --hard). " + UNION_RULE)
     note = disabled_note(lines)
     if note:
         parts.append(note)

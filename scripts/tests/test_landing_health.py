@@ -75,6 +75,29 @@ def test_repeatedly_on_other_branch_reports_disabled(tmp_path):
     assert rc == 0 and "Landing appears disabled: the last 4 attempts were on another branch" in text
 
 
+def test_conflict_notice_carries_the_union_rule(tmp_path):
+    write_log(tmp_path, ["2026-10-08 10:00:00 conflict predicted: 1 file(s): Notes.md; not rebased, working tree untouched"])
+    rc, text = run_hook(tmp_path)
+    assert rc == 0 and "failed 1 times" in text
+    assert "keep both sides (union)" in text and "Git Autopilot rule 6" in text
+
+
+def test_rebase_skipped_in_a_synced_folder_is_reported(tmp_path):
+    write_log(tmp_path, ["2026-10-08 09:00:00 landed on main (attempt 1)",
+                         "2026-10-08 10:00:00 rebase skipped: synced folder (iCloud); committed on this computer, not on main"])
+    rc, text = run_hook(tmp_path)
+    assert rc == 0 and "synced folder" in text and "System/Adding Your Computer.md" in text and "Tell the user" in text
+    assert "resolve the conflict" not in text
+    write_log(tmp_path, ["2026-10-08 10:00:00 rebase skipped: synced folder (iCloud)", "2026-10-08 11:00:00 landed on main (attempt 1)"])
+    assert run_hook(tmp_path) == (0, "")
+
+
+def test_rebase_skipped_because_the_check_failed_is_a_plain_failure(tmp_path):
+    write_log(tmp_path, ["2026-10-08 10:00:00 rebase skipped: could not check for a synced folder (see _generated/landing-git.log)"])
+    rc, text = run_hook(tmp_path)
+    assert rc == 0 and "failed 1 times" in text and "sits in a synced folder" not in text
+
+
 def test_two_locked_lines_are_not_enough_and_success_resets(tmp_path):
     write_log(tmp_path, ["2026-10-08 10:00:00 locked: another landing is running", "2026-10-08 10:01:00 locked: another landing is running"])
     assert run_hook(tmp_path) == (0, "")

@@ -21,6 +21,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 1. Take `System/Setup Procedure.md`, `System/Adding Your Computer.md`, `System/Company GitHub Organization.md`, and `scripts/setup/github.py` from the template.
 2. In `CLAUDE.md`, guideline 25 ("Answering questions about this system") adds "where a vault lives on GitHub (own account or the company's organization)" to the list of questions answered from `System/`; make that one edit and keep the rest of the guideline as it is.
 3. Nothing moves: a vault on a personal account stays there unless the owner asks for the move in `System/Company GitHub Organization.md`.
+## [2026-10-13] - Local landing: a conflict never rewrites your files
+
+### Fixed
+- **`scripts/land-local.sh`** logged "working tree untouched" on a conflict, but `git rebase` checks out upstream before it can see the conflict and `git rebase --abort` rewrites the tree again, so every retry touched every file that differed. In a synced folder each touch can leave the original missing and a numbered copy beside it. Now a rejected push first predicts the merge with `git merge-tree` (no working tree involved): a predicted conflict keeps the local commit, leaves the files and `main` alone, and logs `conflict predicted: <n> file(s): <paths>`. A clean prediction rebases and pushes as before; a rebase that still conflicts (another push raced in) is aborted once, never retried in a loop.
+- **Synced folders** (iCloud, Dropbox, OneDrive, Google Drive): `land-local.sh` never rebases there. The edits are committed on the computer, `rebase skipped: synced folder` is logged, and the next session says so. Detection reuses `scripts/hooks/guard_vault_path.py`. Both checks fail closed: if the synced-folder check or the merge prediction cannot run, there is no rebase.
+- **`scripts/hooks/landing_health.py`**: the conflict notice now carries the Git Autopilot rule 6 union rule in one sentence, so the next session resolves the conflict the documented way, and a synced-folder skip gets its own notice pointing at moving the vault (`System/Adding Your Computer.md`).
+
+### Added
+- Tests in `scripts/tests/test_land_local.py` (same line edited on both sides: no rebase, every file's content, inode and mtime unchanged, log line present, also with the pre-2.38 prediction; a file deleted on one side and edited or renamed on the other; a synced-folder check that cannot run; different lines: rebase and push; a race after a clean prediction aborts once; a vault under a synced folder commits but never rebases) and `test_landing_health.py`.
+
+### In an existing vault
+1. Take `scripts/land-local.sh`, `scripts/hooks/landing_health.py` and `scripts/hooks/README.md` from the template.
+2. If the vault sits inside iCloud, Dropbox, OneDrive or Google Drive, move it out (`System/Adding Your Computer.md`, step 2); until then local edits that meet newer changes from another device stay on the computer and are reported at session start.
+## [2026-10-13] - Who decides: the system fixes its own rules and sends the technical part to your contact
+
+### Added
+- **`System/Who Decides.md`**: the client page. The owner is never the approver. The system fixes its own rules, memory, command wording, guide pages, and themes when the same friction repeats, logs each fix with its reason in `_generated/vault-hygiene/audit-log.md`, one commit each, and the next nightly run confirms it held. Scripts, hooks, guard rules, credentials, routines, settings, and template bugs are never changed alone and never put to the owner: they go to the owner's contact as a report of names and counts only.
+- **`docs/DEVELOPING.md`, "Decision tiers"**: the rule the builds cite (Tier 1 apply-and-log, Tier 2 report), the Tier 2 package format, the channel order (the `Inbox/` report through `help_report.py` today; the owner's Gmail connector with the End of Day dedupe when connected), and the surfacing rule: every run that changes something ends with a numbered list of at most six plain lines.
+- **`CLAUDE.md`**: one bullet under "How I Work" saying the same, pointing at `System/Who Decides.md`. One line each in `README.md` and `System/How This Works.md`.
+- The nightly tuning step and system check that carry out Tier 1 ship in the next two updates; this entry is the rule and the client page they are built to.
+
+### In an existing vault
+1. Take `System/Who Decides.md` and `System/How This Works.md` from the template.
+2. In `CLAUDE.md`, under `### How I Work`, add the bullet that starts "**I fix my own rules, memory, and wording, and send anything technical to your contact.**" from the template's `CLAUDE.md`.
 
 ## [2026-10-13] - Cloud landing: land what the session changed, never what the container forgot
 
