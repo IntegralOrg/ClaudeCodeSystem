@@ -6,6 +6,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-13] - Cloud landing: land what the session changed, never what the container forgot
+
+### Fixed
+- **`scripts/cloud-land.sh`** defined "what this session changed" as the working tree versus the merge-base of HEAD and `origin/main`. A cloud container restored from a stale environment snapshot has a working tree older than main, so a 13-second read-only session landed 101 deletions and 109 reverts of four days of work. Now `--start` (first in the `SessionStart` hook) snapshots the working tree as a git tree before the agent does anything, and every landing diffs against that snapshot: a file the agent never touched is never landed. After a landing the snapshot is re-taken, so a second turn cannot clobber an edit someone made to the same file on main in between.
+- **Fallback with no snapshot** (the SessionStart hook did not run): deletions are refused and a delta of more than 25 files is refused entirely. Every refusal is recorded as `_generated/landing/cloud-refusals/<date>-<sid8>.json` and that marker is landed, so the loss is never silent.
+- **`scripts/hooks/landing_health.py`** reports any cloud refusal marker from the last three days at session start on every machine, naming the session, the count, the reason, and the record.
+- **`scripts/system-journal/cloud-journal.sh`** lands only its own session's journal line and evidence record instead of every file under `cloud/` and `evidence/`; a stale container was overwriting fresh records on main.
+
+### Added
+- Tests: `scripts/tests/test_cloud_land_snapshot.py` (stale tree lands nothing; edits after the snapshot land exactly; a second turn does not re-land; fallback refuses deletions and large deltas and records them), `test_cloud_journal_own_session.py`, and the refusal cases in `test_landing_health.py`.
+
 ## [2026-10-12] - Screen control from the first minute: one button, Trust, Enter
 
 ### Added

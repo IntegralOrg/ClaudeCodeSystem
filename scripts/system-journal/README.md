@@ -144,6 +144,9 @@ The scripts carry no hardcoded owner identity; everything resolves at runtime.
     `--settings <path>` targets a different file (for testing against a copy).
 - **Distiller model.** `SYSTEM_JOURNAL_MODEL` overrides the default (`claude-sonnet-5`). Cost is
   roughly nine cents per session on Sonnet.
+- **Own session only.** `cloud-journal.sh` lands only its own session's two files (the journal line
+  `cloud/<date>.<sid8>.json` and `evidence/<month>/<session id>.json`). A container can hold stale
+  copies of other sessions' records; copying everything overwrote fresh records on main once.
 - **Cloud git identity.** `cloud-journal.sh` and `cloud-land.sh` commit as the env
   `SYSTEM_JOURNAL_GIT_NAME` / `SYSTEM_JOURNAL_GIT_EMAIL`, then the repo's existing git identity,
   then a neutral placeholder bot identity.
