@@ -363,3 +363,169 @@ def test_session_start_runs_the_pull():
     hooks = [h for g in s["hooks"]["SessionStart"] for h in g["hooks"]]
     pull = [h for h in hooks if h["command"] == 'bash "$CLAUDE_PROJECT_DIR/scripts/land-local.sh" --pull']
     assert len(pull) == 1 and pull[0]["timeout"] == 30
+
+
+# --- conflict safety: predict before rebasing, never rewrite the working tree on a conflict ----
+
+LINES = "".join(f"line {i}\n" for i in range(1, 8))
+
+
+def tree_fingerprint(clone):
+    """Every working-tree file outside .git and _generated: content, inode and mtime. A rebase that
+    checks out upstream and then aborts rewrites files, which changes the inode or mtime even when
+    the content comes back identical (in a synced folder that is what leaves numbered copies)."""
+    out = {}
+    for p in sorted(clone.rglob("*")):
+        rel = p.relative_to(clone).as_posix()
+        if rel == ".git" or rel.startswith(".git/") or rel.startswith("_generated") or not p.is_file():
+            continue
+        st = p.stat()
+        out[rel] = (p.read_bytes(), st.st_ino, st.st_mtime_ns)
+    return out
+
+
+def seeded_world(base):
+    base.mkdir(parents=True, exist_ok=True)
+    w = make_world(base, union=False)
+    b = w["b"]; (b / "data.txt").write_text(LINES); land(w, b, "--final")
+    git(w["a"], "pull", "-q", "--ff-only", "origin", "main")
+    return w
+
+
+def edit_line(clone, n, who):
+    (clone / "data.txt").write_text(LINES.replace(f"line {n}\n", f"line {n} from {who}\n"))
+
+
+def dirty(clone):
+    """Uncommitted paths outside _generated/ (the fixture ignores only landing.log)."""
+    return [l for l in git(clone, "status", "--porcelain").splitlines() if "_generated" not in l]
+
+
+def no_rebase_in_progress(clone):
+    return not (clone / ".git" / "rebase-merge").exists() and not (clone / ".git" / "rebase-apply").exists()
+
+
+@pytest.mark.parametrize("legacy", ["", "1"])
+def test_predicted_conflict_never_rebases_or_touches_the_working_tree(tmp_path, legacy):
+    w = seeded_world(tmp_path / "w")
+    a, b = w["a"], w["b"]
+    edit_line(b, 4, "b"); land(w, b, "--final")
+    edit_line(a, 4, "a"); (a / "other.md").write_text("untouched\n")
+    tip = origin_tip(w)
+    before = tree_fingerprint(a); time.sleep(0.05)
+    p = land(w, a, "--final", extra_env={"LAND_LOCAL_LEGACY_MERGE_TREE": legacy})
+    assert p.returncode == 0 and p.stdout == ""
+    assert tree_fingerprint(a) == before  # no checkout and no abort: not one file rewritten
+    assert origin_tip(w) == tip  # main left alone
+    assert not dirty(a)  # the local edits are committed on this computer
+    assert git(a, "rev-list", "--count", "origin/main..HEAD") == "1"
+    log = (a / "_generated" / "landing.log").read_text()
+    assert "conflict predicted: 1 file(s): data.txt" in log and "rebase aborted" not in log
+    assert all(STAMPED.match(l) for l in log.splitlines())
+    assert no_rebase_in_progress(a)
+
+
+@pytest.mark.parametrize("legacy", ["", "1"])
+def test_modify_delete_conflict_is_predicted(tmp_path, legacy):
+    # No text conflict marker exists for a file one side deleted and the other edited.
+    w = seeded_world(tmp_path / "w")
+    a, b = w["a"], w["b"]
+    git(b, "rm", "-q", "data.txt"); git(b, "commit", "-q", "-m", "rm"); git(b, "push", "-q", "origin", "main")
+    edit_line(a, 4, "a")
+    tip = origin_tip(w)
+    before = tree_fingerprint(a); time.sleep(0.05)
+    p = land(w, a, "--final", extra_env={"LAND_LOCAL_LEGACY_MERGE_TREE": legacy})
+    assert p.returncode == 0 and p.stdout == ""
+    assert tree_fingerprint(a) == before and origin_tip(w) == tip and not dirty(a)
+    assert "conflict predicted: 1 file(s): data.txt" in (a / "_generated" / "landing.log").read_text()
+    assert no_rebase_in_progress(a)
+
+
+@pytest.mark.parametrize("legacy", ["", "1"])
+def test_rename_against_a_delete_is_predicted(tmp_path, legacy):
+    # The pre-2.38 merge-tree has no rename detection, so a rename is treated as an uncertain prediction.
+    w = seeded_world(tmp_path / "w")
+    a, b = w["a"], w["b"]
+    git(b, "rm", "-q", "data.txt"); git(b, "commit", "-q", "-m", "rm"); git(b, "push", "-q", "origin", "main")
+    git(a, "mv", "data.txt", "renamed.txt")
+    (a / "renamed.txt").write_text(LINES + "line 8 from a\n")
+    git(a, "add", "-A"); git(a, "commit", "-q", "-m", "rename")  # a local commit: no fast-forward
+    tip = origin_tip(w)
+    before = tree_fingerprint(a); time.sleep(0.05)
+    p = land(w, a, "--final", extra_env={"LAND_LOCAL_LEGACY_MERGE_TREE": legacy})
+    assert p.returncode == 0 and p.stdout == ""
+    assert tree_fingerprint(a) == before and origin_tip(w) == tip and not dirty(a)
+    assert "conflict predicted" in (a / "_generated" / "landing.log").read_text()
+    assert no_rebase_in_progress(a)
+
+
+def test_synced_folder_check_failure_never_rebases(tmp_path):
+    # Fail closed: when the synced-folder check cannot run, there is no rebase.
+    w = seeded_world(tmp_path / "w")
+    a, b = w["a"], w["b"]
+    edit_line(b, 1, "b"); land(w, b, "--final")
+    edit_line(a, 7, "a")
+    tip = origin_tip(w)
+    before = tree_fingerprint(a); time.sleep(0.05)
+    p = land(w, a, "--final", extra_env={"LAND_LOCAL_HOOKS_DIR": str(tmp_path / "nowhere")})
+    assert p.returncode == 0 and p.stdout == ""
+    assert tree_fingerprint(a) == before and origin_tip(w) == tip and not dirty(a)
+    log = (a / "_generated" / "landing.log").read_text()
+    assert "rebase skipped: could not check for a synced folder" in log
+    assert no_rebase_in_progress(a)
+
+
+@pytest.mark.parametrize("legacy", ["", "1"])
+def test_different_lines_rebase_and_push(tmp_path, legacy):
+    w = seeded_world(tmp_path / "w")
+    a, b = w["a"], w["b"]
+    edit_line(b, 1, "b"); land(w, b, "--final")
+    edit_line(a, 7, "a")
+    p = land(w, a, "--final", extra_env={"LAND_LOCAL_LEGACY_MERGE_TREE": legacy})
+    assert p.returncode == 0 and p.stdout == ""
+    log = (a / "_generated" / "landing.log").read_text()
+    assert "landed on main" in log and "conflict" not in log
+    git(a, "fetch", "-q", "origin"); text = git(a, "show", "origin/main:data.txt")
+    assert "line 1 from b" in text and "line 7 from a" in text
+    assert git(a, "rev-parse", "HEAD") == origin_tip(w)
+
+
+def test_rebase_conflict_after_a_clean_prediction_aborts_once_and_stops(tmp_path):
+    # The tips merge cleanly (the local history nets to no change on line 4) but replaying the first
+    # local commit conflicts: the race path. One abort, one log line, no retry loop.
+    w = seeded_world(tmp_path / "w")
+    a, b = w["a"], w["b"]
+    edit_line(b, 4, "b"); land(w, b, "--final")
+    edit_line(a, 4, "a"); git(a, "commit", "-q", "-am", "one")
+    (a / "data.txt").write_text(LINES); git(a, "commit", "-q", "-am", "two")
+    (a / "new.txt").write_text("n\n")
+    tip = origin_tip(w)
+    p = land(w, a, "--final")
+    assert p.returncode == 0 and p.stdout == ""
+    assert origin_tip(w) == tip
+    log = (a / "_generated" / "landing.log").read_text()
+    assert log.count("rebase aborted") == 1 and "conflict predicted" not in log and "conflict with origin/main" in log
+    assert no_rebase_in_progress(a)
+    assert (a / "new.txt").read_text() == "n\n" and not dirty(a)
+
+
+def test_synced_folder_commits_but_never_rebases(tmp_path):
+    w = seeded_world(tmp_path / "Library" / "Mobile Documents" / "com~apple~CloudDocs" / "vault")
+    a, b = w["a"], w["b"]
+    edit_line(b, 1, "b"); land(w, b, "--final")
+    edit_line(a, 7, "a")
+    tip = origin_tip(w)
+    before = tree_fingerprint(a); time.sleep(0.05)
+    p = land(w, a, "--final")
+    assert p.returncode == 0 and p.stdout == ""
+    assert tree_fingerprint(a) == before and origin_tip(w) == tip
+    assert not dirty(a) and git(a, "rev-list", "--count", "origin/main..HEAD") == "1"
+    assert "rebase skipped: synced folder" in (a / "_generated" / "landing.log").read_text()
+    assert no_rebase_in_progress(a)
+
+
+def test_synced_folder_still_lands_when_no_rebase_is_needed(tmp_path):
+    w = seeded_world(tmp_path / "Dropbox" / "vault")
+    a = w["a"]; (a / "n.md").write_text("n\n")
+    land(w, a, "--final")
+    assert "n.md" in landed(a) and "landed on main" in (a / "_generated" / "landing.log").read_text()
