@@ -6,6 +6,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-13] - Who decides: the system fixes its own rules and sends the technical part to your contact
+
+### Added
+- **`System/Who Decides.md`**: the client page. The owner is never the approver. The system fixes its own rules, memory, command wording, guide pages, and themes when the same friction repeats, logs each fix with its reason in `_generated/vault-hygiene/audit-log.md`, one commit each, and the next nightly run confirms it held. Scripts, hooks, guard rules, credentials, routines, settings, and template bugs are never changed alone and never put to the owner: they go to the owner's contact as a report of names and counts only.
+- **`docs/DEVELOPING.md`, "Decision tiers"**: the rule the builds cite (Tier 1 apply-and-log, Tier 2 report), the Tier 2 package format, the channel order (the `Inbox/` report through `help_report.py` today; the owner's Gmail connector with the End of Day dedupe when connected), and the surfacing rule: every run that changes something ends with a numbered list of at most six plain lines.
+- **`CLAUDE.md`**: one bullet under "How I Work" saying the same, pointing at `System/Who Decides.md`. One line each in `README.md` and `System/How This Works.md`.
+
+### In an existing vault
+1. Take `System/Who Decides.md` and `System/How This Works.md` from the template.
+2. In `CLAUDE.md`, under `### How I Work`, add the bullet that starts "**I fix my own rules, memory, and wording, and send anything technical to your contact.**" from the template's `CLAUDE.md`.
+
 ## [2026-10-13] - Cloud landing: land what the session changed, never what the container forgot
 
 ### Fixed

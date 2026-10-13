@@ -61,6 +61,10 @@ Two small hooks run at the start of every session (cloud or local) and speak fir
 
 When Gmail or Google Calendar is connected, End of Day adds a push outside the vault: an email to the address in the `## Owner` section of `CLAUDE.md`, or, if it cannot send, an all-day calendar event titled "Brain needs you: <reason>". It sends a given reason at most once a week.
 
+## Who decides
+
+Your system fixes its own rules, memory, and wording when the same friction repeats, logs each fix, and sends anything technical to your contact as a short report. You are never asked to approve anything. `System/Who Decides.md` has the full list.
+
 ## Getting a new version
 
 Type `/update` (or paste the prompt in the template's README). The agent takes the newest version of the system in full, keeps what you have built, and reports in a few lines. Details: `System/Updating.md`.

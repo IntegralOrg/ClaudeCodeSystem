@@ -58,6 +58,25 @@ That is it. **You do not need to register the command anywhere.** A client's vau
 
 ---
 
+## Decision tiers
+
+Who decides what in a client's system. The client-facing version is `System/Who Decides.md`; this section is the rule the builds cite. The intention: the owner of a vault is non-technical, so the system makes as many decisions as it can, routes what it must not decide to the people who maintain the template, and never routes anything to the owner as a decision.
+
+- **The client is never the approver.** No approve/skip, no cards, no queue. At most one plain line in the daily note or at the end of a run ("Fixed: it kept forgetting your time zone").
+- **Tier 1, the system decides and applies on its own:** rules in the vault's `CLAUDE.md`, memory files, wording in `.claude/commands/*.md` (and the `cowork-commands/` mirror), `System/` guide pages, and its own `_generated/Themes.md`. Every change is logged with its reason in `_generated/vault-hygiene/audit-log.md`, one undoable change each (the landing commit is the undo). Tier 1 is apply-and-log, never propose-and-wait: a proposal nobody applies is the failure mode, not an over-eager change. The next nightly run is what confirms a fix held; there is no Done button.
+- **Tier 2, the system must not decide alone, and it goes to the template maintainers, never the client:** scripts, hooks, guard rules, credentials, routines, `.claude/settings.json`, `.mcp.json`, and anything that looks like a bug in the template. Packaged as names and counts only.
+- **Tier 2 that is generic** (the same bug in every vault) is fixed once in the template and reaches every vault through `/update`. The maintainers fix the product; they never review one vault's system on a schedule.
+
+**The Tier 2 package format** (nothing else, ever): routine name, error class, count, first and last date, file paths. Never note content, never anything from a session marked `"private": true` in the System Journal (skip those records entirely), never a value that looks like a key.
+
+**The channel, in the order the system tries it:**
+1. Write the package into `Inbox/<date> report for your contact.md` through `scripts/setup/help_report.py` (it masks anything that looks like a key) and put one plain line in the daily note asking the owner to send it to their contact. This works in every vault with no setup; `System/Getting Help.md` describes it to the owner.
+2. When the owner's Gmail connector is connected, the same report can go directly, using the mechanism and dedupe End of Day already uses for its push (`.claude/commands/eod.md`, "Final Step: Status and Push Channel"): `_generated/routine-alerts.json`, once per reason per 7 days. Direct delivery to a support address, or through a support agent, is not yet chosen; until it is, step 1 is the channel and this section is where the choice gets written.
+
+**The surfacing rule:** every run that changes something ends with a numbered list of at most six plain lines saying what just happened. `/update` already does this; the nightly system check and the nightly tuning step do it for their runs.
+
+---
+
 ## Developing THIS repo (maintainers, not vault users)
 
 Everything above is for a maintainer changing this template. The engineering playbook (branching, review, the CodeRabbit loop) does **not** live in this repo: it is kept in one internal copy and linked from here by maintainers' own notes, so that copies never drift. Do not add a second copy of it here; vault-setup tooling is not where an engineering playbook belongs.
