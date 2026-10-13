@@ -29,6 +29,9 @@ FAKE_GH = textwrap.dedent(r'''
         print("! First copy your one-time code: ABCD-1234", flush=True)
         print("Open this URL to continue in your web browser: https://github.com/login/device", flush=True)
         time.sleep(1); s["signed_in"] = True; json.dump(s, open(st, "w")); sys.exit(0)
+    if a[:2] == ["api", "user/orgs"]:
+        for o in s.get("orgs", []): print(o)
+        sys.exit(0)
     if a[:2] == ["api", "user"]:
         print("pat"); sys.exit(0)
     if a[:2] == ["repo", "view"]:
@@ -154,7 +157,7 @@ def test_connect_can_use_another_name_after_repo_exists(world):
              repos={"pat/brain": {"empty": False, "visibility": "PRIVATE"}})
     rc, out = run(world, "connect", "--name", "brain-2")
     assert rc == 0, out
-    assert json.loads(world["state"].read_text())["created"] == "brain-2"
+    assert json.loads(world["state"].read_text())["created"] == "pat/brain-2"
 
 
 def _set_origin(w, url):
@@ -191,6 +194,79 @@ def test_connect_stops_on_an_organization_policy_without_retrying(world):
     assert rc == 3 and out.startswith("ORG_POLICY"), out
     assert "PUSH_FAILED" not in out
     assert not (world["tmp"] / "bare.git").exists()        # nothing was created or pushed
+
+
+def test_orgs_lists_the_organizations_the_account_belongs_to(world):
+    setstate(world, signed_in=True, orgs=["acme", "acme-labs"])
+    rc, out = run(world, "orgs")
+    assert rc == 0 and out.strip() == "ORGS acme acme-labs", out
+
+
+def test_orgs_prints_the_bare_token_when_there_are_none(world):
+    setstate(world, signed_in=True)
+    rc, out = run(world, "orgs")
+    assert rc == 0 and out.strip() == "ORGS", out
+
+
+def test_connect_owner_creates_in_the_organization_with_a_per_person_name(world):
+    setstate(world, signed_in=True, bare=str(world["tmp"] / "remote.git"))
+    rc, out = run(world, "connect", "--owner", "acme")
+    assert rc == 0 and out.splitlines()[-1].startswith("CONNECTED"), out
+    assert json.loads(world["state"].read_text())["created"] == "acme/brain-pat"
+
+
+def test_connect_owner_keeps_an_explicit_name(world):
+    setstate(world, signed_in=True, bare=str(world["tmp"] / "remote.git"))
+    rc, out = run(world, "connect", "--owner", "acme", "--name", "pat-vault")
+    assert rc == 0, out
+    assert json.loads(world["state"].read_text())["created"] == "acme/pat-vault"
+
+
+def test_connect_owner_reuses_an_empty_repo_the_admin_created(world):
+    bare = world["tmp"] / "remote.git"
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(bare)], check=True)
+    setstate(world, signed_in=True, repos={"acme/brain-pat": {"empty": True, "visibility": "PRIVATE"}})
+    world["env"]["SETUP_REMOTE_URL"] = str(bare)
+    rc, out = run(world, "connect", "--owner", "acme")
+    assert rc == 0, out
+    assert "created" not in json.loads(world["state"].read_text())
+    assert subprocess.run(["git", "-C", str(bare), "rev-parse", "main"], capture_output=True).returncode == 0
+
+
+def test_connect_owner_stops_on_an_organization_policy(world):
+    setstate(world, signed_in=True, bare=str(world["tmp"] / "bare.git"),
+             create_error="HTTP 403: Resource not accessible by integration")
+    rc, out = run(world, "connect", "--owner", "acme")
+    assert rc == 3 and out.startswith("ORG_POLICY"), out
+    assert not (world["tmp"] / "bare.git").exists()
+
+
+def test_retarget_points_origin_at_a_private_repo_in_the_organization(world):
+    old = world["tmp"] / "old.git"; new = world["tmp"] / "new.git"
+    for b in (old, new):
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(b)], check=True)
+    _set_origin(world, str(old))
+    setstate(world, signed_in=True, repos={"acme/brain-pat": {"empty": True, "visibility": "PRIVATE"}})
+    world["env"]["SETUP_REMOTE_URL"] = str(new)
+    rc, out = run(world, "retarget", "--to", "acme/brain-pat")
+    assert rc == 0 and out.startswith("RETARGETED"), out
+    origin = subprocess.run(["git", "-C", str(world["vault"]), "remote", "get-url", "origin"],
+                            capture_output=True, text=True).stdout.strip()
+    assert origin == str(new)
+
+
+def test_retarget_refuses_a_public_or_unknown_repo_and_keeps_origin(world):
+    old = world["tmp"] / "old.git"
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(old)], check=True)
+    _set_origin(world, str(old))
+    setstate(world, signed_in=True, repos={"acme/open": {"empty": True, "visibility": "PUBLIC"}})
+    rc, out = run(world, "retarget", "--to", "acme/open")
+    assert rc == 3 and out.startswith("REPO_NOT_PRIVATE"), out
+    rc, out = run(world, "retarget", "--to", "acme/missing")
+    assert rc == 3 and out.startswith("ORIGIN_UNVERIFIED"), out
+    origin = subprocess.run(["git", "-C", str(world["vault"]), "remote", "get-url", "origin"],
+                            capture_output=True, text=True).stdout.strip()
+    assert origin == str(old)
 
 
 def test_is_org_policy_matches_the_known_messages_only():

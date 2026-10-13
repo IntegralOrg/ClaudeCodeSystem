@@ -18,7 +18,7 @@ You need a Claude Max plan and a free GitHub account (setup helps you make one).
 
 By hand instead: [download the zip](https://github.com/IntegralOrg/ClaudeCodeSystem/archive/refs/heads/main.zip). On Windows, right-click it in Downloads and choose **Extract All**; Windows makes a folder with a second `ClaudeCodeSystem-main` folder inside it, and that inner one is the folder to choose. Open it in **Code**, click **Trust**, and send any message.
 
-No computer handy? Click **Use this template** (private, name it `brain`) and open it at claude.ai/code instead, and send any message; you can add a computer later (`System/Adding Your Computer.md`).
+No computer handy? Click **Use this template** (private, name it `brain`; in a company's GitHub organization, `brain-<your username>`, see `System/Company GitHub Organization.md`) and open it at claude.ai/code instead, and send any message; you can add a computer later (`System/Adding Your Computer.md`).
 Questions: ask your agent. It answers from `System/`.
 
 **Updating an existing vault.** In a session on your vault, type `/update`. If your vault is older than that command, paste this instead:
@@ -103,6 +103,7 @@ ClaudeCodeSystem/
 │   ├── Connecting Tools.md             # Per-tool connection click paths
 │   ├── Routines.md                     # Which routines are live, ids, schedules, how to create one by hand
 │   ├── Adding Your Computer.md         # Claude Desktop, GitHub Desktop, clone to ~/Brain
+│   ├── Company GitHub Organization.md  # Vaults in a company's GitHub organization: setup, moving one in, offboarding
 │   ├── Getting Help.md                 # Where to ask, what to send
 │   ├── Updating.md                     # How the vault takes a new version of the system
 │   └── routines/                       # Definitions: eod.md, vault-hygiene.md
@@ -142,6 +143,7 @@ ClaudeCodeSystem/
 | [Routines](System/Routines.md) | Which routines are live, their schedules and ids, how to create one by hand, what to do when one is stale |
 | [Connecting Tools](System/Connecting%20Tools.md) | Per-tool connection click paths: Gmail, Google Calendar, Slack, Fathom, ClickUp, and Claude plugins |
 | [Adding Your Computer](System/Adding%20Your%20Computer.md) | Claude Desktop, GitHub Desktop, and cloning the vault to `~/Brain` |
+| [Company GitHub Organization](System/Company%20GitHub%20Organization.md) | Vaults in a company's GitHub organization: the owner's checklist, moving an existing vault in, what happens when someone leaves |
 | [Updating](System/Updating.md) | Taking a new version of the system without losing what you built |
 | [Vault Design Guide](docs/vault-design-guide.md) | Folder structure, inbox system, CLAUDE.md design, skills, integrations, step-by-step build guide |
 | [Integration Architecture](docs/integration-architecture.md) | How Claude connects to your tools: direct connections, tool credentials, custom scripts, scheduled automation |

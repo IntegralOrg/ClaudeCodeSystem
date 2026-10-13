@@ -6,9 +6,13 @@ Each step checks first, so any step can be re-run:
   install-gh   download the GitHub CLI into the user's own folder (no admin rights)
   login-start  start the browser sign-in in the background, copy the one-time code, open the page
   login-wait   wait until the sign-in finishes
-  connect      make Git use gh for github.com, create the private repo `brain` (or reuse an empty one), push
+  orgs         list the GitHub organizations the signed-in account belongs to (ORGS a b c; bare ORGS when none)
+  connect      make Git use gh for github.com, create the private repo (or reuse an empty one), push.
+               Default: `brain` on the person's own account. With --owner <org>: `brain-<login>` in that
+               organization (or --name), so each person's vault has its own name there.
+  retarget     --to <owner/name>: point origin at a vault that was moved into an organization (private, reachable)
   verify       GIT_TERMINAL_PROMPT=0 git ls-remote origin
-Stdout: the first token is stable (GH_READY, CODE, SAY, SIGNED_IN, CONNECTED, REACHABLE, or a failure token).
+Stdout: the first token is stable (GH_READY, CODE, SAY, SIGNED_IN, ORGS, CONNECTED, RETARGETED, REACHABLE, or a failure token).
 Exit: 0 ok, 1 failed, 2 usage, 3 needs the person (LOGIN_NEEDED, REPO_EXISTS, REPO_NOT_PRIVATE, ORIGIN_UNVERIFIED, ORG_POLICY).
 Test hooks: SETUP_NO_UI=1 (no clipboard, no browser), SETUP_GH, SETUP_BIN_DIR, SETUP_REMOTE_URL.
 """
@@ -218,6 +222,11 @@ def cmd_connect(a):
         fail("LOGIN_NEEDED", "run login-start first", 3)
     configure_helper(gh)
     login = run([gh, "api", "user", "--jq", ".login"]).stdout.strip()
+    # Personal: github.com/<login>/brain. Organization (--owner): github.com/<org>/brain-<login>, so ten people's
+    # vaults in one organization do not collide; --name overrides either.
+    owner = a.owner or login
+    name = a.name or ("brain" if not a.owner else f"brain-{login}")
+    path = f"{owner}/{name}"
     origin = git(a.vault, "remote", "get-url", "origin")
     has_origin = origin.returncode == 0
     if has_origin:
@@ -230,9 +239,9 @@ def cmd_connect(a):
         if json.loads(view.stdout or "{}").get("visibility") != "PRIVATE":
             fail("REPO_NOT_PRIVATE", f"{url} is not private; nothing was pushed", 3)
     else:
-        view = run([gh, "repo", "view", f"{login}/{a.name}", "--json", "isEmpty,visibility"])
+        view = run([gh, "repo", "view", path, "--json", "isEmpty,visibility"])
         if view.returncode != 0:
-            r = run([gh, "repo", "create", a.name, "--private", "--source", a.vault, "--remote", "origin", "--push"],
+            r = run([gh, "repo", "create", path, "--private", "--source", a.vault, "--remote", "origin", "--push"],
                     cwd=a.vault, timeout=300)
             if r.returncode != 0:
                 err = r.stderr.strip()[:300] or "creating the repository failed"
@@ -242,11 +251,11 @@ def cmd_connect(a):
         else:
             info = json.loads(view.stdout or "{}")
             if info.get("visibility") != "PRIVATE":
-                fail("REPO_NOT_PRIVATE", f"github.com/{login}/{a.name} exists and is not private", 3)
+                fail("REPO_NOT_PRIVATE", f"github.com/{path} exists and is not private", 3)
             if not info.get("isEmpty"):
-                fail("REPO_EXISTS", f"github.com/{login}/{a.name} already has files; ask which name to use, "
+                fail("REPO_EXISTS", f"github.com/{path} already has files; ask which name to use, "
                                     "then run connect --name <new name>", 3)
-            url = os.environ.get("SETUP_REMOTE_URL") or f"https://github.com/{login}/{a.name}.git"
+            url = os.environ.get("SETUP_REMOTE_URL") or f"https://github.com/{path}.git"
             git(a.vault, "remote", "add", "origin", url)
     push = git(a.vault, "push", "-u", "origin", "main", timeout=300)
     if push.returncode != 0:
@@ -255,6 +264,45 @@ def cmd_connect(a):
             fail("ORG_POLICY", err, 3)
         fail("PUSH_FAILED", err)
     out("CONNECTED", git(a.vault, "remote", "get-url", "origin").stdout.strip())
+
+
+def cmd_orgs(a):
+    gh = need_gh()
+    if not signed_in(gh):
+        fail("LOGIN_NEEDED", "run login-start first", 3)
+    r = run([gh, "api", "user/orgs", "--paginate", "--jq", ".[].login"])
+    names = [n for n in (r.stdout or "").split() if n] if r.returncode == 0 else []
+    out("ORGS", " ".join(names))
+
+
+def cmd_retarget(a):
+    """After a vault repository was transferred into an organization: verify the new home is private, point origin
+    at it, and prove it is reachable. The old origin is kept whenever any check fails."""
+    gh = need_gh()
+    if not signed_in(gh):
+        fail("LOGIN_NEEDED", "run login-start first", 3)
+    if not a.to or a.to.count("/") != 1:
+        fail("USAGE", "retarget needs --to <owner/name>", 2)
+    configure_helper(gh)
+    view = run([gh, "repo", "view", a.to, "--json", "visibility"])
+    if view.returncode != 0:
+        fail("ORIGIN_UNVERIFIED", f"could not confirm github.com/{a.to} exists and is this person's to use", 3)
+    if json.loads(view.stdout or "{}").get("visibility") != "PRIVATE":
+        fail("REPO_NOT_PRIVATE", f"github.com/{a.to} is not private; origin unchanged", 3)
+    url = os.environ.get("SETUP_REMOTE_URL") or f"https://github.com/{a.to}.git"
+    old = git(a.vault, "remote", "get-url", "origin")
+    if old.returncode == 0:
+        git(a.vault, "remote", "set-url", "origin", url)
+    else:
+        git(a.vault, "remote", "add", "origin", url)
+    r = git(a.vault, "ls-remote", "origin", timeout=60)
+    if r.returncode != 0:
+        if old.returncode == 0:
+            git(a.vault, "remote", "set-url", "origin", old.stdout.strip())
+        else:
+            git(a.vault, "remote", "remove", "origin")
+        fail("UNREACHABLE", (r.stderr.strip() or "cannot reach the new repository; origin unchanged")[:300])
+    out("RETARGETED", url)
 
 
 def cmd_verify(a):
@@ -274,16 +322,21 @@ def cmd_status(a):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=["status", "install-gh", "login-start", "login-wait", "connect", "verify"])
+    ap.add_argument("step", choices=["status", "install-gh", "login-start", "login-wait", "orgs", "connect",
+                                     "retarget", "verify"])
     ap.add_argument("--vault", default=os.getcwd())
     ap.add_argument("--timeout", type=float, default=None)
-    ap.add_argument("--name", default="brain", help="connect: the repository name (default brain)")
+    ap.add_argument("--owner", default=None, help="connect: a GitHub organization to create the vault in")
+    ap.add_argument("--name", default=None,
+                    help="connect: the repository name (default brain, or brain-<login> with --owner)")
+    ap.add_argument("--to", default=None, help="retarget: the vault's new home as owner/name")
     a = ap.parse_args()
     a.vault = os.path.abspath(a.vault)
     if a.timeout is None:
         a.timeout = 30 if a.step == "login-start" else 600
     {"status": cmd_status, "install-gh": cmd_install_gh, "login-start": cmd_login_start,
-     "login-wait": cmd_login_wait, "connect": cmd_connect, "verify": cmd_verify}[a.step](a)
+     "login-wait": cmd_login_wait, "orgs": cmd_orgs, "connect": cmd_connect, "retarget": cmd_retarget,
+     "verify": cmd_verify}[a.step](a)
 
 
 if __name__ == "__main__":

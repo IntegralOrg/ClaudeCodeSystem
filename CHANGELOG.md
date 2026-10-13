@@ -6,6 +6,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-13] - A vault on your own account or in your company's GitHub organization
+
+### Added
+- **`scripts/setup/github.py`**: `connect --owner <organization>` creates the vault as `brain-<username>` in a company's GitHub organization (or reuses an empty private repository an owner created under that name); without `--owner` it is `brain` on the person's own account, as before. `orgs` lists the organizations the signed-in account belongs to. `retarget --to <owner/name>` points `origin` at a vault that was transferred into an organization, after confirming it is private and reachable, and keeps the old origin when any check fails.
+- **`System/Company GitHub Organization.md`**: when a vault belongs in the company's organization (the company pays for the seat), the owner's one-time checklist (two owners, two-factor, base permission none, admin per person on their own repository, the GitHub CLI approved under third-party access, the Claude GitHub app installed, no branch protection on vault repositories), the steps to move an existing vault in, and what happens when someone leaves.
+- Tests for the organization path, `orgs`, `retarget`, and the new document.
+
+### Changed
+- **Setup Procedure B3** asks where the vault should live only when the person's GitHub account belongs to an organization (`github.py orgs`), or takes the answer from a prepared brief's `github owner` field. `ORG_POLICY` now has two messages: with `--owner`, the organization has not allowed it yet (approve the GitHub CLI, or create the empty repository); without, the account is company-managed, so name the organization or use a personal account. **B4** names the organization in the Claude GitHub app step and says a non-owner's install is a request an owner approves.
+- **Adding Your Computer** and the README name the repository in both homes (`brain`, or `brain-<username>` in an organization).
+
+### In an existing vault
+1. Take `System/Setup Procedure.md`, `System/Adding Your Computer.md`, `System/Company GitHub Organization.md`, and `scripts/setup/github.py` from the template.
+2. In `CLAUDE.md`, guideline 25 ("Answering questions about this system") adds "where a vault lives on GitHub (own account or the company's organization)" to the list of questions answered from `System/`; make that one edit and keep the rest of the guideline as it is.
+3. Nothing moves: a vault on a personal account stays there unless the owner asks for the move in `System/Company GitHub Organization.md`.
+
 ## [2026-10-13] - Cloud landing: land what the session changed, never what the container forgot
 
 ### Fixed

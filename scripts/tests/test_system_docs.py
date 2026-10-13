@@ -2,7 +2,8 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DOCS = ["Setup Procedure", "How This Works", "Connecting Tools", "Routines", "Adding Your Computer", "Getting Help", "Updating", "Start"]
+DOCS = ["Setup Procedure", "How This Works", "Connecting Tools", "Routines", "Adding Your Computer", "Company GitHub Organization",
+        "Getting Help", "Updating", "Start"]
 
 
 def read(name):
@@ -337,6 +338,25 @@ def test_setup_procedure_stops_on_an_organization_policy():
     has(part_b, "ORG_POLICY", "personal GitHub account", "ask your admin")
     line = [l for l in part_b.splitlines() if "ORG_POLICY" in l][0]
     assert "do not retry" in line.lower()
+    has(line, "--owner", "third-party access", "Company GitHub Organization")   # two messages: org blocked vs managed account
+
+
+def test_setup_procedure_offers_the_company_organization_only_when_the_account_has_one():
+    text = read("Setup Procedure")
+    part_b = text[text.index("## Part B"):text.index("## 1. Open, then learn")]
+    has(part_b, "github.py orgs", "github owner", "Where should your vault live on GitHub?", "connect --owner",
+        "brain-<their GitHub username>", "ask nothing")
+    b4 = part_b[part_b.index("**B4."):]
+    has(b4, "organization", "request", "owner approves")
+    sec1 = text[text.index("## 1. Open, then learn"):text.index("## 2. Build the vault")]
+    has(sec1, "github owner", "prepared brief", "never asked here")
+
+
+def test_company_github_organization_doc_covers_setup_move_and_offboarding():
+    text = read("Company GitHub Organization")
+    has(text, "What it is", "Our recommendation", "Team plan", "Exactly two", "Two-factor", "No permission", "Admin",
+        "third-party access", "GitHub CLI", "Claude GitHub app", "No branch protection", "brain-<GitHub username>",
+        "Transfer ownership", "retarget --to", "land-local.sh --final", "When someone leaves", "only `origin`")
 
 
 def test_wispr_flow_is_offered_by_name_after_the_demo():
