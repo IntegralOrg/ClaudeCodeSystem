@@ -369,14 +369,15 @@ def check_needs_a_look(ctx):
 # ----------------------------------------------------------------------------- 3. deterministic pieces
 
 IMPORT_PROBE = r"""
-import importlib.util, json, sys
+import importlib.util, json, os, sys
 out = []
 for path in sys.argv[1:]:
+    name = os.path.basename(path)
     try:
-        spec = importlib.util.spec_from_file_location("probe_" + path.rsplit("/", 1)[-1][:-3], path)
+        spec = importlib.util.spec_from_file_location("probe_" + name[:-3], path)
         spec.loader.exec_module(importlib.util.module_from_spec(spec))
     except BaseException as e:
-        out.append([path.rsplit("/", 1)[-1], type(e).__name__])
+        out.append([name, type(e).__name__])
 print(json.dumps(out))
 """
 
@@ -792,13 +793,15 @@ def sort_key(f):
 
 def summary_lines(findings, today):
     problems = [f for f in findings if f["severity"] != "fine"]
-    if not problems:
+    errors = [f for f in findings if f["id"].startswith("check-error:")]  # fail open, but never hide an incomplete check
+    visible = problems + errors
+    if not visible:
         return ["1. Setup: no problems found; the next nightly run checks again (System/Who Decides.md)."]
-    shown = problems[:6] if len(problems) <= 6 else problems[:5]
+    shown = visible[:6] if len(visible) <= 6 else visible[:5]
     lines = [f"{i}. {f['title']}. Fix: {f['fix']} ({f['page']})." for i, f in enumerate(shown, 1)]
-    if len(problems) > 6:
-        lines.append(f"6. {len(problems) - 5} more are listed for your contact in _generated/system-check/{today}.json (System/Who Decides.md).")
-    elif len(lines) < 6:
+    if len(visible) > 6:
+        lines.append(f"6. {len(visible) - 5} more are listed for your contact in _generated/system-check/{today}.json (System/Who Decides.md).")
+    elif len(lines) < 6 and not errors:
         lines.append(f"{len(lines) + 1}. Everything else checked out; the next nightly run confirms whether a fix held (System/Who Decides.md).")
     return [l.replace("..", ".") for l in lines]
 
@@ -843,7 +846,11 @@ def run(root, today, template):
 
 def markdown(data):
     n = data["problems"]
-    return (f"# System check {data['date']}\n\nSetup: {n} problem{'' if n == 1 else 's'}.\n\n" + "\n".join(data["summary"])
+    status = f"Setup: {n} problem{'' if n == 1 else 's'}."
+    errors = sum(1 for f in data["findings"] if f["id"].startswith("check-error:"))
+    if errors:
+        status += f" Incomplete: {n_of(errors, 'check')} could not run."
+    return (f"# System check {data['date']}\n\n{status}\n\n" + "\n".join(data["summary"])
             + f"\n\nDetails for your contact (names and counts only): `_generated/system-check/{data['date']}.json`\n")
 
 

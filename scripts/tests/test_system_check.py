@@ -313,3 +313,18 @@ def test_nightly_run_and_opportunity_scan_run_the_check():
         assert re.search(r"^0\. .*scripts/system-check\.py", scan, re.M)
         eod = (ROOT / folder / "eod.md").read_text(encoding="utf-8")
         assert "Setup: N problems" in eod and "_generated/system-check/" in eod
+
+
+def test_a_check_that_cannot_run_is_shown_not_hidden(tmp_path, monkeypatch):
+    mod = load()
+    root = base_vault(tmp_path)
+
+    def boom(ctx):
+        raise RuntimeError("x")
+    monkeypatch.setattr(mod, "check_history", boom)
+    data = mod.run(root, mod.date(2026, 10, 14), None)
+    [err] = by_id(data, "check-error:history")
+    assert err["severity"] == "fine" and data["problems"] == 0
+    assert any("history check could not run" in line for line in data["summary"])
+    assert not any("Everything else checked out" in line for line in data["summary"])
+    assert "Incomplete: 1 check could not run." in mod.markdown(data)

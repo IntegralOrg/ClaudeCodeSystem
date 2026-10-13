@@ -135,3 +135,12 @@ def test_unreadable_refusal_marker_is_still_reported(tmp_path):
     (d / "2026-10-13-deadbeef.json").write_text("not json")
     text = run_hook_today(tmp_path, "2026-10-13")
     assert "Cloud session deadbeef" in text and "Tell the user" in text
+
+
+def test_a_malformed_today_override_still_reports_refusals(tmp_path):
+    from datetime import date
+    d = tmp_path / "_generated" / "landing" / "cloud-refusals"
+    d.mkdir(parents=True)
+    (d / f"{date.today().isoformat()}-abcdef12.json").write_text('{"reason": "r", "refused_deletions": 1, "refused_changes": 0}')
+    text = run_hook_today(tmp_path, "not-a-date")
+    assert "Cloud session abcdef12" in text

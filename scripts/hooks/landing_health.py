@@ -50,7 +50,10 @@ def refusal_markers(root, days=REFUSAL_DAYS, today=None):
         return []
     if today is None:
         forced = os.environ.get("LANDING_HEALTH_TODAY")
-        today = date.fromisoformat(forced) if forced else date.today()
+        try:
+            today = date.fromisoformat(forced) if forced else date.today()
+        except ValueError:
+            today = date.today()
     out = []
     for p in sorted(d.glob("*.json")):
         m = re.match(r"^(\d{4}-\d{2}-\d{2})-([0-9a-f]{8})\.json$", p.name)
