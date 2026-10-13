@@ -14,7 +14,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **`scripts/hooks/landing_health.py`**: the conflict notice now carries the Git Autopilot rule 6 union rule in one sentence, so the next session resolves the conflict the documented way, and a synced-folder skip gets its own notice pointing at moving the vault (`System/Adding Your Computer.md`).
 
 ### Added
-- Tests in `scripts/tests/test_land_local.py` (same line edited on both sides: no rebase, every file's content, inode and mtime unchanged, log line present, also with the pre-2.38 prediction; a file deleted on one side and edited on the other; a synced-folder check that cannot run; different lines: rebase and push; a race after a clean prediction aborts once; a vault under a synced folder commits but never rebases) and `test_landing_health.py`.
+- Tests in `scripts/tests/test_land_local.py` (same line edited on both sides: no rebase, every file's content, inode and mtime unchanged, log line present, also with the pre-2.38 prediction; a file deleted on one side and edited or renamed on the other; a synced-folder check that cannot run; different lines: rebase and push; a race after a clean prediction aborts once; a vault under a synced folder commits but never rebases) and `test_landing_health.py`.
 
 ### In an existing vault
 1. Take `scripts/land-local.sh`, `scripts/hooks/landing_health.py` and `scripts/hooks/README.md` from the template.

@@ -184,6 +184,16 @@ predict_conflicts() {
     return 1
   fi
   base=$(git merge-base HEAD origin/main 2>>"$GITLOG") || return 2
+  # The legacy merge-tree has no rename detection, so a rename on either side is an uncertain
+  # prediction: report the renamed files as conflicts and do not rebase.
+  local tip changes renamed=""
+  for tip in HEAD origin/main; do
+    changes=$(git diff --name-status --find-renames "$base" "$tip" 2>>"$GITLOG") || return 2
+    renamed="$renamed$(printf '%s\n' "$changes" | awk -F '\t' '$1 ~ /^R/ { print $2 }')
+"
+  done
+  renamed=$(printf '%s' "$renamed" | sed '/^$/d' | sort -u)
+  if [ -n "$renamed" ]; then printf '%s\n' "$renamed"; return 1; fi
   out=$(git merge-tree "$base" HEAD origin/main 2>>"$GITLOG") || return 2
   # Legacy output: a section header at column 0 ("changed in both", "removed in remote", ...), then
   # "  base|our|their <mode> <sha> <path>" lines, then a diff. A text conflict shows a marker; a
