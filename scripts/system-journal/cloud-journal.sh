@@ -109,7 +109,7 @@ cat >/dev/null 2>&1 || true
   done
   changed=0
   for f in "${OWN[@]}"; do
-    rel="${f#$REPO/}"
+    rel="${f#"$REPO"/}"
     if ! git cat-file -e "origin/main:$rel" 2>/dev/null || ! git show "origin/main:$rel" 2>/dev/null | cmp -s - "$f"; then
       changed=1; break
     fi
@@ -128,7 +128,7 @@ cat >/dev/null 2>&1 || true
     rmdir "$TMP"
     if git worktree add -q --detach "$TMP" origin/main 2>&1; then
       for f in "${OWN[@]}"; do
-        rel="${f#$REPO/}"
+        rel="${f#"$REPO"/}"
         mkdir -p "$TMP/$(dirname "$rel")"
         cp "$f" "$TMP/$rel" 2>/dev/null
       done

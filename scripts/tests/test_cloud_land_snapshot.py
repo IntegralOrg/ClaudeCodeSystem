@@ -127,6 +127,37 @@ def test_a_second_turn_does_not_reland_or_clobber(tmp_path):
     assert main_file(bare, "new.md") == "edited elsewhere\n" and main_file(bare, "b.md") == "turn 2\n"
 
 
+def test_start_after_a_failed_landing_retains_the_snapshot(tmp_path):
+    """/clear runs SessionStart again in the same container. If the last landing failed, a fresh
+    snapshot would make the unlanded edits look untouched; the existing snapshot must be kept."""
+    repo, bare, seed, newer = make_repos(tmp_path)
+    run(repo, tmp_path, "--start")
+    first = (tmp_path / "state" / ".cloud-land" / "start-tree").read_text()
+    (repo / "new.md").write_text("unlanded edit\n")
+    git(repo, "remote", "set-url", "origin", str(tmp_path / "nowhere.git"))   # the landing cannot reach origin
+    run(repo, tmp_path)
+    assert "fetch failed" in log(tmp_path) and git(bare, "rev-parse", "main") == newer
+    run(repo, tmp_path, "--start")                                             # /clear
+    assert (tmp_path / "state" / ".cloud-land" / "start-tree").read_text() == first
+    assert "retaining start snapshot" in log(tmp_path)
+    git(repo, "remote", "set-url", "origin", str(bare))
+    run(repo, tmp_path, "--final")
+    assert main_file(bare, "new.md") == "unlanded edit\n"
+
+
+def test_start_after_a_successful_landing_keeps_the_relanded_baseline(tmp_path):
+    repo, bare, seed, newer = make_repos(tmp_path)
+    run(repo, tmp_path, "--start")
+    (repo / "new.md").write_text("turn 1\n")
+    run(repo, tmp_path)
+    landed = (tmp_path / "state" / ".cloud-land" / "start-tree").read_text()
+    run(repo, tmp_path, "--start")                                             # /clear after a clean landing
+    assert (tmp_path / "state" / ".cloud-land" / "start-tree").read_text() == landed
+    run(repo, tmp_path, "--final")
+    assert log(tmp_path).splitlines()[-1].endswith("nothing to land")
+    assert git(bare, "log", "--oneline", "main").count("\n") == 2            # seed, newer, turn 1: nothing re-landed
+
+
 def test_without_a_snapshot_deletions_are_refused_and_recorded(tmp_path):
     repo, bare, seed, newer = make_repos(tmp_path)
     (repo / "new.md").write_text("by the agent\n")

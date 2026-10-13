@@ -158,6 +158,14 @@ PY
 
   if [ "$MODE" = "start" ]; then
     # 0. Start-of-session snapshot: the only trustworthy definition of "what this session changed".
+    # A snapshot is replaced only after a successful landing (below). `/clear` runs SessionStart again
+    # in the SAME container, so if the last landing failed (fetch or push), re-snapshotting here would
+    # make the unlanded edits look untouched and lose them; a valid existing snapshot is retained.
+    START=$(cat "$START_FILE" 2>/dev/null)
+    if [ -n "$START" ] && git cat-file -e "$START^{tree}" 2>/dev/null; then
+      echo "retaining start snapshot ${START:0:7} (last landing did not replace it)"
+      exit 0
+    fi
     START=$(snapshot_tree)
     if [ -z "$START" ]; then echo "start snapshot failed"; exit 0; fi
     printf '%s\n' "$START" > "$START_FILE"
