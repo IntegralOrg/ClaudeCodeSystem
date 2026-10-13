@@ -7,6 +7,7 @@ argument-hint: <session-id>
 
 Reactive, one session at a time. Input: `$ARGUMENTS` (a Claude Code session id; if empty, ask for one).
 
+0. Run `python3 scripts/system-check.py --no-write` first. If one of its problems explains the session (a key or connector missing, a hook switched off, saving to GitHub failing), that is the answer: name it in step 3 and skip the durable-change search for that part.
 1. Run `python3 scripts/system-journal/telemetry-stats.py --session $ARGUMENTS --json`. Note the failed calls and their `error_class`, repeated calls of the same tool on the same input (retries), and the slowest calls.
 2. Read the session's evidence file: `_generated/system-journal/evidence/<YYYY-MM>/$ARGUMENTS.json`. Use its turns and `errors` for context only; never quote personal content.
 3. Answer in at most 8 lines:
