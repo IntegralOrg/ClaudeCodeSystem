@@ -13,6 +13,8 @@ updated: 2026-10-10
 
 The agent answers anything covered in `System/`: how the system works, how to connect a tool, what a routine does, how to add a computer, and what to do next. If `System/` does not cover your question, it says so and points you here; it will not guess at setup advice.
 
+If Claude shows **Message flagged** instead of an answer, send "Continue setup" (or your question) again, in a new session if it repeats; every setup step checks what is already done and skips it, so nothing is lost. Setup uses a noticeable share of a session's usage allowance (about a tenth of a Pro plan's five-hour window for the two setup sessions); that is expected, and it is a one-time cost.
+
 ## 2. Dean, when the agent cannot fix it
 
 When a step fails and the agent cannot repair it (setup stopped partway, saving to GitHub keeps failing, the agent cannot drive the screen), the agent says so plainly, tells you to let Dean know, and writes a short report into `Inbox/` that you can send to Dean as is. The report holds:
