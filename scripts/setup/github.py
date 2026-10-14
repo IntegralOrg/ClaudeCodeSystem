@@ -5,7 +5,8 @@ Each step checks first, so any step can be re-run:
   status       one JSON line: gh path, signed in, origin, reachable
   install-gh   download the GitHub CLI into the user's own folder (no admin rights)
   login-start  start the browser sign-in in the background (with the workflow scope, so the autosync
-               workflow file can be pushed), copy the one-time code, open the page
+               workflow file can be pushed; an existing sign-in missing that scope gets a refresh the same way),
+               copy the one-time code, open the page
   login-wait   wait until the sign-in finishes
   logout       sign the current GitHub account out (the person confirmed it is the wrong one); run login-start again
   orgs         list the GitHub organizations the signed-in account belongs to (ORGS a b c; bare ORGS when none)
@@ -177,10 +178,24 @@ def signed_in(gh):
     return run([gh, "auth", "status", "-h", "github.com"]).returncode == 0
 
 
+def token_scopes(gh):
+    """The scopes of the current sign-in, from `gh auth status` (it prints them as 'repo', 'workflow', ...)."""
+    r = run([gh, "auth", "status", "-h", "github.com"])
+    return set(re.findall(r"'([^']+)'", (r.stdout or "") + (r.stderr or "")))
+
+
 def cmd_login_start(a):
     gh = need_gh()
     if signed_in(gh):
-        return out("SIGNED_IN", run([gh, "api", "user", "--jq", ".login"]).stdout.strip())
+        if "workflow" in token_scopes(gh):
+            return out("SIGNED_IN", run([gh, "api", "user", "--jq", ".login"]).stdout.strip())
+        # Signed in before setup, or by an older setup, without the workflow scope: the first push of
+        # .github/workflows/vault-autosync.yml would be rejected. One more device-code approval adds it.
+        argv = [gh, "auth", "refresh", "-h", "github.com", *LOGIN_SCOPES]
+    else:
+        # -s workflow: the first push carries .github/workflows/vault-autosync.yml, which GitHub refuses
+        # without that scope (seen live: a second device-code approval to add it).
+        argv = [gh, "auth", "login", "--web", "-h", "github.com", "-p", "https", *LOGIN_SCOPES]
     logdir = os.path.join(a.vault, "_generated", "setup")
     os.makedirs(logdir, exist_ok=True)
     log = os.path.join(logdir, "github-login.log")
@@ -189,9 +204,7 @@ def cmd_login_start(a):
         kw["creationflags"] = 0x00000008 | 0x00000200   # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
     else:
         kw["start_new_session"] = True
-    # -s workflow: the first push carries .github/workflows/vault-autosync.yml, which GitHub refuses
-    # without that scope (seen live: a second device-code approval to add it).
-    subprocess.Popen([gh, "auth", "login", "--web", "-h", "github.com", "-p", "https", *LOGIN_SCOPES], **kw)
+    subprocess.Popen(argv, **kw)
     deadline = time.time() + a.timeout
     while time.time() < deadline:
         with open(log, encoding="utf-8", errors="replace") as f:

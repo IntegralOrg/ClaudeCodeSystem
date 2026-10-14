@@ -80,3 +80,15 @@ def test_script_runs_the_cli_with_the_session_variables_unset(tmp_path):
     assert "args: plugin list" in p.stdout
     for v in SESSION_VARS:
         assert f"{v}=unset" in p.stdout, p.stdout
+
+
+def test_find_cli_ignores_a_process_whose_binary_is_not_the_users_own(tmp_path):
+    """ps can list another account's processes on a shared Mac; a path owned by someone else is never run."""
+    other = fake_cli(tmp_path / "elsewhere/claude-code/9.9.9/x/claude.app/Contents/MacOS/claude")
+    line = f"{other} --output-format stream-json"
+    assert cc.find_cli(system="Darwin", home=str(tmp_path), path_dirs=[], processes=[line], is_mine=lambda p: False) is None
+    assert cc.find_cli(system="Darwin", home=str(tmp_path), path_dirs=[], processes=[line], is_mine=lambda p: True) == str(other)
+
+
+def test_process_listing_is_limited_to_the_current_user():
+    assert "-xo" in cc.ps_command("Darwin") and "-axo" not in cc.ps_command("Darwin")

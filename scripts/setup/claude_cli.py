@@ -3,7 +3,7 @@
 
 Claude Desktop runs every session through its own copy of the command-line tool, but that copy is not on PATH,
 so `claude plugin ...` fails in a session on a computer where nobody installed the CLI by hand. The copy is
-findable: on a Mac it is the running process behind this session (`ps -axo command`), or the newest
+findable: on a Mac it is the running process behind this session (`ps -xo command`, this user's processes only), or the newest
 `~/Library/Application Support/Claude/claude-code/<version>/<hash>/claude.app/Contents/MacOS/claude`; on Windows
 it is the running process whose path contains `claude-code` and ends in `claude.exe`.
 
@@ -35,9 +35,29 @@ def _version_key(path):
     return tuple(int(x) for x in parts), os.path.getmtime(path)
 
 
-def _from_process_line(line, system):
+def is_mine(path):
+    """True when the current user owns the file (Windows has no uid: fall back to the home folder)."""
+    try:
+        if hasattr(os, "getuid"):
+            return os.stat(path).st_uid == os.getuid()
+    except OSError:
+        return False
+    return os.path.abspath(path).lower().startswith(os.path.expanduser("~").lower())
+
+
+def ps_command(system):
+    """The process listing: this user's processes only (`-x`, never `-a`), so a fake `claude` another account
+    started on a shared computer is never picked up."""
+    if system == "Windows":
+        return ["powershell.exe", "-NoProfile", "-Command",
+                "Get-Process | Where-Object { $_.Path } | ForEach-Object { $_.Path }"]
+    return ["ps", "-xo", "command"]
+
+
+def _from_process_line(line, system, is_mine=is_mine):
     """The bundled CLI path inside one `ps` command line, or None. The path may hold spaces
-    ("Application Support"), and a wrapper such as `disclaimer --pgroup --` may precede it."""
+    ("Application Support"), and a wrapper such as `disclaimer --pgroup --` may precede it.
+    Only a file the current user owns is accepted: the result gets run."""
     if system == "Darwin":
         end = line.find(MAC_TAIL)
         if end < 0:
@@ -54,10 +74,10 @@ def _from_process_line(line, system):
         starts += [m.start() for m in re.finditer(r"(?<![^\s\"'])[A-Za-z]:[\\/]", head)]
     start = max(starts) if starts else 0
     candidate = head[start:].strip("\"'")
-    return candidate if os.path.isfile(candidate) else None
+    return candidate if os.path.isfile(candidate) and is_mine(candidate) else None
 
 
-def find_cli(system=None, home=None, path_dirs=None, processes=None):
+def find_cli(system=None, home=None, path_dirs=None, processes=None, is_mine=is_mine):
     """Return the path of a working Claude CLI, or None. Order: PATH, the running process, the bundle on disk."""
     system = system or platform.system()
     home = home or os.path.expanduser("~")
@@ -67,11 +87,11 @@ def find_cli(system=None, home=None, path_dirs=None, processes=None):
     if on_path:
         return on_path
     for line in (processes if processes is not None else _process_lines(system)):
-        found = _from_process_line(line, system)
+        found = _from_process_line(line, system, is_mine)
         if found:
             return found
     if system == "Darwin":
-        bundled = [p for p in glob.glob(os.path.join(home, MAC_BUNDLE_GLOB)) if os.access(p, os.X_OK)]
+        bundled = [p for p in glob.glob(os.path.join(home, MAC_BUNDLE_GLOB)) if os.access(p, os.X_OK) and is_mine(p)]
         if bundled:
             return max(bundled, key=_version_key)
     return None
@@ -85,12 +105,7 @@ def _process_lines(system):
         with open(ps_file, encoding="utf-8", errors="replace") as f:
             return f.read().splitlines()
     try:
-        if system == "Windows":
-            r = subprocess.run(["powershell.exe", "-NoProfile", "-Command",
-                                "Get-Process | Where-Object { $_.Path } | ForEach-Object { $_.Path }"],
-                               capture_output=True, text=True, timeout=30)
-        else:
-            r = subprocess.run(["ps", "-axo", "command"], capture_output=True, text=True, timeout=30)
+        r = subprocess.run(ps_command(system), capture_output=True, text=True, timeout=30)
         return r.stdout.splitlines()
     except Exception:
         return []
