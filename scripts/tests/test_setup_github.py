@@ -23,9 +23,14 @@ FAKE_GH = textwrap.dedent(r'''
         print("gh version 9.9.9"); sys.exit(0)
     if a[:2] == ["auth", "status"]:
         sys.exit(0 if s.get("signed_in") else 1)
+    if a[:2] == ["auth", "logout"]:
+        if not s.get("signed_in"):
+            print("not logged in to any hosts", file=sys.stderr); sys.exit(1)
+        s["signed_in"] = False; json.dump(s, open(st, "w")); sys.exit(0)
     if a[:2] == ["auth", "login"]:
         if s.get("no_code"):
             time.sleep(60); sys.exit(1)
+        s["login_argv"] = a; json.dump(s, open(st, "w"))
         print("! First copy your one-time code: ABCD-1234", flush=True)
         print("Open this URL to continue in your web browser: https://github.com/login/device", flush=True)
         time.sleep(1); s["signed_in"] = True; json.dump(s, open(st, "w")); sys.exit(0)
@@ -293,3 +298,20 @@ def test_is_org_policy_matches_the_known_messages_only():
         assert gh.is_org_policy(msg), msg
     for msg in ("remote: Repository not found.", "could not resolve host github.com", ""):
         assert not gh.is_org_policy(msg), msg
+
+
+def test_login_start_asks_for_the_workflow_scope(world):
+    """The first push carries .github/workflows/vault-autosync.yml, which GitHub refuses without the workflow scope."""
+    rc, out = run(world, "login-start", "--timeout", "15")
+    assert rc == 0, out
+    argv = json.loads(world["state"].read_text())["login_argv"]
+    assert "-s" in argv and argv[argv.index("-s") + 1] == "workflow", argv
+
+
+def test_logout_signs_the_wrong_account_out_so_login_start_can_run_again(world):
+    setstate(world, signed_in=True)
+    rc, out = run(world, "logout")
+    assert rc == 0 and out.startswith("SIGNED_OUT"), out
+    assert not json.loads(world["state"].read_text()).get("signed_in")
+    rc, out = run(world, "logout")                 # nothing to sign out of: still fine, still re-runnable
+    assert rc == 0 and out.startswith("SIGNED_OUT"), out

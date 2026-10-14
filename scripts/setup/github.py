@@ -4,15 +4,17 @@
 Each step checks first, so any step can be re-run:
   status       one JSON line: gh path, signed in, origin, reachable
   install-gh   download the GitHub CLI into the user's own folder (no admin rights)
-  login-start  start the browser sign-in in the background, copy the one-time code, open the page
+  login-start  start the browser sign-in in the background (with the workflow scope, so the autosync
+               workflow file can be pushed), copy the one-time code, open the page
   login-wait   wait until the sign-in finishes
+  logout       sign the current GitHub account out (the person confirmed it is the wrong one); run login-start again
   orgs         list the GitHub organizations the signed-in account belongs to (ORGS a b c; bare ORGS when none)
   connect      make Git use gh for github.com, create the private repo (or reuse an empty one), push.
                Default: `brain` on the person's own account. With --owner <org>: `brain-<login>` in that
                organization (or --name), so each person's vault has its own name there.
   retarget     --to <owner/name>: point origin at a vault that was moved into an organization (private, reachable)
   verify       GIT_TERMINAL_PROMPT=0 git ls-remote origin
-Stdout: the first token is stable (GH_READY, CODE, SAY, SIGNED_IN, ORGS, CONNECTED, RETARGETED, REACHABLE, or a failure token).
+Stdout: the first token is stable (GH_READY, CODE, SAY, SIGNED_IN, SIGNED_OUT, ORGS, CONNECTED, RETARGETED, REACHABLE, or a failure token).
 Exit: 0 ok, 1 failed, 2 usage, 3 needs the person (LOGIN_NEEDED, REPO_EXISTS, REPO_NOT_PRIVATE, ORIGIN_UNVERIFIED, ORG_POLICY).
 Test hooks: SETUP_NO_UI=1 (no clipboard, no browser), SETUP_GH, SETUP_BIN_DIR, SETUP_REMOTE_URL.
 """
@@ -34,6 +36,7 @@ import zipfile
 
 PINNED_VERSION = "2.102.0"
 DEVICE_URL = "https://github.com/login/device"
+LOGIN_SCOPES = ["-s", "workflow"]
 CODE_RE = re.compile(r"\b([A-Z0-9]{4}-[A-Z0-9]{4})\b")
 SAY_LOGIN = ("SAY The code is already copied. On the GitHub page that just opened, paste it, click Continue, "
              "then click the green Authorize button. Come back here when GitHub says you are done.")
@@ -186,7 +189,9 @@ def cmd_login_start(a):
         kw["creationflags"] = 0x00000008 | 0x00000200   # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
     else:
         kw["start_new_session"] = True
-    subprocess.Popen([gh, "auth", "login", "--web", "-h", "github.com", "-p", "https"], **kw)
+    # -s workflow: the first push carries .github/workflows/vault-autosync.yml, which GitHub refuses
+    # without that scope (seen live: a second device-code approval to add it).
+    subprocess.Popen([gh, "auth", "login", "--web", "-h", "github.com", "-p", "https", *LOGIN_SCOPES], **kw)
     deadline = time.time() + a.timeout
     while time.time() < deadline:
         with open(log, encoding="utf-8", errors="replace") as f:
@@ -208,6 +213,17 @@ def cmd_login_wait(a):
             return out("SIGNED_IN", run([gh, "api", "user", "--jq", ".login"]).stdout.strip())
         time.sleep(3)
     fail("LOGIN_TIMEOUT", "the GitHub approval did not finish; run login-start again for a fresh code")
+
+
+def cmd_logout(a):
+    """The identity card said this is the wrong account: sign it out so login-start opens a fresh approval.
+    Already signed out counts as done, so the step can be re-run."""
+    gh = need_gh()
+    if signed_in(gh):
+        r = run([gh, "auth", "logout", "-h", "github.com"])
+        if r.returncode != 0 and signed_in(gh):
+            fail("LOGOUT_FAILED", (r.stderr.strip() or "could not sign out")[:300])
+    out("SIGNED_OUT")
 
 
 def configure_helper(gh):
@@ -327,7 +343,7 @@ def cmd_status(a):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=["status", "install-gh", "login-start", "login-wait", "orgs", "connect",
+    ap.add_argument("step", choices=["status", "install-gh", "login-start", "login-wait", "logout", "orgs", "connect",
                                      "retarget", "verify"])
     ap.add_argument("--vault", default=os.getcwd())
     ap.add_argument("--timeout", type=float, default=None)
@@ -340,7 +356,7 @@ def main():
     if a.timeout is None:
         a.timeout = 30 if a.step == "login-start" else 600
     {"status": cmd_status, "install-gh": cmd_install_gh, "login-start": cmd_login_start,
-     "login-wait": cmd_login_wait, "orgs": cmd_orgs, "connect": cmd_connect, "retarget": cmd_retarget,
+     "login-wait": cmd_login_wait, "logout": cmd_logout, "orgs": cmd_orgs, "connect": cmd_connect, "retarget": cmd_retarget,
      "verify": cmd_verify}[a.step](a)
 
 
