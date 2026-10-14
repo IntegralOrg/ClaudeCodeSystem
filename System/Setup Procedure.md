@@ -55,7 +55,7 @@ Two rules for every browser step in this part (the GitHub sign-in, the Claude Gi
 6. Run the landing script now (`bash scripts/land-local.sh` with the `--final` flag) and confirm the last line of `_generated/landing.log` is "landed on main" or "nothing to push". On Windows, if `bash` is not found in this session, run it through Git's own copy: `& "$env:LOCALAPPDATA\Programs\Git\bin\bash.exe" scripts/land-local.sh` with the `--final` flag (or `$env:ProgramFiles\Git\bin\bash.exe` for a machine-wide Git).
 **B4. Claude GitHub app.** Say, once, before this page (it is the first page that needs the browser signed in to Claude, which a Desktop-only person has not done): "Your browser will ask you to sign in to Claude once; use the same email as the app." Then open `https://github.com/apps/claude/installations/new` and say: "Choose your account (or your company's organization, if the vault lives there), pick **Only select repositories**, choose your vault repository, and click Install." Ask "Did you install it?" with the two answers from the Part B rule, **Installed** and **It did not work**, and bring Claude back to the front when they answer. In an organization where they are not an owner, GitHub turns the install into a request and emails the owners; say so, and that routines stay "not live" until an owner approves it. Routines need the app to read and save the vault from the cloud. Its proof is the first routine run (a routine stays "not live" until its first run reports).
 
-Then continue with section 1 (skip its opening line, and skip any field already in `_generated/setup/answers.md`), section 2 (build the vault from the answers), section 3 (routines: in Claude Desktop use the `/schedule` tools when the session has them; otherwise "Create a routine by hand" in `System/Routines.md`, offering to drive the screen through it), and sections 4 to 7. Delete `_generated/setup/answers.md` when you write the completion line.
+Then continue with section 1 (skip its opening line, and skip any field already in `_generated/setup/answers.md`), section 2 (build the vault from the answers), section 3 (routines: in Claude Desktop use the `/schedule` skill and `RemoteTrigger` when the session has them; otherwise "Create a routine by hand" in `System/Routines.md`, offering to drive the screen through it), and sections 4 to 7. Delete `_generated/setup/answers.md` when you write the completion line.
 
 ## 1. Open, then learn who this is for
 
@@ -90,27 +90,44 @@ Fields: owner name, role, company, company one-liner, tools, week shape (includi
 
 ## 3. Create the routines
 
-Call `mcp__Claude_Code_Remote__list_triggers` first. For each file in `System/routines/`: if a routine with the same name already exists, reuse it (update it with `update_trigger` if the schedule or prompt differs) instead of creating a duplicate; otherwise create it with `create_trigger`. The tools a cloud session exposes for this are `mcp__Claude_Code_Remote__create_trigger`, `list_triggers`, `get_trigger`, `update_trigger`, and `delete_trigger`. `create_trigger` takes a name, a cron expression (or `run_once_at` for a single run), the prompt, and a repository source. The name, schedule, time zone, and prompt come from the routine's file.
+There is one routine per file in `System/routines/`; the name, local schedule, time zone, model, and prompt come from that file. Two tool paths do the same job; use whichever this session has, local first.
 
-- **The cron expression is in UTC.** The routine files give the schedule in the owner's local time, with `timezone:` set to their IANA zone. Convert it to UTC before calling `create_trigger`, using the offset in force today. Example: 11 PM Monday to Friday in America/New_York is `0 3 * * 2-6` in UTC during daylight time (EDT) and `0 4 * * 2-6` in standard time (EST); the weekday field moves by one because 3 AM UTC is the next day. Write the UTC expression and the local intent in `System/Routines.md` (the fire time shifts by an hour at each daylight-saving change, see that file).
+**Local session (Claude Desktop): the `/schedule` skill and the `RemoteTrigger` tool** (actions `list`, `create`, `get`, `update`). This is the path that runs on a person's computer. Call `RemoteTrigger` `list` first. For each routine file: if a routine with the same name already exists, reuse it (`update` it when the schedule, model, or prompt differs) instead of creating a duplicate; otherwise `create` it with this body, filled from the file:
 
+```json
+{"name": "End of Day", "cron_expression": "7 3 * * 2-6", "enabled": true, "persist_session": false,
+ "job_config": {"ccr": {"environment_id": "<the environment id>",
+   "session_context": {"model": "claude-opus-5-5", "sources": [{"git_repository": {"url": "https://github.com/<owner>/<repo>"}}]},
+   "events": [{"data": {"uuid": "<a fresh UUID>", "session_id": "", "type": "user", "parent_tool_use_id": null,
+                        "message": {"role": "user", "content": "/eod"}}}]}}}
+```
+
+`cron_expression` is the file's schedule converted to UTC (below); `session_context.model` is the `model:` line from the routine's file (End of Day `claude-opus-5-5`, Vault Hygiene `claude-sonnet-5-5`), never the skill's default; `sources[0].git_repository.url` is this vault's repository (`git remote get-url origin`); the `events` message is the file's `prompt:`. `environment_id` is the person's cloud environment: `/schedule` or the `RemoteTrigger` `list` result names it (every account has a default one); if none exists yet, "Create a routine by hand" in `System/Routines.md` makes it. After every `create`, and for every routine you reuse, call `get` and confirm the result shows this repository under `sources`, the model from the file, and the UTC cron; fix a wrong field with `update`.
+
+**Cloud session: the `Claude_Code_Remote` tools.** Call `mcp__Claude_Code_Remote__list_triggers` first. For each file in `System/routines/`: if a routine with the same name already exists, reuse it (update it with `update_trigger` if the schedule, model, or prompt differs) instead of creating a duplicate; otherwise create it with `create_trigger`. The tools a cloud session exposes for this are `mcp__Claude_Code_Remote__create_trigger`, `list_triggers`, `get_trigger`, `update_trigger`, and `delete_trigger`. `create_trigger` takes a name, a cron expression (or `run_once_at` for a single run), the prompt, a model, and a repository source. The name, schedule, time zone, model, and prompt come from the routine's file.
+
+Rules for both paths:
+
+- **The cron expression is in UTC.** The routine files give the schedule in the owner's local time, with `timezone:` set to their IANA zone. Convert it to UTC before creating, using the offset in force today. Example: 11:07 PM Monday to Friday in America/New_York is `7 3 * * 2-6` in UTC during daylight time (EDT) and `7 4 * * 2-6` in standard time (EST); the weekday field moves by one because 3 AM UTC is the next day. The schedules sit at seven minutes past the hour on purpose: a routine set for :00 can start minutes late. Write the UTC expression and the local intent in `System/Routines.md` (the fire time shifts by an hour at each daylight-saving change, see that file).
+- **Pass `model` from the routine's file** and verify it in `get` (or `get_trigger`): a routine created from a skill's template default runs on the wrong model every night.
 - Create every routine with `persist_session: false` (each run is a fresh session, so nothing a previous run left in memory is relied on).
 - **Do not pass `connectors`.** The parameter is refused for some organizations ("not available for this organization"). The user attaches each routine's connectors by hand afterwards (see `System/Connecting Tools.md`); a run without them degrades and Routine health reports `connector-missing`.
-- **Attach this repository to every routine.** A routine created without a repository source runs in an empty container with no vault. Before creating, read the `create_trigger` tool's input schema and find the field that names the repository or sources (the name varies: `repository`, `sources`, `git_repository`, `repo_url`). Pass this repository's HTTPS URL in it.
+- **Attach this repository to every routine.** A routine created without a repository source runs in an empty container with no vault. In a cloud session, before creating, read the `create_trigger` tool's input schema and find the field that names the repository or sources (the name varies: `repository`, `sources`, `git_repository`, `repo_url`). Pass this repository's HTTPS URL in it.
 - **Verify each routine, created or reused.** After every `create_trigger`, and for every routine you reuse, call `get_trigger` and confirm the result lists this repository as a source (it appears under `session_request.config`, as `sources`). If a reused routine's source is missing, repair it with `update_trigger` when the tool has a field for it. If the tool has no such field, or the source list is still empty, call `delete_trigger` on that routine and use "Create a routine by hand" in `System/Routines.md` for it instead; write "created by hand" in its section.
 - **Environment:** create the routine on the current session's environment when the tool reports one, or without naming an environment when the tool allows. Use "Create a routine by hand" in `System/Routines.md` (it includes creating the environment and installing the Claude GitHub app) only when creation fails, or when a routine's first run reports no repository access; tell the user you will verify on the next run.
-- Record each routine's id and the environment id in `System/Routines.md`.
+- Record each routine's id, model, and the environment id in `System/Routines.md`.
 
-If these tools are not available in this session (a local session usually has no `Claude_Code_Remote` server), follow "Create a routine by hand" in `System/Routines.md` and tell the user you will verify on the next run. Mark every routine "not live" until its first run reports its keys present.
+If neither tool set is available in this session, follow "Create a routine by hand" in `System/Routines.md` (in Claude the page is Routines (the sidebar may say Scheduled)) and tell the user you will verify on the next run. Mark every routine "not live" until its first run reports its keys present.
 
-`System/Routines.md` is read by the vault's health hooks, so keep its shape exactly: one `## <title>` heading per routine using the `title:` from its file in `System/routines/` (`End of Day`, `Vault Hygiene`), and the **first** bullet under each heading is `- live_since: not live` (or `- live_since: YYYY-MM-DD` once the first run has reported its keys present). Then bullets for the schedule, what it needs (keys, connectors), the routine id, and the environment id:
+`System/Routines.md` is read by the vault's health hooks, so keep its shape exactly: one `## <title>` heading per routine using the `title:` from its file in `System/routines/` (`End of Day`, `Vault Hygiene`), and the **first** bullet under each heading is `- live_since: not live` (or `- live_since: YYYY-MM-DD` once the first run has reported its keys present). Then bullets for the schedule, the model, what it needs (keys, connectors), the routine id, and the environment id:
 
 ```markdown
 ## End of Day
 - live_since: not live
-- schedule: 11 PM Monday to Friday America/New_York, cron `0 3 * * 2-6` UTC (EDT; `0 4 * * 2-6` in standard time)
+- schedule: 11:07 PM Monday to Friday America/New_York, cron `7 3 * * 2-6` UTC (EDT; `7 4 * * 2-6` in standard time)
+- model: claude-opus-5-5
 - needs: connectors Gmail, Google Calendar; optional keys FATHOM_API_KEY, SLACK_TOKEN_WORKSPACE_A
-- routine id: <id from create_trigger, or "not created yet">
+- routine id: <id from create, or "not created yet">
 - environment id: <environment id, or "not created yet">
 ```
 

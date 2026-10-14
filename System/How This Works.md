@@ -19,8 +19,8 @@ updated: 2026-10-08
 
 | Routine | When | What it touches |
 |---|---|---|
-| End of Day | Weeknights, 11 PM your time | Reads your calendar and email (and calls and Slack when connected), writes `Work/Daily/<date>.md`, updates client pages, checks that the other routines ran, and reaches you outside the vault when something needs you |
-| Vault Hygiene | Every night, 1 AM your time | Backfills missing frontmatter, reports repeated frontmatter keys, finds duplicate subjects, marks canonical files, writes `_generated/vault-hygiene/audit-log.md` |
+| End of Day | Weeknights, 11:07 PM your time | Reads your calendar and email (and calls and Slack when connected), writes `Work/Daily/<date>.md`, updates client pages, checks that the other routines ran, and reaches you outside the vault when something needs you |
+| Vault Hygiene | Every night, 1:07 AM your time | Backfills missing frontmatter, reports repeated frontmatter keys, finds duplicate subjects, marks canonical files, writes `_generated/vault-hygiene/audit-log.md` |
 
 Their definitions are in `System/routines/`; whether each is live is in `System/Routines.md`.
 

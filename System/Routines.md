@@ -5,15 +5,16 @@ updated: 2026-10-08
 ---
 # Routines
 
-**What it is.** A routine is a scheduled job in your Claude account: at the set time it starts a fresh cloud session on this repository, runs one command, and writes the result back into the vault. Two routines ship with the system (End of Day and Vault Hygiene); their definitions (schedule, prompt, connectors, keys) are in `System/routines/`. Setup creates them and fills in the sections below. The vault's health hooks read this file, so keep each section's shape: one `## <title>` heading per routine, and the first bullet under it is `- live_since: <date>` or `- live_since: not live`.
+**What it is.** A routine is a scheduled job in your Claude account (the page in Claude is Routines (the sidebar may say Scheduled)): at the set time it starts a fresh cloud session on this repository, runs one command, and writes the result back into the vault. Two routines ship with the system (End of Day and Vault Hygiene); their definitions (schedule, model, prompt, connectors, keys) are in `System/routines/`. Setup creates them and fills in the sections below. The vault's health hooks read this file, so keep each section's shape: one `## <title>` heading per routine, and the first bullet under it is `- live_since: <date>` or `- live_since: not live`.
 
-**Schedules are in UTC.** Routine cron expressions run in UTC, not in your time zone. Setup converts each definition's local schedule (the `timezone:` in `System/routines/<name>.md`) to UTC when it creates the routine, using the offset in force that day. Example: 11 PM Monday to Friday in America/New_York is `0 3 * * 2-6` in daylight time and `0 4 * * 2-6` in standard time. The fire time therefore shifts by an hour at the daylight-saving change (11 PM becomes midnight, or 10 PM) until someone updates the routine's cron; End of Day computes its dates in your own zone, so its notes stay correct either way.
+**Schedules are in UTC.** Routine cron expressions run in UTC, not in your time zone. Setup converts each definition's local schedule (the `timezone:` in `System/routines/<name>.md`) to UTC when it creates the routine, using the offset in force that day. Example: 11:07 PM Monday to Friday in America/New_York is `7 3 * * 2-6` in daylight time and `7 4 * * 2-6` in standard time. The fire time therefore shifts by an hour at the daylight-saving change (11:07 PM becomes 12:07 AM, or 10:07 PM) until someone updates the routine's cron; End of Day computes its dates in your own zone, so its notes stay correct either way. The schedules sit at seven minutes past the hour on purpose: Claude warns that a routine set for :00 can start minutes late.
 
 A routine is **not live** until its first run has reported its keys present; that run then replaces `not live` with the date. The first run of a routine is also the proof that its schedule, environment, and GitHub app access all work.
 
 ## End of Day
 - live_since: not live
-- schedule: weeknights at 11 PM your time (`0 23 * * 1-5` local; created as the UTC equivalent, for example `0 3 * * 2-6` in New York daylight time)
+- schedule: weeknights at 11:07 PM your time (`7 23 * * 1-5` local; created as the UTC equivalent, for example `7 3 * * 2-6` in New York daylight time)
+- model: claude-opus-5-5
 - needs: connectors Gmail and Google Calendar; optional keys `FATHOM_API_KEY`, `SLACK_TOKEN_WORKSPACE_A`
 - routine id: not created yet
 - environment id: not created yet
@@ -22,7 +23,8 @@ Output: `Work/Daily/<date>.md`, including a **Routine health** section.
 
 ## Vault Hygiene
 - live_since: not live
-- schedule: every night at 1 AM your time (`0 1 * * *` local; created as the UTC equivalent)
+- schedule: every night at 1:07 AM your time (`7 1 * * *` local; created as the UTC equivalent)
+- model: claude-sonnet-5-5
 - needs: nothing
 - routine id: not created yet
 - environment id: not created yet
@@ -31,7 +33,9 @@ Output: `_generated/vault-hygiene/audit-log.md` (the newest `## YYYY-MM-DD` head
 
 ## How setup creates them
 
-In a cloud session the agent uses the tools `mcp__Claude_Code_Remote__create_trigger`, `list_triggers`, `get_trigger`, `update_trigger`, and `delete_trigger`. `create_trigger` takes a name, a cron expression (or `run_once_at` for a single run), the prompt, and a repository source. Two facts matter: the `connectors` parameter is refused for some organizations, so connectors are attached by hand afterwards (see `System/Connecting Tools.md`); and a routine created without a repository source runs in an empty container with no vault, so setup passes this repository's URL and then calls `get_trigger` to confirm the repository is listed as a source (under `session_request.config`); the same check applies to a routine that already existed and is reused. If a source is missing and cannot be repaired with `update_trigger`, setup deletes that routine and uses the by-hand steps below, noting "created by hand" in its section. Every routine is created with `persist_session: false` (each run is a fresh session) and on an **environment** whose Claude GitHub app covers this repository. If those tools are not available (a local session usually does not have them), use "Create a routine by hand" below.
+In a local session (Claude Desktop) the agent uses the `/schedule` skill and the `RemoteTrigger` tool (`list`, `create`, `get`, `update`): the create body carries the name, the cron expression in UTC, `persist_session: false`, the environment id, the model from the routine's file (`session_context.model`), this repository as a source (`sources[].git_repository.url`), and the prompt as the first message event; the body is written out in `System/Setup Procedure.md` section 3. After creating, the agent calls `get` and checks the repository, the model, and the cron.
+
+In a cloud session the agent uses the tools `mcp__Claude_Code_Remote__create_trigger`, `list_triggers`, `get_trigger`, `update_trigger`, and `delete_trigger`. `create_trigger` takes a name, a cron expression (or `run_once_at` for a single run), the prompt, and a repository source. Two facts matter: the `connectors` parameter is refused for some organizations, so connectors are attached by hand afterwards (see `System/Connecting Tools.md`); and a routine created without a repository source runs in an empty container with no vault, so setup passes this repository's URL and then calls `get_trigger` to confirm the repository is listed as a source (under `session_request.config`); the same check applies to a routine that already existed and is reused. If a source is missing and cannot be repaired with `update_trigger`, setup deletes that routine and uses the by-hand steps below, noting "created by hand" in its section. Every routine is created with `persist_session: false` (each run is a fresh session), with the `model:` from its file, and on an **environment** whose Claude GitHub app covers this repository. If neither tool set is available, use "Create a routine by hand" below.
 
 ## Create a routine by hand
 
@@ -43,9 +47,10 @@ Do this once per routine, in a browser on claude.ai.
 4. Schedule: the cron expression from that file, converted to UTC for your time zone (see "Schedules are in UTC" above).
 5. Repository: choose `brain` (this vault repository, whatever you named it), branch `main`. A routine with no repository runs in an empty container, so do not skip this step.
 6. Prompt: the `prompt:` line from that file (`/eod` or `/vault-audit`).
-7. Connectors: the ones listed under `connectors:` in that file (End of Day: Gmail and Google Calendar).
-8. Environment: the one you created or chose. Keys go in its **Environment variables** (see `System/Connecting Tools.md`).
-9. Save. Then record the routine's id and the environment id in the matching section above, and leave `live_since: not live` until its first run succeeds.
+7. Model: the `model:` line from that file (End of Day `claude-opus-5-5`, Vault Hygiene `claude-sonnet-5-5`), not the form's default.
+8. Connectors: the ones listed under `connectors:` in that file (End of Day: Gmail and Google Calendar).
+9. Environment: the one you created or chose. Keys go in its **Environment variables** (see `System/Connecting Tools.md`).
+10. Save. Then record the routine's id and the environment id in the matching section above, and leave `live_since: not live` until its first run succeeds.
 
 ## If a routine is stale or not live
 

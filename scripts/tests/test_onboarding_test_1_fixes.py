@@ -58,7 +58,7 @@ def test_routine_files_carry_a_model_and_an_off_the_hour_schedule():
     eod = (ROOT / "System" / "routines" / "eod.md").read_text(encoding="utf-8")
     hyg = (ROOT / "System" / "routines" / "vault-hygiene.md").read_text(encoding="utf-8")
     assert re.search(r"^model: claude-opus-5-5$", eod, re.M)
-    assert re.search(r"^model: claude-sonnet-5-5", hyg, re.M)
+    assert re.search(r"^model: claude-sonnet-5-5$", hyg, re.M)   # a bare value: check-keys.py and setup pass it to the API as is
     assert re.search(r'^schedule: "7 23 \* \* 1-5"$', eod, re.M)
     assert re.search(r'^schedule: "7 1 \* \* \*"$', hyg, re.M)
     has(eod, "11:07 PM")
