@@ -6,6 +6,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-14] - From the first live onboarding test: GitHub scope, routine models, the bundled CLI, plainer setup words
+
+### Added
+- **`scripts/setup/claude_cli.py`**: finds the Claude command line a Desktop-only install bundles (on PATH, behind the running session, or the newest copy inside the Claude app on a Mac) and prints `CLI <path>` or `CLI_MISSING`; `-- <args>` runs it with the session's own variables unset. Superpowers now installs through it, and the Settings, Plugins screen drive is only the fallback.
+- **`scripts/setup/github.py logout`**: signs the wrong GitHub account out so `login-start` can run again.
+- Tests: the workflow scope on `login-start`, `logout`, the CLI finder, and the setup documents below.
+
+### Changed
+- **`scripts/setup/github.py login-start`** asks for the `workflow` scope, so the first push (which carries `.github/workflows/vault-autosync.yml`) is not rejected and the person approves GitHub once, not twice.
+- **Setup Procedure, Part B**: after the GitHub sign-in a card confirms the signed-in account before the repository is created; every "did you do it" card offers **It did not work**; Claude is brought back to the front after each browser step; the Claude GitHub app step says the browser will ask for a Claude sign-in once; the signup line says what to do when the email already has an account.
+- **Routines**: `System/routines/eod.md` names its model (`claude-opus-5-5`) and runs at 11:07 PM; `vault-hygiene.md` names `claude-sonnet-5-5` and runs at 1:07 AM (seven past the hour, because a routine set for :00 can start minutes late; Opus for Vault Hygiene is the open decision, written in that file). Setup Procedure section 3 writes the local path first (`/schedule` with `RemoteTrigger` and the create body shape), passes the model from the file, and verifies it; `System/Routines.md` records the model per routine and that the sidebar may say Scheduled.
+- **Setup Procedure sections 1, 2, 7**: round 3 offers **Process automation** and makes "I do not plan the week" the quiet default; section 2 says every `CLAUDE.md` placeholder is replaced and rules 12 and 13 are rewritten from the week-shape and planning answers; section 7 and `System/Adding Your Computer.md` step 4 list the visible connectors, name the missing ones, and say before the session journal install that its end-of-session step is a paid `claude -p` call.
+- **`System/Start.md`**: the welcome warns about the macOS Allow prompts; the hand-off sentence is said two seconds before the new window opens.
+- **`System/Getting Help.md`** and "When a step fails": what to do when Claude shows **Message flagged** (send "Continue setup" again); setup's share of the usage allowance is expected.
+- **README and front door**: a Claude Pro or Max plan (the test ran on Pro).
+
+### In an existing vault
+1. Take `scripts/setup/`, `System/Setup Procedure.md`, `System/Start.md`, `System/Adding Your Computer.md`, `System/Getting Help.md`, and `System/How This Works.md` from the template.
+2. In `System/routines/eod.md` add `model: claude-opus-5-5` and set `schedule: "7 23 * * 1-5"`; in `System/routines/vault-hygiene.md` add `model: claude-sonnet-5-5` and set `schedule: "7 1 * * *"`. Keep your own `timezone:` lines.
+3. In `System/Routines.md`, add a `- model: <that model>` bullet under each routine's section and move the schedules to seven past the hour; then update each routine's cron and model in Claude (`RemoteTrigger` `update`, or the routine's edit form), keeping your routine ids.
+
+---
+
 ## [2026-10-13] - A vault on your own account or in your company's GitHub organization
 
 ### Added
