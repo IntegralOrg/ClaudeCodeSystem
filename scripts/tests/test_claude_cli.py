@@ -92,3 +92,16 @@ def test_find_cli_ignores_a_process_whose_binary_is_not_the_users_own(tmp_path):
 
 def test_process_listing_is_limited_to_the_current_user():
     assert "-xo" in cc.ps_command("Darwin") and "-axo" not in cc.ps_command("Darwin")
+
+
+def test_find_cli_applies_the_ownership_check_to_a_path_candidate_too(tmp_path):
+    shared = fake_cli(tmp_path / "shared-bin" / "claude")
+    dirs = [str(tmp_path / "shared-bin")]
+    assert cc.find_cli(system="Darwin", home=str(tmp_path), path_dirs=dirs, processes=[], is_mine=lambda p: False) is None
+    assert cc.find_cli(system="Darwin", home=str(tmp_path), path_dirs=dirs, processes=[], is_mine=lambda p: True) == str(shared)
+
+
+def test_is_mine_accepts_the_users_own_file_and_rejects_a_missing_one(tmp_path):
+    own = fake_cli(tmp_path / "bin" / "claude")
+    assert cc.is_mine(str(own))
+    assert not cc.is_mine(str(tmp_path / "nope"))

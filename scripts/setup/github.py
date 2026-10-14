@@ -7,7 +7,7 @@ Each step checks first, so any step can be re-run:
   login-start  start the browser sign-in in the background (with the workflow scope, so the autosync
                workflow file can be pushed; an existing sign-in missing that scope gets a refresh the same way),
                copy the one-time code, open the page
-  login-wait   wait until the sign-in finishes
+  login-wait   wait until the sign-in finishes, with the workflow scope in place
   logout       sign the current GitHub account out (the person confirmed it is the wrong one); run login-start again
   orgs         list the GitHub organizations the signed-in account belongs to (ORGS a b c; bare ORGS when none)
   connect      make Git use gh for github.com, create the private repo (or reuse an empty one), push.
@@ -218,11 +218,17 @@ def cmd_login_start(a):
     fail("LOGIN_NO_CODE", "GitHub did not answer; check the internet connection and run login-start again")
 
 
+def login_ready(gh):
+    """Signed in with the workflow scope. A sign-in without the scope is not done: the refresh that login-start
+    started is still waiting for its approval, and finishing now would send the first push to a rejection."""
+    return signed_in(gh) and "workflow" in token_scopes(gh)
+
+
 def cmd_login_wait(a):
     gh = need_gh()
     deadline = time.time() + a.timeout
     while time.time() < deadline:
-        if signed_in(gh):
+        if login_ready(gh):
             return out("SIGNED_IN", run([gh, "api", "user", "--jq", ".login"]).stdout.strip())
         time.sleep(3)
     fail("LOGIN_TIMEOUT", "the GitHub approval did not finish; run login-start again for a fresh code")

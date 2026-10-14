@@ -84,7 +84,7 @@ def find_cli(system=None, home=None, path_dirs=None, processes=None, is_mine=is_
     exe = "claude.exe" if system == "Windows" else "claude"
     path = os.pathsep.join(path_dirs) if path_dirs is not None else os.environ.get("PATH", "")
     on_path = shutil.which(exe, path=path) or (shutil.which("claude", path=path) if system == "Windows" else None)
-    if on_path:
+    if on_path and is_mine(on_path):      # the same rule as below: the result gets run, so only the user's own file
         return on_path
     for line in (processes if processes is not None else _process_lines(system)):
         found = _from_process_line(line, system, is_mine)

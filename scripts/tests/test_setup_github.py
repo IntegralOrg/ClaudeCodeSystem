@@ -334,6 +334,14 @@ def test_login_start_adds_the_workflow_scope_to_an_existing_sign_in(world):
     assert argv[:2] == ["auth", "refresh"] and "-s" in argv and argv[argv.index("-s") + 1] == "workflow", argv
     rc, out = run(world, "login-wait", "--timeout", "5")
     assert rc == 0 and "SIGNED_IN pat" in out
+    assert "workflow" in json.loads(world["state"].read_text())["scopes"]
+
+
+def test_login_wait_does_not_finish_on_a_sign_in_that_still_lacks_the_workflow_scope(world):
+    """The refresh is pending: the old sign-in answers auth status, but the push would still be rejected."""
+    setstate(world, signed_in=True, scopes=["gist", "read:org", "repo"])
+    rc, out = run(world, "login-wait", "--timeout", "4")
+    assert rc == 1 and out.startswith("LOGIN_TIMEOUT"), out
 
 
 def test_login_start_leaves_a_sign_in_that_already_has_the_scope_alone(world):
