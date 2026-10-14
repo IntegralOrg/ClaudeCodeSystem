@@ -58,11 +58,11 @@ def test_routine_files_carry_a_model_and_an_off_the_hour_schedule():
     eod = (ROOT / "System" / "routines" / "eod.md").read_text(encoding="utf-8")
     hyg = (ROOT / "System" / "routines" / "vault-hygiene.md").read_text(encoding="utf-8")
     assert re.search(r"^model: claude-opus-5-5$", eod, re.M)
-    assert re.search(r"^model: claude-sonnet-5-5$", hyg, re.M)   # a bare value: check-keys.py and setup pass it to the API as is
+    assert re.search(r"^model: claude-opus-5-5$", hyg, re.M)   # a bare value: check-keys.py and setup pass it to the API as is
     assert re.search(r'^schedule: "7 23 \* \* 1-5"$', eod, re.M)
     assert re.search(r'^schedule: "7 1 \* \* \*"$', hyg, re.M)
     has(eod, "11:07 PM")
-    has(hyg, "1:07 AM", "open decision")
+    has(hyg, "1:07 AM", "same model as End of Day")
     assert "0 23 * * 1-5" not in eod and "0 1 * * *" not in hyg
 
 
@@ -85,7 +85,7 @@ def test_routines_doc_records_the_model_and_the_07_schedules():
     eod = text[text.index("## End of Day"):text.index("## Vault Hygiene")]
     hyg = text[text.index("## Vault Hygiene"):text.index("## How setup creates them")]
     has(eod, "- model: claude-opus-5-5", "7 23 * * 1-5", "11:07 PM", "7 3 * * 2-6")
-    has(hyg, "- model: claude-sonnet-5-5", "7 1 * * *", "1:07 AM")
+    has(hyg, "- model: claude-opus-5-5", "7 1 * * *", "1:07 AM")
     has(text, "7 4 * * 2-6", "Routines (the sidebar may say Scheduled)", "RemoteTrigger", "`/schedule`",
         "start minutes late")
     by_hand = text[text.index("## Create a routine by hand"):text.index("## If a routine is stale")]

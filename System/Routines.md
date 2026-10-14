@@ -24,7 +24,7 @@ Output: `Work/Daily/<date>.md`, including a **Routine health** section.
 ## Vault Hygiene
 - live_since: not live
 - schedule: every night at 1:07 AM your time (`7 1 * * *` local; created as the UTC equivalent)
-- model: claude-sonnet-5-5
+- model: claude-opus-5-5
 - needs: nothing
 - routine id: not created yet
 - environment id: not created yet
@@ -47,7 +47,7 @@ Do this once per routine, in a browser on claude.ai.
 4. Schedule: the cron expression from that file, converted to UTC for your time zone (see "Schedules are in UTC" above).
 5. Repository: choose `brain` (this vault repository, whatever you named it), branch `main`. A routine with no repository runs in an empty container, so do not skip this step.
 6. Prompt: the `prompt:` line from that file (`/eod` or `/vault-audit`).
-7. Model: the `model:` line from that file (End of Day `claude-opus-5-5`, Vault Hygiene `claude-sonnet-5-5`), not the form's default.
+7. Model: the `model:` line from that file (`claude-opus-5-5` for both End of Day and Vault Hygiene), not the form's default.
 8. Connectors: the ones listed under `connectors:` in that file (End of Day: Gmail and Google Calendar).
 9. Environment: the one you created or chose. Keys go in its **Environment variables** (see `System/Connecting Tools.md`).
 10. Save. Then record the routine's id and the environment id in the matching section above, and leave `live_since: not live` until its first run succeeds.
