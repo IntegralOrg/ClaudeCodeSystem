@@ -35,6 +35,16 @@ def _version_key(path):
     return tuple(int(x) for x in parts), os.path.getmtime(path)
 
 
+def under_home(path, home):
+    """Component-aware containment: `C:\\Users\\alice-elsewhere` is not under `C:\\Users\\alice`."""
+    candidate = os.path.normcase(os.path.abspath(path))
+    home = os.path.normcase(os.path.abspath(home))
+    try:
+        return os.path.commonpath([candidate, home]) == home
+    except ValueError:        # different drives on Windows
+        return False
+
+
 def is_mine(path):
     """True when the current user owns the file (Windows has no uid: fall back to the home folder)."""
     try:
@@ -42,7 +52,7 @@ def is_mine(path):
             return os.stat(path).st_uid == os.getuid()
     except OSError:
         return False
-    return os.path.abspath(path).lower().startswith(os.path.expanduser("~").lower())
+    return os.path.isfile(path) and under_home(path, os.path.expanduser("~"))
 
 
 def ps_command(system):

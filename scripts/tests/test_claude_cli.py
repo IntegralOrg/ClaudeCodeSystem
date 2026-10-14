@@ -105,3 +105,11 @@ def test_is_mine_accepts_the_users_own_file_and_rejects_a_missing_one(tmp_path):
     own = fake_cli(tmp_path / "bin" / "claude")
     assert cc.is_mine(str(own))
     assert not cc.is_mine(str(tmp_path / "nope"))
+
+
+def test_under_home_is_component_aware(tmp_path):
+    """The Windows fallback (no uid): a sibling folder that merely starts with the home name is outside it."""
+    home = tmp_path / "Users" / "alice"
+    assert cc.under_home(str(home / "AppData" / "claude.exe"), str(home))
+    assert not cc.under_home(str(tmp_path / "Users" / "alice-elsewhere" / "claude.exe"), str(home))
+    assert not cc.under_home(str(tmp_path / "Users"), str(home))
