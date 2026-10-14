@@ -8,7 +8,7 @@ prompt: "/vault-audit"
 connectors: []
 keys: []
 optional_keys: []
-description: Nightly self-healing pass: frontmatter, duplicate-subject detection, canonical markers, a report in _generated/vault-hygiene/.
+description: Nightly self-healing pass: a system check first (Step 0b), then frontmatter, duplicate-subject detection, canonical markers, a report in _generated/vault-hygiene/, and tuning from the week's sessions (Step 5b).
 ---
 # Vault Hygiene
 

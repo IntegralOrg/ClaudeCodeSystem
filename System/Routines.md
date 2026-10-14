@@ -1,7 +1,7 @@
 ---
 type: reference
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-13
 ---
 # Routines
 
@@ -29,7 +29,7 @@ Output: `Work/Daily/<date>.md`, including a **Routine health** section.
 - routine id: not created yet
 - environment id: not created yet
 
-Output: `_generated/vault-hygiene/audit-log.md` (the newest `## YYYY-MM-DD` heading is the last run).
+Output: `_generated/vault-hygiene/audit-log.md` (the newest `## YYYY-MM-DD` heading is the last run). Vault Hygiene also tunes the system from the week's sessions: a fix in plain words lands the same night and is logged there, and anything technical becomes a report for your contact in `Inbox/`.
 
 ## How setup creates them
 

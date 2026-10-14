@@ -1,4 +1,4 @@
-# System Journal (capture)
+# System Journal (capture and nightly tuning)
 
 Turn every Claude Code session into two durable records so a later review can spot what keeps
 coming back across sessions, and so any claim can be checked against what was actually said.
@@ -11,13 +11,11 @@ coming back across sessions, and so any claim can be checked against what was ac
   what happened, what failed, what the user complained about, what shipped, what was decided,
   what was left open, which systems it touched, and a first "why."
 
-This template ships the **capture** half only. There is no reflection command and no Themes
-writer yet; the audit tier is generated locally but is not shipped anywhere. `themes-inject.py`
-is included but stays inert until a `_generated/Themes.md` exists (nothing here writes one).
-Today the capture hooks record each session as it ends (a capture can be throttled or fail,
-so the record is near-complete, not guaranteed), and `/opportunity-scan` answers what change
-would have prevented a bad session; automatic self-tuning from repeated friction is planned as a step
-inside the nightly Vault Hygiene run.
+The capture hooks record each session as it ends (a capture can be throttled or fail, so the
+record is near-complete, not guaranteed). The nightly Vault Hygiene run reads the week back and
+tunes the system from it (`/vault-audit` Step 5b, below), and `/opportunity-scan` answers on demand
+what change would have prevented one bad session. The audit tier is generated locally but is not
+shipped anywhere.
 
 ## The read rule (entropy guard)
 
@@ -25,7 +23,7 @@ inside the nightly Vault Hygiene run.
 |------|--------------|-------|
 | Evidence (deterministic, per session) | A human or agent checking or re-deriving a line | `_generated/system-journal/evidence/<YYYY-MM>/<session_id>.json` |
 | Journal (distilled, one line per session) | A review step, whole, never a working session | `_generated/system-journal/<YYYY-MM>.<host>.jsonl` (local) and `cloud/<date>.<sid8>.json` (containers) |
-| Themes (capped render) | Every session at startup (once a reflection step writes it) | `_generated/Themes.md` |
+| Themes (capped render) | Every session at startup | `_generated/Themes.md` (written nightly by `/vault-audit` Step 5b) |
 
 A working session never loads the journal or the evidence at startup. When a session needs
 history on a topic, it reads Themes (once that exists), then follows the session ids listed
@@ -81,9 +79,9 @@ them:
   extract that session as FINAL and distill it. Every run also sweeps any session idle for 30+
   minutes that was never processed. Single-flight lock in `~/.system-journal/run.lock`.
 - `SessionStart` -> `themes-inject.py`: the read side for non-vault directories. It injects any
-  Themes whose `Projects:` line matches a path component of the session's cwd. Inert until a
-  reflection step writes `_generated/Themes.md`; silent in the vault, in temp dirs, and on any
-  error.
+  Themes whose `Projects:` line matches a path component of the session's cwd. Silent until the
+  nightly tuning step has written `_generated/Themes.md`, in the vault (which reads Themes through
+  the CLAUDE.md Startup Checklist), in temp dirs, and on any error.
 
 Temp-dir transcripts are never extracted or journaled. Every headless `claude -p` distill call
 is itself a session and fires the hooks, so bursts of "skipped: another run holds the lock"
@@ -203,7 +201,51 @@ words), `shipped[]`, `decisions[]`, `open_loop`, `systems[]` (**controlled vocab
 
 ## Telemetry (`telemetry-stats.py`)
 
-Aggregates the evidence files; no transcript, no network, same script in every vault built from the template. `python3 scripts/system-journal/telemetry-stats.py --since-days 7 --group-by tool|repo|session|model|day [--json]` or `--session <id>` for one session (errors, ten slowest calls, tokens). `evidence/1` calls count as `unknown`; a call whose result has not arrived is `pending` and excluded from the error rate. Growth is sized, not archived: git history keeps every blob, so the fields were kept to about 25 to 45 bytes per call and 200 bytes per session, and old files are never re-extracted. The extractor loads its secret masker from `scripts/hooks/log_tool_use.py` (the vault path first, then script-relative); when none loads, every stored tool input becomes `[input withheld: secret masker not found]` with one warning in `run.log`. Evidence bytes therefore depend on the masker version, which qualifies "deterministic": the same transcript plus the same masker gives the same bytes. `ms` runs from the tool call to its result and includes any time a human spent approving the call. Reader: `/opportunity-scan`.
+Aggregates the evidence files; no transcript, no network, same script in every vault built from the template. `python3 scripts/system-journal/telemetry-stats.py --since-days 7 --group-by tool|repo|session|model|day [--json]` or `--session <id>` for one session (errors, ten slowest calls, tokens). `evidence/1` calls count as `unknown`; a call whose result has not arrived is `pending` and excluded from the error rate. Growth is sized, not archived: git history keeps every blob, so the fields were kept to about 25 to 45 bytes per call and 200 bytes per session, and old files are never re-extracted. The extractor loads its secret masker from `scripts/hooks/log_tool_use.py` (the vault path first, then script-relative); when none loads, every stored tool input becomes `[input withheld: secret masker not found]` with one warning in `run.log`. Evidence bytes therefore depend on the masker version, which qualifies "deterministic": the same transcript plus the same masker gives the same bytes. `ms` runs from the tool call to its result and includes any time a human spent approving the call. Readers: `/opportunity-scan` and the nightly tuning step (`scripts/self-tune.py` imports `load_records`).
+
+## Nightly tuning (`/vault-audit` Step 5b)
+
+The reflection half. Every night the Vault Hygiene routine runs `scripts/self-tune.py` (stdlib,
+read-only on the journal) over a rolling 7-day window and acts on what keeps coming back. The rule
+it follows is the "Decision tiers" section of `docs/DEVELOPING.md`; the owner's page is
+`System/Who Decides.md`.
+
+- **What counts.** A pattern needs 3+ sessions in the window, or 2 sessions 14+ days apart (the
+  script looks back 60 days for that second signature). Patterns are grouped by root cause, never by
+  symptom: one per `systems` tag for what sessions complained about (`complaints`) or failed at
+  (`failures`), one per tool and error class for `hook_blocked` and `permission_denied` calls in the
+  evidence. Exit codes, HTTP errors and generic tool errors are everyday noise and do not count.
+- **What is never read.** Every record marked `"private": true` (and the evidence of that session),
+  every line tagged with a `sensitive_tags` area from `vocab.json`, and anything outside
+  `_generated/system-journal/`. `Personal/` is never opened.
+- **Tier 1, applied the same night:** a rule in `CLAUDE.md`, a command's wording (and its
+  `cowork-commands/` mirror), a `System/` page, a memory file, a Themes entry. The command step
+  writes the fix with Edit/Write and logs one line in `_generated/vault-hygiene/audit-log.md` with
+  the pattern key and the reason; the landing commit is the undo. Never "propose and wait".
+- **Tier 2, reported:** anything in scripts, hooks, settings, guard rules, `.mcp.json`, routines, or a
+  pattern whose fix is unclear. Names and counts only, written to `Inbox/<date> report for your
+  contact.md` through `scripts/setup/help_report.py --report`, deduped through
+  `_generated/routine-alerts.json` once per reason per 7 days. Nothing is edited.
+- **Guards.** One change per pattern per night; a pattern changed or reported is left alone for 14
+  days (`_generated/vault-hygiene/tuning.json`); with fewer than 3 sessions in the window nothing
+  is applied and the audit log says "not enough sessions yet". `self-tune.py record` refuses a
+  Tier 1 change to a script, hook or settings file. Every text that leaves the journal passes
+  through the secret masker.
+- **Outputs.** `self-tune.py` writes only `_generated/vault-hygiene/tuning-order.json` (the work
+  order), `tuning.json` (cooldowns and themes), and `_generated/Themes.md` (40 lines at most; a
+  theme with no new session for 14 days drops out). End of Day's Routine health line comes from
+  `self-tune.py summary` ("Tuned N things this week: ..."), and the Vault Hygiene run ends with at
+  most six numbered plain lines saying what it changed. The next night's plan is the check that a
+  fix held: a pattern that comes back after its cooldown carries its `previous` fix, so the next
+  attempt changes the approach.
+
+```
+python3 scripts/self-tune.py plan --vault <vault>        # the work order (what Step 5b reads)
+python3 scripts/self-tune.py record --vault <vault> --key <key> --tier 1 --target CLAUDE.md --change "..." --why "..." --dry-run
+python3 scripts/self-tune.py package --vault <vault>     # the Tier 2 package, names and counts only
+python3 scripts/self-tune.py themes --vault <vault>      # rewrite _generated/Themes.md
+python3 scripts/self-tune.py summary --vault <vault>     # the daily note's tuning line
+```
 
 ## Private sessions
 

@@ -125,7 +125,7 @@ Create the daily note at `$VAULT/Work/Daily/$TODAY.md` with these sections:
 4. TASKS COMPLETED: Items marked done today
 5. TASKS ADDED: New items routed today
 6. TIME SUMMARY: Hours per client and work type, or "Time tracking not configured"
-7. ROUTINE HEALTH: Vault Hygiene freshness (OK or STALE, with date), missing keys (names only, or "none"), connectors (connected/missing by name), landing (last line or default)
+7. ROUTINE HEALTH: Vault Hygiene freshness (OK or STALE, with date), missing keys (names only, or "none"), connectors (connected/missing by name), landing (last line or default), and `Setup: N problems` from the newest `_generated/system-check/<date>.json` (its `problems` count; "Setup: not checked yet" when there is none)
 8. SUMMARY: 2-3 sentence narrative of the day, ending with `Routine status: <ok | needs you: reason>`
 
 Report: file path and brief stats.

@@ -40,6 +40,7 @@ Setup fills this section; End of Day reads the email to reach the owner outside 
 
 1. **Verify the actual current date and time** by running: `date` in Bash to get the system date in your local timezone
 2. Then proceed to check `Inbox/Today.md` for today's plan and per-client files in `Inbox/` for pending items
+3. If `_generated/Themes.md` exists, read it: it lists what keeps going wrong across sessions (written nightly by Vault Hygiene). If the task touches a theme, say so before starting and avoid repeating it. Never open `_generated/system-journal/` in a working session.
 
 > **Important**: Do NOT trust the date in your system prompt or training data. Always verify with a live check.
 

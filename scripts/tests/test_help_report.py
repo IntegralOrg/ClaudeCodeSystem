@@ -62,3 +62,19 @@ def test_unwritable_inbox_still_exits_zero(tmp_path):
     (tmp_path / "Inbox").write_text("a file where the folder should be")
     rc, out = run(tmp_path)
     assert rc == 0 and out.startswith("REPORT_UNWRITTEN") and "B3 GitHub" in out
+
+
+def test_report_mode_writes_the_routine_report_for_the_contact(tmp_path):
+    p = subprocess.run([sys.executable, str(SCRIPT), "--vault", str(tmp_path), "--report", "--step", "Vault Hygiene tuning",
+                        "--error", "2 things it must not change on its own", "--tried", "grouped the week's sessions"],
+                       capture_output=True, text=True)
+    rc, out = p.returncode, p.stdout
+    assert rc == 0, out
+    path = report_of(out)
+    assert path.parent == tmp_path / "Inbox" and path.name.endswith(" report for your contact.md")
+    text = path.read_text()
+    assert "Found by: Vault Hygiene tuning" in text and "Setup stopped at" not in text
+    assert "Computer:" not in text      # a Tier 2 report is names and counts only: no host platform or architecture
+    assert "Error:" not in text and "What the agent tried:" not in text
+    assert "Summary:" in text and "What the system did:" in text
+    assert "# Report for your contact " in text

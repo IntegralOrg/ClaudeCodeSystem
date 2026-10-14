@@ -76,7 +76,7 @@ A vault created from this template ends up with:
 - **Folders** for clients, projects, daily notes, personal notes, and reference, plus a client page for each client or project you named.
 - **Two scheduled routines** (End of Day, Vault Hygiene) defined in `System/routines/` and recorded in `System/Routines.md`.
 - **Guard hooks and an action log** wired in the committed `.claude/settings.json`, the same in the cloud and on your computer.
-- **The System Journal** capturing sessions as they end, and **session telemetry** showing where the system wastes effort.
+- **The System Journal** capturing sessions as they end, and **session telemetry** showing where the system wastes effort. Vault Hygiene also tunes the system from the week's sessions: a fix in plain words lands the same night, anything technical becomes a report for your contact.
 - **A guidance library** in `System/` that your agent answers questions from.
 - **Slash commands** for morning review, end-of-day processing, handoffs, and other workflows.
 
@@ -180,6 +180,9 @@ Long-running workflows track every extracted item in a tracking list (`/tmp/eod-
 
 ### File Writes
 When Claude finishes a turn, the Stop hook lands your changes on `main`: `scripts/land-local.sh` on your computer, `scripts/cloud-land.sh` in the cloud. You never run Git. Git history is the rollback: every change is recoverable from it.
+
+### System Check
+`/system-check` says how the vault is set up and whether it is working, in at most six plain lines; it also runs every night inside Vault Hygiene (`scripts/system-check.py`, read-only, names only), so a fix is confirmed by the next night's run and anything technical reaches your contact as names and counts.
 
 ### Route-As-You-Go
 Every extracted item is routed to its destination file immediately, not batched for later. This prevents data loss if a step fails partway through or the process runs long.

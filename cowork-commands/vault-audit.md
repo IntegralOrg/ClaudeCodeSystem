@@ -1,6 +1,6 @@
 ---
 name: vault-audit
-description: Nightly self-healing vault hygiene -- fixes misfiled files, backfills frontmatter, self-amends its own schema, embeds docs to detect same-subject forks, and proposes merges to a human review queue. Never asks for approval mid-run.
+description: Nightly self-healing vault hygiene -- fixes misfiled files, backfills frontmatter, self-amends its own schema, embeds docs to detect same-subject forks, proposes merges to a human review queue, and tunes its own rules from the week's sessions. Never asks for approval mid-run.
 ---
 
 # Vault Audit: Daily Self-Healing Hygiene
@@ -14,7 +14,7 @@ Modes:
 - **`init`**: one-time bootstrap for a vault with no schema/index yet. See the Init section.
 
 Hard rules:
-- Never touch anything under a `protected` path or a non-markdown file.
+- Never touch anything under a `protected` path or a non-markdown file when tidying the vault. This command's own state is the one exception, and only these files: everything under `_generated/vault-hygiene/` (schema, index, log, trash, the tuning order and `tuning.json`), `_generated/Themes.md`, and `_generated/routine-alerts.json` (Step 5b's dedupe, shared with End of Day). Step 5b's Tier 1 edits go only to the plain-words Markdown files the "Decision tiers" section allows (`CLAUDE.md`, a command and its mirror, a `System/` page, a memory file); `record --dry-run` refuses anything else.
 - Never `rm` a vault file: removals go through the `stage` subcommand.
 - Records (files under `no_merge` folders) are never merged, split, or have their body rewritten. A pair with a record on either side is never folded: it downgrades to a label-only supersession (confirm-keep), which may add a `canonical`/`superseded_by` marker to the record's frontmatter but never touches its body.
 - Only Step 4b item 5 (`apply`) ever folds, merges, or stamps canonical/superseded markers on an authored doc, and only on a block a human has decided. (Step 2's deterministic fixes -- refiling, frontmatter backfill, stub expansion, link repointing -- also edit the vault, exactly as the structural audit always has.) The embedding subcommands other than `apply` write only under `_generated/vault-hygiene/`.
@@ -31,6 +31,10 @@ Hard rules:
 2. `date` for today (`TODAY`).
 3. `VAULT` = vault root (directory containing CLAUDE.md). `AUDIT="python3 \"$VAULT/scripts/vault-audit.py\""`, `EMBED="python3 \"$VAULT/scripts/vault-embed.py\""`.
 4. If `_generated/vault-hygiene/vault-schema.md` is missing, stop and run Init instead.
+
+## Step 0b: System check
+
+Run `python3 "$VAULT/scripts/system-check.py" --vault "$VAULT" --today "$TODAY"`. It reads the vault only, writes `_generated/system-check/$TODAY.json` and `_generated/system-check/$TODAY.md`, and always exits 0, so it never stops this run. Carry its `problems` count (from the JSON) into the Step 6 receipt as `setup: N problems`. Then do step 3 of `.claude/commands/system-check.md` (the report of names and counts for the owner's contact, at most once per reason per 7 days through `_generated/routine-alerts.json`). Change nothing else because of a finding here: tonight's count against last night's `setup:` line in the audit log is how a fix is confirmed, and a problem that comes back is reported again, never marked done.
 
 ## Step 1: Script pass
 
@@ -89,6 +93,23 @@ Runs every night. `$EMBED` is stdlib-only for every subcommand except `report` (
 
 Read the last 3 run entries in `_generated/vault-hygiene/audit-log.md`, including each entry's `violations` line (written by Step 6). Group entries by their `kind:folder-or-path:destination-or-rule` tuple: if the same tuple recurs in the same direction across 3+ runs, the schema is wrong, not the vault's content: amend the YAML core (add the folder, adjust the rule) AND append one line to the schema's Amendment Changelog: `- YYYY-MM-DD: <change>. Why: <the recurring pattern>.` Never amend to bless junk (recurring genuine clutter is just fixed again), and never touch `protected` this way. After amending the schema, re-run scan to confirm it still parses before proceeding.
 
+## Step 5b: Tune from the week
+
+The system improves itself from its own work: friction that keeps coming back across sessions is fixed tonight, not proposed. The rule is the "Decision tiers" section of `docs/DEVELOPING.md` (the owner's page is `System/Who Decides.md`). Nobody is asked to approve anything, and this step never edits a script, a hook, a guard rule, `.claude/settings.json`, `.mcp.json`, or a routine.
+
+1. **Plan.** `python3 "$VAULT/scripts/self-tune.py" plan --vault "$VAULT"`. It reads the last 7 days of the System Journal (journal lines and evidence, through `scripts/system-journal/telemetry-stats.py`), skips every record marked `"private": true` and every line tagged with a sensitive area, never reads `Personal/`, and writes the work order `_generated/vault-hygiene/tuning-order.json`. A pattern is over the bar with 3+ sessions in the window, or 2 sessions 14+ days apart. Patterns are grouped by root cause, never by symptom: one per `systems` tag for what sessions complained about or failed at, one per tool and error class for guard and permission blocks. A pattern changed or reported in the last 14 days is listed under `skipped_cooldown` and left alone. If the command fails, put `tuning: skipped (<reason>)` in the receipt and go to Step 6.
+2. **Not enough sessions.** If `status` is `not_enough_sessions`, put its `audit_line` (`tuning: not enough sessions yet (N sessions in the last 7 days)`) in the receipt and go to item 5. Nothing is applied.
+3. **Tier 1: apply tonight.** For each pattern with `tier: 1`, one change per pattern:
+   - Read its `samples`, `context`, and `previous`; when that is not enough, read the journal lines for its `session_ids` (this step is a review step, the one place allowed to read journal lines). Name the one root cause behind them and the one fix.
+   - Write the fix in plain words to `target`. `CLAUDE.md`: a new numbered rule at the end of `## Assistant Guidelines`, or a sharper wording of the rule the samples show being missed; one or two sentences that say what to do, not the history. `.claude/commands/<name>.md`: a sentence at the step where the friction happened, and the identical edit in `mirror` (the `cowork-commands/` body must stay identical). A `System/` page or a memory file when the samples show the owner's guidance or a remembered fact is wrong: the target in the order is a suggestion, and any plain-words file the "Decision tiers" section lists will do.
+   - A write under `.claude/` can wait on a permission prompt in a scheduled cloud run (see "Why these files live" above), and a prompt nobody answers loses the run. So in a scheduled run, a fix to a command's wording goes into `CLAUDE.md`'s Assistant Guidelines as a rule that names the command ("When running `/<name>`: ..."), recorded with `CLAUDE.md` as the target.
+   - When `previous` is set, the earlier fix did not hold: change the approach instead of repeating the wording.
+   - When you cannot name one root cause and one fix with confidence, do not guess: treat the pattern as Tier 2 (item 4).
+   - Check, apply, record: `python3 "$VAULT/scripts/self-tune.py" record --vault "$VAULT" --key <key> --tier 1 --target <file> --change "<what changed, plain words>" --why "<the root cause, plain words>" --title "<a short name for the theme>" --dry-run`. Exit 2 means the change is not allowed (a Tier 2 pattern, a script, hook or settings target, cooldown, or a second change to the pattern tonight): do not apply it. Exit 0: make the edit with Edit/Write (never a heredoc or shell redirect), then run the same command without `--dry-run` and keep the line it prints for the receipt (Step 6 writes it into `_generated/vault-hygiene/audit-log.md`). Never put a value that looks like a key into any change.
+4. **Tier 2: report, never edit.** Collect first, write once: `help_report.py --report` replaces `Inbox/<date> report for your contact.md` each time it runs, so one report per night holds every package. For each pattern with `tier: 2` (and any moved there in item 3): skip it when its dedupe key `tuning:<key>` is in `_generated/routine-alerts.json` with a date fewer than 7 days ago. For the rest, `python3 "$VAULT/scripts/self-tune.py" package --vault "$VAULT" --key <key>` (one `--key` per pattern) prints the package: names and counts only (pattern key, error class or system, count, first and last date, vault-relative file paths). Append every package to ONE scratch file with the Write tool (a blank line between packages). When the scratch file has at least one package, run `python3 "$VAULT/scripts/setup/help_report.py" --report --vault "$VAULT" --step "Vault Hygiene tuning" --error "<N> things the system must not change on its own" --tried "Grouped the week's sessions; these touch scripts, hooks, settings or the environment, so nothing was changed" --details-file <scratch>` exactly once. It writes `Inbox/<date> report for your contact.md` and masks anything that looks like a key. That file is the channel (the "Decision tiers" section): the owner sends it to their contact; the system never emails anyone. Only after that one write, for each pattern in the report run `python3 "$VAULT/scripts/self-tune.py" record --vault "$VAULT" --key <key> --tier 2 --target "Inbox/<date> report for your contact.md" --change "reported" --why "<one line>"` and keep its line, and merge `{"tuning:<key>": "<today>"}` into `_generated/routine-alerts.json` with Edit/Write (create it as `{}` when missing; keep every other key).
+5. **Themes.** `python3 "$VAULT/scripts/self-tune.py" themes --vault "$VAULT"` rewrites `_generated/Themes.md` (40 lines at most; a theme with no new session for 14 days drops out), so the next session starts knowing what keeps going wrong.
+6. **Into the receipt (Step 6):** a `tuning:` line (the order's `audit_line`, or the skip reason), then each line `record` printed: `- tuned <key> in <file>: <change> (why: <root cause>; N sessions, <first> to <last>)` or `- reported <key> to your contact (<report>): <what> xN, <first> to <last>`. The landing commit is the undo for every change. End of Day puts one line in the next daily note's Routine health section from `self-tune.py summary` ("Tuned N things this week: ..."); the next night's plan is the check that a fix held.
+
 ## Step 6: Receipt
 
 Append to `_generated/vault-hygiene/audit-log.md` **using the Edit/Write tool** (read the file, add the new entry at the end). Do NOT shell this out with `cat >>`, `echo >>`, `tee`, or a heredoc: shell write-redirects are not in the cloud runner's auto-approved set, so a scheduled routine stalls on a permission prompt, whereas an Edit/Write tool call is auto-approved. Same rule for the Step 5 Amendment Changelog line and any other file this command writes.
@@ -108,13 +129,16 @@ candidates: <meta.candidates from Step 4b's pending output; append " (embedding 
 judged: <verdicts accepted in Step 4b this run> (backlog: <meta.pending after judging>)
 proposals_open: <queue.open from the survivorship output, or 0 when skipped>
 applied: <receipt.applied from the apply step, or 0> (folded N, kept N, rejected N)
+setup: <N problems from Step 0b, or "not checked" when the script is missing>
 invariant_violations: <count from the scan output, or 0>
 stale_canonical: <count from the scan output, or 0>
+tuning: <the Step 5b audit_line, or skipped (<reason>)>
+<each "- tuned ..." and "- reported ..." line from Step 5b, one per line, or nothing>
 ```
 
 `violations` is the identity record Step 5 compares across runs: one entry per `root_clutter`, `unknown_folder`, `naming_violations`, `empty_stubs`, or `missing_frontmatter` finding acted on this run, written as `kind:folder-or-path:destination-or-rule` -- e.g. `unknown_folder:Notes/:Resources/Reference/` for a file routed to the closest general-purpose folder, or `missing_frontmatter:Resources/Health/:added` for a frontmatter fix. Reuse the exact same tuple wording when the same violation recurs so Step 5 can match it; do not paraphrase run to run.
 
-Then report ONE line: `Vault audit: N moved, N merged, N staged, N amendments, N proposals open`. In EOD, that line is the phase status; standalone, print it plus anything surprising.
+Then report ONE line: `Vault audit: N moved, N merged, N staged, N amendments, N proposals open, N tuned, N reported`. In EOD, that line is the phase status; standalone, print it plus anything surprising. When this run changed anything (a file moved or staged, a schema amendment, a decision applied, a fix tuned, a report written), follow the line with `What just happened:` and a numbered list of at most six plain lines, one per change, in words the owner would use (`1. Added a rule: tasks always use your time zone.`, `2. Wrote a short report for your contact in Inbox/.`). Nothing changed: no list.
 
 ## Init (one time per vault)
 

@@ -5,6 +5,7 @@ Never fails: a report that cannot be written is printed instead, and the exit co
 never becomes one more failure. Masks anything that looks like a key or token before it is written or printed.
 
 Usage: help_report.py --step S (--error-file F | --error LINE) (--tried-file F | --tried TEXT) [--details-file F] [--vault PATH]
+       [--report]   (a routine's report for the contact: `Inbox/<date> report for your contact.md`, not a setup failure)
 Stdout: REPORT <path> (or REPORT_UNWRITTEN followed by the report), then SAY <one sentence for the person>.
 """
 import argparse
@@ -69,6 +70,8 @@ def main():
     tried.add_argument("--tried-file")
     ap.add_argument("--details-file")
     ap.add_argument("--vault", default=os.getcwd())
+    ap.add_argument("--report", action="store_true",
+                    help="a routine's report for the contact (the Tier 2 channel in docs/DEVELOPING.md), not a setup failure")
     a = ap.parse_args()
     if a.error_file:
         a.error = tail(a.error_file).strip() or "(error file empty or unreadable)"
@@ -77,14 +80,19 @@ def main():
     now = datetime.datetime.now()
     details = tail(a.details_file) if a.details_file else ""
     body = mask(
-        f"Setup stopped at: {a.step}\n"
-        f"Error: {a.error}\n"
-        f"What the agent tried: {a.tried}\n"
-        f"Computer: {platform.system()} {platform.release()} ({platform.machine()})\n"
+        # Report mode carries the Tier 2 package (names and counts the caller composed), so its two
+        # fields are a summary and what the system did, never an error trace.
+        (f"Found by: {a.step}\nSummary: {a.error}\nWhat the system did: {a.tried}\n" if a.report
+         else f"Setup stopped at: {a.step}\nError: {a.error}\nWhat the agent tried: {a.tried}\n")
+        # A setup failure names the computer so the contact can reproduce it. A Tier 2 report never does:
+        # its contract (docs/DEVELOPING.md, "Decision tiers") is names and counts only.
+        + ("" if a.report else f"Computer: {platform.system()} {platform.release()} ({platform.machine()})\n")
         + (f"\nDetails:\n{details}\n" if details else ""))
-    text = (f"---\ntype: note\ncreated: {now:%Y-%m-%d}\n---\n# Setup help request {now:%Y-%m-%d %H:%M}\n\n"
+    title = "Report for your contact" if a.report else "Setup help request"
+    text = (f"---\ntype: note\ncreated: {now:%Y-%m-%d}\n---\n# {title} {now:%Y-%m-%d %H:%M}\n\n"
             "Send this to your onboarding contact as is. It holds no keys or passwords.\n\n" + body)
-    path = os.path.join(a.vault, "Inbox", f"Setup help request {now:%Y-%m-%d %H%M}.md")
+    name = f"{now:%Y-%m-%d} report for your contact.md" if a.report else f"Setup help request {now:%Y-%m-%d %H%M}.md"
+    path = os.path.join(a.vault, "Inbox", name)
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:

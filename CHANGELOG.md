@@ -28,6 +28,43 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 3. In `System/Routines.md`, add a `- model: <that model>` bullet under each routine's section and move the schedules to seven past the hour; then update each routine's cron and model in Claude (`RemoteTrigger` `update`, or the routine's edit form), keeping your routine ids.
 
 ---
+## [2026-10-13] - The technical report is a file the owner sends on
+
+### Changed
+- **Tier 2 channel decided** (`docs/DEVELOPING.md`, "Decision tiers"; `System/Who Decides.md`; `/vault-audit` Step 5b and its mirror): anything the system must not change on its own becomes `Inbox/<date> report for your contact.md` (names and counts only, keys masked), and the system leaves one plain line asking the owner to reach out to their contact for support with that file. The owner knows who their contact is. The system never emails anyone, never names an address, and never calls a support service; the "when your email is connected it can go directly" wording is gone.
+
+### In an existing vault
+1. Take `System/Who Decides.md`, `.claude/commands/vault-audit.md`, and `cowork-commands/vault-audit.md` from the template.
+
+## [2026-10-13] - Nightly self-tuning: the system fixes what keeps going wrong
+
+### Added
+- **`/vault-audit` Step 5b, "Tune from the week"** (and the `cowork-commands/` mirror): every night Vault Hygiene reads the last 7 days of the System Journal and fixes friction that keeps coming back, with no one approving anything. A pattern needs 3+ sessions in the window, or 2 sessions 14+ days apart, and is grouped by root cause, never by symptom. Tier 1 fixes (a rule in `CLAUDE.md`, a command's wording, a `System/` page, a memory file) are applied the same night and logged in `_generated/vault-hygiene/audit-log.md` with the pattern key and the reason; the landing commit is the undo. Tier 2 (scripts, hooks, settings, guard rules, routines, or a fix that is unclear) is never edited: it becomes `Inbox/<date> report for your contact.md`, names and counts only, deduped once per reason per 7 days. The rule is the "Decision tiers" section of `docs/DEVELOPING.md`.
+- **`scripts/self-tune.py`** (stdlib, read-only on the journal): `plan` writes the work order, `record` checks and logs one change (and refuses a Tier 1 change to a script, hook or settings file, a pattern in its 14-day cooldown, or a second change to a pattern in one night), `themes` rewrites `_generated/Themes.md` (40 lines at most; a theme not seen for 14 days drops out), `package` prints the Tier 2 package, `summary` prints the daily note line. It skips private sessions and lines tagged with a sensitive area, never reads `Personal/`, and masks anything that looks like a key. With fewer than 3 sessions in the window nothing is applied and the audit log says "not enough sessions yet".
+- **`scripts/setup/help_report.py --report`**: the same masked report, written as a routine's report for the contact instead of a setup failure.
+- **Surfacing:** End of Day's Routine health section gets one line, "Tuned N things this week: ...", from `self-tune.py summary`; the Vault Hygiene run ends with at most six numbered plain lines saying what it changed.
+- **`CLAUDE.md` Startup Checklist** step 3: read `_generated/Themes.md` when it exists.
+- Tests: `scripts/tests/test_self_tune.py` (Tier 1 applied and recorded; Tier 2 reported with no file edited; private and sensitive sessions ignored; cooldown; a 2-session window applies nothing; the audit-log line format; no secret-looking value in any output).
+
+### Changed
+- **`scripts/system-journal/README.md`** describes the nightly tuning step; the template no longer ships "the capture half only". `themes-inject.py` now has a writer.
+
+### In an existing vault
+1. Take `scripts/self-tune.py`, `scripts/setup/help_report.py`, `scripts/system-journal/README.md`, `scripts/system-journal/themes-inject.py`, `.claude/commands/vault-audit.md`, `cowork-commands/vault-audit.md`, `.claude/commands/eod-note.md`, `cowork-commands/eod-note.md`, `System/How This Works.md`, and `docs/DEVELOPING.md` from the template.
+2. In `CLAUDE.md`, under `## Startup Checklist`, add step 3 from the template's `CLAUDE.md` (the one that starts "If `_generated/Themes.md` exists, read it").
+3. In `System/Routines.md`, under `## Vault Hygiene`, append the sentence "Vault Hygiene also tunes the system from the week's sessions: ..." from the template to the `Output:` line. Keep the section's `live_since` bullet as it is.
+## [2026-10-13] - System check: the system says what is wrong before you have to
+
+### Added
+- **`scripts/system-check.py`**: reads the vault alone (never the home folder or `~/.config`) and reports how it is set up and whether it is working, in eight parts: configuration (hooks, permissions and deny rules against the template, hooks pointing outside the vault, inline values in `.mcp.json`, counted, never shown), scripts that read settings from outside the vault or did not come from the template, the deterministic pieces (hook scripts load, the two landing scripts match the template, the key checker), routines and hooks working (it imports `routine_health.py` and `landing_health.py` rather than copying them), repeated error classes and rate limits from the System Journal (through `telemetry-stats.py`; private sessions are skipped), local `main` against GitHub and leftover `claude/*` branches, landing safety (cloud refusal markers, a landing that deleted more than 10 files or changed files its session never touched, numbered copies beside tracked notes, a synced folder), and connectors each routine declares that the daily notes report missing. Every finding carries a severity (blocks cloud, local only, fine) and a tier from `docs/DEVELOPING.md` "Decision tiers". It writes `_generated/system-check/<date>.json` for the maintainers and `<date>.md`, at most six numbered plain lines, the worst first, each with its fix and its `System/` page. Names only, never a value; it always exits 0.
+- **`/system-check`** (and its `cowork-commands/` mirror): runs the script, adds what only a session can see (routines in the Claude account, open pull requests), sends Tier 2 findings to the owner's contact as names and counts through `scripts/setup/help_report.py`, at most once per reason per 7 days through `_generated/routine-alerts.json`, and ends with the six-line summary.
+- **Nightly:** `/vault-audit` runs it as Step 0b and records `setup: N problems` in its receipt, and End of Day's Routine health line carries `Setup: N problems`. The next night's count is what confirms a fix held; there is no Done button. `/opportunity-scan` runs it first (step 0).
+- `scripts/hooks/landing_health.py` exposes `refusal_markers()`, `log_lines()` and `notices()`, and `routine_health.py` exposes `routine_health_lines()`, so the session-start notices and the system check share one implementation. Their behavior is unchanged.
+- Tests: `scripts/tests/test_system_check.py` (a fixture vault with planted drift, a planted secret value that never appears in any output, the six-line summary, the Tier 2 package and its dedupe, private sessions skipped).
+
+### In an existing vault
+1. Take `scripts/system-check.py`, `scripts/hooks/landing_health.py`, `scripts/hooks/routine_health.py`, `.claude/commands/system-check.md`, `cowork-commands/system-check.md`, `.claude/commands/vault-audit.md`, `.claude/commands/opportunity-scan.md`, `.claude/commands/eod.md` and their `cowork-commands/` copies, and `System/How This Works.md` from the template.
+2. Nothing to run: the next nightly Vault Hygiene run writes the first `_generated/system-check/<date>.md`.
 
 ## [2026-10-13] - A vault on your own account or in your company's GitHub organization
 

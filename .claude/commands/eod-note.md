@@ -51,6 +51,7 @@ Build the daily note with these sections, in order. Omit any section that has no
 - Keys: <missing key names only, or "none">
 - Connectors: <connected / missing, by name>
 - Landing: <last line of _generated/landing.log if the file exists; otherwise "cloud session, landing by hook">
+- Tuning: <the first line of `python3 scripts/self-tune.py summary`, e.g. "Tuned 2 things this week: ...">
 
 ## Summary
 [2-3 sentence narrative: what the day looked like, what moved forward,
@@ -64,7 +65,7 @@ what carries into tomorrow. Write in first person, plain language.]
 - **Tasks Completed**: Scan each `Inbox/<Client>.md` for items marked `- [x]` that were completed today. Include the client name in parentheses.
 - **Tasks Added**: Pull manifest rows where Type is `action-owner`, `action-other`, or `followup`. Show the source so future-you knows where it came from.
 - **Time Tracking**: Parse `/tmp/rize-summary-TODAY.md` for total time and category breakdown. Keep it to one or two lines.
-- **Routine health**: Always present. Vault Hygiene's freshness (check for `## YYYY-MM-DD` in `_generated/vault-hygiene/audit-log.md`; if STALE, open System/Routines.md and check the routine is scheduled), missing keys from `check-keys.py --routine eod`, available/missing connectors from the session, and the landing log (read `_generated/landing.log`'s last line or note if the file doesn't exist). Night-one rule: if audit-log does not exist and `System/Routines.md` has no `live_since` for vault-hygiene, write "Vault Hygiene: not yet run" and do NOT treat as STALE.
+- **Routine health**: Always present. Vault Hygiene's freshness (check for `## YYYY-MM-DD` in `_generated/vault-hygiene/audit-log.md`; if STALE, open System/Routines.md and check the routine is scheduled), missing keys from `check-keys.py --routine eod`, available/missing connectors from the session, and the landing log (read `_generated/landing.log`'s last line or note if the file doesn't exist). Tuning: run `python3 scripts/self-tune.py summary` and copy its first line (what Vault Hygiene fixed on its own this week); if it prints a second line (a short report for the owner's contact is in `Inbox/`), add it as its own bullet, word for word. If the script is missing or fails, write "Tuning: not available". Night-one rule: if audit-log does not exist and `System/Routines.md` has no `live_since` for vault-hygiene, write "Vault Hygiene: not yet run" and do NOT treat as STALE.
 - **Summary**: Write a brief narrative based on everything above. Mention the biggest win, any blockers, and what's queued for tomorrow.
 
 ---

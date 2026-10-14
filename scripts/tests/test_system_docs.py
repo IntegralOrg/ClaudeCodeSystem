@@ -420,7 +420,12 @@ def test_developing_has_the_decision_tiers_section():
     has(sec, "The client is never the approver", "Tier 1", "Tier 2", "apply-and-log", "never propose-and-wait",
         "audit-log.md", "routine", "error class", "count", "first and last date", "file paths",
         "help_report.py", "routine-alerts.json", "once per reason per 7 days", "`/update`",
-        "numbered list of at most six plain lines", "System/Who Decides.md")
+        "numbered list of at most six plain lines", "System/Who Decides.md",
+        "a Markdown file the owner sends on", "never emails anyone", "never names an address")
+    assert "not yet chosen" not in sec and "Gmail" not in sec
+    has(read("Who Decides"), "reach out to your contact", "never emails anyone")
+    for rel in (".claude/commands/vault-audit.md", "cowork-commands/vault-audit.md"):
+        assert "not chosen yet" not in (ROOT / rel).read_text(encoding="utf-8"), rel
     assert chr(0x2014) not in sec
 
 
@@ -433,3 +438,45 @@ def test_claude_md_and_guides_point_at_who_decides():
     log = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     entry = log.split("## [2026-10-13] - Who decides")[1].split("\n## [")[0]
     has(entry, "System/Who Decides.md", "### In an existing vault", "Decision tiers")
+
+
+def test_vault_audit_tunes_from_the_week():
+    code = (ROOT / ".claude" / "commands" / "vault-audit.md").read_text(encoding="utf-8")
+    cowork = (ROOT / "cowork-commands" / "vault-audit.md").read_text(encoding="utf-8")
+    assert cowork.split("---", 2)[2].strip() == code.strip()      # the mirror's body matches the Code version
+    step = code[code.index("## Step 5b: Tune from the week"):code.index("## Step 6: Receipt")]
+    has(step, "scripts/self-tune.py", "plan", "record", "--dry-run", "themes", "package", "Decision tiers",
+        "\"private\": true", "Personal/", "3+ sessions", "14+ days apart", "root cause", "not enough sessions yet",
+        "Tier 1", "Tier 2", "tonight", "Edit/Write", "help_report.py",
+        "--report", "routine-alerts.json", "fewer than 7 days", "_generated/Themes.md", "audit-log.md",
+        "never edits a script", "one change per pattern", "previous", "permission prompt")
+    has(code[code.index("## Step 6: Receipt"):], "tuning:", "- tuned", "- reported", "What just happened:", "at most six")
+    assert chr(0x2014) not in code
+
+
+def test_tuning_reaches_the_daily_note_and_the_guides():
+    for rel in (".claude/commands/eod-note.md", "cowork-commands/eod-note.md"):
+        has((ROOT / rel).read_text(encoding="utf-8"), "Tuning:", "self-tune.py summary", "Tuned 2 things this week")
+    readme = (ROOT / "scripts" / "system-journal" / "README.md").read_text(encoding="utf-8")
+    assert "capture half only" not in readme
+    has(readme, "Step 5b", "self-tune.py", "rolling 7-day window", "Tier 1", "Tier 2", "\"private\": true")
+    line = "tunes the system from the week's sessions"
+    has((ROOT / "README.md").read_text(encoding="utf-8"), line)
+    has(read("How This Works"), line)
+    has(read("Routines"), line)
+    has((ROOT / "CLAUDE.md").read_text(encoding="utf-8"), "_generated/Themes.md")
+    dev = (ROOT / "docs" / "DEVELOPING.md").read_text(encoding="utf-8")
+    assert "Until both have shipped" not in dev
+    has(dev, "Step 5b", "scripts/self-tune.py")
+    log = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    entry = log.split("## [2026-10-13] - Nightly self-tuning")[1].split("\n## [")[0]
+    has(entry, "Step 5b", "scripts/self-tune.py", "Decision tiers", "### In an existing vault", "System/Routines.md", "Startup Checklist")
+
+
+def test_system_check_is_documented():
+    has(read("How This Works"), "/system-check", "_generated/system-check/")
+    has((ROOT / "README.md").read_text(encoding="utf-8"), "/system-check", "scripts/system-check.py")
+    log = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    entry = log.split("## [2026-10-13] - System check")[1].split("\n## [")[0]
+    has(entry, "scripts/system-check.py", "Decision tiers", "### In an existing vault", "setup: N problems", "names and counts")
+    assert chr(0x2014) not in entry

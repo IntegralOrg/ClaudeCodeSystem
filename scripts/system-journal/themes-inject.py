@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Inject the Themes relevant to this session's directory (global SessionStart hook).
 
-Themes.md lives in the vault and is written weekly by /system-reflection. Vault sessions read
+Themes.md lives in the vault and is written nightly by /vault-audit Step 5b. Vault sessions read
 it through the CLAUDE.md Startup Checklist; every OTHER directory on this Mac (DevProjects repos,
 worktrees) gets only the themes whose `Projects:` line names one of its path components, or `all`.
 Stdout of a SessionStart hook is added to the session's context. Silent on anything unexpected:
@@ -77,8 +77,8 @@ def main():
     if not hits:
         return 0
     print(
-        "Recurring cross-session themes that apply to this project (from the vault's weekly "
-        "System Journal reflection). If the current task touches one, say so "
+        "Recurring cross-session themes that apply to this project (from the vault's nightly "
+        "System Journal tuning). If the current task touches one, say so "
         "before doing anything else and avoid repeating the failure.\n"
     )
     print("\n\n".join(hits))

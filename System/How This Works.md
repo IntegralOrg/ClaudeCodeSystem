@@ -1,7 +1,7 @@
 ---
 type: reference
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-13
 ---
 # How This Works
 
@@ -21,6 +21,8 @@ updated: 2026-10-08
 |---|---|---|
 | End of Day | Weeknights, 11:07 PM your time | Reads your calendar and email (and calls and Slack when connected), writes `Work/Daily/<date>.md`, updates client pages, checks that the other routines ran, and reaches you outside the vault when something needs you |
 | Vault Hygiene | Every night, 1:07 AM your time | Backfills missing frontmatter, reports repeated frontmatter keys, finds duplicate subjects, marks canonical files, writes `_generated/vault-hygiene/audit-log.md` |
+| End of Day | Weeknights, 11 PM your time | Reads your calendar and email (and calls and Slack when connected), writes `Work/Daily/<date>.md`, updates client pages, checks that the other routines ran, and reaches you outside the vault when something needs you |
+| Vault Hygiene | Every night, 1 AM your time | Backfills missing frontmatter, reports repeated frontmatter keys, finds duplicate subjects, marks canonical files, tunes the system from the week's sessions (and rewrites `_generated/Themes.md`), writes `_generated/vault-hygiene/audit-log.md` |
 
 Their definitions are in `System/routines/`; whether each is live is in `System/Routines.md`.
 
@@ -48,6 +50,7 @@ Markdown files use `merge=union`, which means that when two sessions change the 
 
 ## When something seems off
 
+- `/system-check`, or its nightly result in `_generated/system-check/<date>.md`: at most six plain lines on what is set up wrong or not working, the worst first, each with its fix. It runs every night inside Vault Hygiene, so the next night's result is what confirms a fix held.
 - `Work/Daily/<today>.md`, the **Routine health** section: End of Day writes whether each routine ran and which keys or connectors are missing.
 - `_generated/vault-hygiene/audit-log.md`: the newest `## YYYY-MM-DD` heading tells you when Vault Hygiene last ran.
 - `_generated/landing.log`: one line per attempt to save your work. A line saying `on branch` means the session was on a side branch, where landing deliberately does nothing (landing only runs on `main`); a line saying `locked` means another save was in progress.
