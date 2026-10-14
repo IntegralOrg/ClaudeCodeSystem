@@ -6,10 +6,10 @@ This is the **cloud edition**: it starts in [Claude Code on the web](https://cod
 
 > **You do not need to be technical.** Claude walks you through everything step by step.
 >
-> **What you will need:** a GitHub account and a Claude Max plan (routines and cloud sessions need it). The front door for non-technical readers is a one-page guide whose hosted address you get from whoever introduces the system.
+> **What you will need:** a GitHub account and a Claude Pro or Max plan (routines and cloud sessions need it). The front door for non-technical readers is a one-page guide whose hosted address you get from whoever introduces the system.
 
 ## Get Started
-You need a Claude Max plan and a free GitHub account (setup helps you make one).
+You need a Claude Pro or Max plan and a free GitHub account (setup helps you make one).
 1. Install [Claude Desktop](https://claude.com/download) and sign in.
 2. First, copy the line below, open **Code** in Claude Desktop, choose your home folder, and paste it as the first message. (If you were given the address of the front-door page, its **Start in Claude** button does the same in one press: your browser asks once, "Open Claude?", say yes, and Claude opens with the message already written.)
 3. Click **Trust**, then press **Enter**. Setup downloads your system into a folder called Brain and does the rest; it asks you only for a few clicks.
@@ -231,7 +231,7 @@ No. Start with Calendar + Email + your meeting transcript service. Add connectio
 Not to start: setup runs in Claude Code on the web, in your browser, from any Mac, Windows, or Linux machine. To also work from your own computer, follow `System/Adding Your Computer.md` (Claude Desktop, GitHub Desktop, Git, and on Windows Python 3).
 
 **How much does this cost?**
-You need a [Claude Max plan](https://claude.ai) (routines and cloud sessions need it) and a free GitHub account. Connections to Google, Slack, and similar services are within their free tiers for personal use. Some tools (like meeting transcript services or time trackers) have their own pricing.
+You need a [Claude Pro or Max plan](https://claude.ai) (routines and cloud sessions need it) and a free GitHub account. Connections to Google, Slack, and similar services are within their free tiers for personal use. Some tools (like meeting transcript services or time trackers) have their own pricing.
 
 **Can I use this for a team?**
 The system is designed for one person. You could adapt it for a small team, but it would need significant customization.

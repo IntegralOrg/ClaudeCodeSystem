@@ -166,8 +166,8 @@ def test_adding_your_computer_final_fix_content():
 
 def test_routine_schedules_are_utc_and_environment_choice_is_simple():
     setup, routines = read("Setup Procedure"), read("Routines")
-    has(setup, "UTC", "0 3 * * 2-6", "0 4 * * 2-6", "America/New_York", "without naming an environment")
-    has(routines, "UTC", "0 3 * * 2-6", "0 4 * * 2-6", "daylight-saving")
+    has(setup, "UTC", "7 3 * * 2-6", "7 4 * * 2-6", "America/New_York", "without naming an environment")
+    has(routines, "UTC", "7 3 * * 2-6", "7 4 * * 2-6", "daylight-saving")
     assert "find the environment id other routines use" not in setup
     for folder in (".claude/commands", "cowork-commands"):
         eod = (ROOT / folder / "eod.md").read_text(encoding="utf-8")

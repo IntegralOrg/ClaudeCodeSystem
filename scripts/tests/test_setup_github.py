@@ -22,10 +22,22 @@ FAKE_GH = textwrap.dedent(r'''
     if a[:1] == ["--version"]:
         print("gh version 9.9.9"); sys.exit(0)
     if a[:2] == ["auth", "status"]:
-        sys.exit(0 if s.get("signed_in") else 1)
+        if not s.get("signed_in"): sys.exit(1)
+        print("  - Token scopes: " + ", ".join("'%s'" % x for x in s.get("scopes", ["gist", "read:org", "repo", "workflow"])))
+        sys.exit(0)
+    if a[:2] == ["auth", "refresh"]:
+        s["refresh_argv"] = a; json.dump(s, open(st, "w"))
+        print("! First copy your one-time code: WXYZ-5678", flush=True)
+        print("Open this URL to continue in your web browser: https://github.com/login/device", flush=True)
+        time.sleep(1); s["scopes"] = s.get("scopes", []) + ["workflow"]; json.dump(s, open(st, "w")); sys.exit(0)
+    if a[:2] == ["auth", "logout"]:
+        if not s.get("signed_in"):
+            print("not logged in to any hosts", file=sys.stderr); sys.exit(1)
+        s["signed_in"] = False; json.dump(s, open(st, "w")); sys.exit(0)
     if a[:2] == ["auth", "login"]:
         if s.get("no_code"):
             time.sleep(60); sys.exit(1)
+        s["login_argv"] = a; json.dump(s, open(st, "w"))
         print("! First copy your one-time code: ABCD-1234", flush=True)
         print("Open this URL to continue in your web browser: https://github.com/login/device", flush=True)
         time.sleep(1); s["signed_in"] = True; json.dump(s, open(st, "w")); sys.exit(0)
@@ -293,3 +305,47 @@ def test_is_org_policy_matches_the_known_messages_only():
         assert gh.is_org_policy(msg), msg
     for msg in ("remote: Repository not found.", "could not resolve host github.com", ""):
         assert not gh.is_org_policy(msg), msg
+
+
+def test_login_start_asks_for_the_workflow_scope(world):
+    """The first push carries .github/workflows/vault-autosync.yml, which GitHub refuses without the workflow scope."""
+    rc, out = run(world, "login-start", "--timeout", "15")
+    assert rc == 0, out
+    argv = json.loads(world["state"].read_text())["login_argv"]
+    assert "-s" in argv and argv[argv.index("-s") + 1] == "workflow", argv
+
+
+def test_logout_signs_the_wrong_account_out_so_login_start_can_run_again(world):
+    setstate(world, signed_in=True)
+    rc, out = run(world, "logout")
+    assert rc == 0 and out.startswith("SIGNED_OUT"), out
+    assert not json.loads(world["state"].read_text()).get("signed_in")
+    rc, out = run(world, "logout")                 # nothing to sign out of: still fine, still re-runnable
+    assert rc == 0 and out.startswith("SIGNED_OUT"), out
+
+
+def test_login_start_adds_the_workflow_scope_to_an_existing_sign_in(world):
+    """gh was signed in before setup (or by an older setup) without the workflow scope: the first push would be rejected."""
+    setstate(world, signed_in=True, scopes=["gist", "read:org", "repo"])
+    rc, out = run(world, "login-start", "--timeout", "15")
+    assert rc == 0, out
+    assert "CODE WXYZ-5678" in out and "SAY " in out          # one more device-code approval, same words
+    argv = json.loads(world["state"].read_text())["refresh_argv"]
+    assert argv[:2] == ["auth", "refresh"] and "-s" in argv and argv[argv.index("-s") + 1] == "workflow", argv
+    rc, out = run(world, "login-wait", "--timeout", "5")
+    assert rc == 0 and "SIGNED_IN pat" in out
+    assert "workflow" in json.loads(world["state"].read_text())["scopes"]
+
+
+def test_login_wait_does_not_finish_on_a_sign_in_that_still_lacks_the_workflow_scope(world):
+    """The refresh is pending: the old sign-in answers auth status, but the push would still be rejected."""
+    setstate(world, signed_in=True, scopes=["gist", "read:org", "repo"])
+    rc, out = run(world, "login-wait", "--timeout", "4")
+    assert rc == 1 and out.startswith("LOGIN_TIMEOUT"), out
+
+
+def test_login_start_leaves_a_sign_in_that_already_has_the_scope_alone(world):
+    setstate(world, signed_in=True, scopes=["repo", "workflow"])
+    rc, out = run(world, "login-start", "--timeout", "15")
+    assert rc == 0 and out.strip() == "SIGNED_IN pat", out
+    assert "refresh_argv" not in json.loads(world["state"].read_text())
