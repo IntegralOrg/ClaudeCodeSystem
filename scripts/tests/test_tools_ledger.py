@@ -80,3 +80,15 @@ def test_set_status_preserves_custom_preamble_and_strips_newlines(tmp_path):
     text = (tmp_path / "System" / "Tools.md").read_text(encoding="utf-8")
     assert text.startswith(pre)
     assert text.count("\n- status:") == 3
+
+
+def test_set_status_on_headerless_ledger_does_not_duplicate_sections(tmp_path):
+    (tmp_path / "System").mkdir()
+    body = SAMPLE[SAMPLE.index("## Gmail"):SAMPLE.index("## Slack")]
+    (tmp_path / "System" / "Tools.md").write_text(body, encoding="utf-8")
+    assert tl.set_status(tmp_path, "Gmail", "connected 2026-10-15", "2026-10-15") is True
+    assert tl.set_status(tmp_path, "Fathom", "skipped (later)", "2026-10-15") is True
+    text = (tmp_path / "System" / "Tools.md").read_text(encoding="utf-8")
+    assert text.startswith(tl.HEADER)
+    assert text.count("## Gmail") == 1 and text.count("## Fathom") == 1
+    assert text.count("\n- status:") == 2

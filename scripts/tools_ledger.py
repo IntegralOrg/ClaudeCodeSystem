@@ -50,12 +50,12 @@ def load(root):
 
 
 def preamble_of(text):
-    """Text before the first `## ` line, or HEADER when there is none."""
+    """Text before the first `## ` line, or HEADER when there is none (or only blank lines)."""
     text = text.replace("\r\n", "\n")
-    head = text if not text.startswith("## ") else ""
+    if text.lstrip().startswith("## "):
+        return HEADER
     idx = text.find("\n## ")
-    if idx != -1:
-        head = text[:idx + 1]
+    head = text[:idx + 1] if idx != -1 else text
     return head if head.strip() else HEADER
 
 
