@@ -57,10 +57,11 @@ Markdown files use `merge=union`, which means that when two sessions change the 
 
 ## How you are told, even with no connectors
 
-Two small hooks run at the start of every session (cloud or local) and speak first, without needing Gmail or a calendar:
+Three small hooks run at the start of every session (cloud or local) and speak first, without needing Gmail or a calendar:
 
 - `landing_health.py` reads `_generated/landing.log` and says so when saves have been failing, or when landing appears to be switched off (several `on branch` or `locked` lines in a row).
 - `routine_health.py` says when a routine has not run when it should (End of Day or Vault Hygiene), using the daily notes, the hygiene log, and the `live_since` lines in `System/Routines.md`.
+- `tools_health.py` reads `System/Tools.md` (the ledger of the tools you named at setup) and says which essential tool is still not connected, every session until it is; a tool you said you would connect later is mentioned once a week.
 
 When Gmail or Google Calendar is connected, End of Day adds a push outside the vault: an email to the address in the `## Owner` section of `CLAUDE.md`, or, if it cannot send, an all-day calendar event titled "Brain needs you: <reason>". It sends a given reason at most once a week.
 
