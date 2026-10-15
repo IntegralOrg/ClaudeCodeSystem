@@ -115,7 +115,7 @@ def test_superpowers_install_finds_the_bundled_cli_before_any_screen_drive():
 def test_first_computer_checks_list_connectors_and_disclose_the_paid_call():
     setup = read("Setup Procedure")
     sec7 = setup[setup.index("## 8. Show it working"):setup.index("## Ask the person only when")]
-    has(sec7, "connectors", "missing", "paid", "`claude -p`", "skip it", "session journal")
+    has(sec7, "System/Tools.md", "still not connected", "paid", "`claude -p`", "skip it", "session journal")
     adding = read("Adding Your Computer")
     step4 = adding[adding.index("## 4."):adding.index("## 5.")]
     has(step4, "paid call", "says so in one sentence", "skips it", "names the missing ones")
@@ -223,3 +223,30 @@ def test_build_section_writes_the_ledger():
     text = read("Setup Procedure")
     sec = text[text.index("## 2. Build"):text.index("## 3. Connect")]
     has(sec, "System/Tools.md", "- status: not connected", "essential: yes")
+
+
+# Task 8: keys through the pop-up and network secrets; the first win replaces the demo
+
+def test_keys_section_names_the_pop_up_and_network_secrets_only():
+    text = read("Setup Procedure")
+    sec = text[text.index("## 5. Keys"):text.index("## 6. Record completion")]
+    has(sec, "scripts/set-key.py", "network secret", "Allowed websites", "Custom headers", "check-keys.py --where",
+        "key present")
+    assert "Environment variables" not in sec
+    for line in sec.splitlines():
+        assert ".env" not in line or "never" in line.lower(), line
+
+
+def test_section_8_is_the_first_win():
+    text = read("Setup Procedure")
+    sec = text[text.index("## 8. Show it working"):text.index("## Ask the person only when")]
+    has(sec, "Summarize the key takeaways from my email over the past week", "/eod", "Your brain is current",
+        "What's something you'd get done today, and how would you go about it?", "Inbox/", "nothing is sent",
+        "Wispr Flow")
+    assert "two-minute demo" not in sec and "render one client page" not in sec
+
+
+def test_completion_line_records_the_ledger_and_the_journal_answer():
+    text = read("Setup Procedure")
+    sec = text[text.index("## 6. Record completion"):text.index("## 7. Land")]
+    has(sec, "tools connected:", "session journal:")

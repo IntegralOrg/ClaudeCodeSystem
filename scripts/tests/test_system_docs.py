@@ -27,7 +27,7 @@ def test_all_system_docs_exist_with_frontmatter():
 def test_setup_procedure_covers_every_step():
     text = read("Setup Procedure")
     has(text, "AskUserQuestion", "prepared brief", "three rounds", "CLAUDE.md", "System/routines", "check-keys.py", "SETUP_PENDING",
-        "Adding Your Computer", "two-minute demo", "connect on your call", "cloud session", "local session",
+        "Adding Your Computer", "first win", "your call with Dean finishes those", "cloud session", "local session",
         "not live", "first run", "environment")
     for line in text.splitlines():
         if "check-keys.py" in line:
@@ -130,14 +130,14 @@ def test_setup_procedure_is_safe_to_re_run():
     done = text.index("Setup completed <date>")
     gone = text.index("Delete `SETUP_PENDING` now")
     land = text.index("land-local.sh --final")
-    demo = text.index("Two-minute demo")
+    demo = text.index("the first win")
     assert keys < done < gone < land < demo
     assert text.count("Delete `SETUP_PENDING`") == 1
 
 
 def test_credentials_file_is_named_once_for_the_human_only():
-    for name in ("Connecting Tools", "Setup Procedure"):
-        has(read(name), "hidden file", "Command+Shift+Period", "The agent never opens it")
+    has(read("Connecting Tools"), "hidden file", "Command+Shift+Period", "The agent never opens it")
+    has(read("Setup Procedure"), "never open or name the file the script writes")
     has(read("Adding Your Computer"), "hidden", "Command+Shift+Period")
     has(read("Connecting Tools"), "update_trigger", "nothing after the `=`", "connector path")
     assert "never edits MCP server configuration" not in read("Connecting Tools")
