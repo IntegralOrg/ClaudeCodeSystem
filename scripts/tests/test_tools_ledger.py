@@ -70,3 +70,13 @@ def test_set_status_rewrites_in_place_and_bumps_updated(tmp_path):
 def test_render_round_trips():
     entries = tl.parse(SAMPLE)
     assert tl.parse(tl.render(entries)) == entries
+
+
+def test_set_status_preserves_custom_preamble_and_strips_newlines(tmp_path):
+    pre = "# Tools\n\nMy own intro, two lines.\nSecond line.\n"
+    (tmp_path / "System").mkdir()
+    (tmp_path / "System" / "Tools.md").write_text(pre + SAMPLE[SAMPLE.index("\n## Gmail"):], encoding="utf-8")
+    assert tl.set_status(tmp_path, "Gmail", "connected\n- status: evil", "2026-10-15") is True
+    text = (tmp_path / "System" / "Tools.md").read_text(encoding="utf-8")
+    assert text.startswith(pre)
+    assert text.count("- status:") == 3

@@ -49,8 +49,18 @@ def load(root):
     return parse(f.read_text(encoding="utf-8", errors="replace"))
 
 
-def render(entries):
-    out = [HEADER]
+def preamble_of(text):
+    """Text before the first `## ` line, or HEADER when there is none."""
+    text = text.replace("\r\n", "\n")
+    head = text if not text.startswith("## ") else ""
+    idx = text.find("\n## ")
+    if idx != -1:
+        head = text[:idx + 1]
+    return head if head.strip() else HEADER
+
+
+def render(entries, preamble=None):
+    out = [(preamble if preamble and preamble.strip() else HEADER).rstrip("\n") + "\n"]
     for e in entries:
         body = "\n".join(e["lines"]).strip("\n")
         out.append(f"\n## {e['name']}\n{body}\n")
@@ -67,7 +77,9 @@ def set_status(root, name, status, today):
     f = Path(root) / LEDGER
     if not f.is_file():
         return False
-    entries = load(root)
+    status = " ".join(str(status).split("\r\n")).replace("\n", " ").replace("\r", " ")
+    raw = f.read_text(encoding="utf-8", errors="replace")
+    entries = parse(raw)
     for e in entries:
         if e["name"].lower() != name.lower():
             continue
@@ -89,6 +101,6 @@ def set_status(root, name, status, today):
             new_lines.append(f"- updated: {today}")
         e["lines"] = new_lines
         e["status"], e["updated"] = status, today
-        f.write_text(render(entries), encoding="utf-8")
+        f.write_text(render(entries, preamble_of(raw)), encoding="utf-8")
         return True
     return False
