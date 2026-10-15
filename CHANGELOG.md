@@ -6,6 +6,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-10-15] - A drive that completes in another window brings Claude back
+
+### Changed
+- **`.claude/skills/drive-screen/scripts/autodrive.py`** ends every exit with `screenctl.py handback`: Claude comes back to the front, a sound plays, and the notification says how the run ended (turn complete, timed out, stopped for a human, dry run). Until now the driven session's window stayed in front when its turn completed, and the hand-back depended on the driving agent remembering rule 8. A focus check that failed because the person took the machine back makes the hand-back `--quiet`, so their app stays in front. `--no-handback` is for a caller that hands back itself. Tests in `_test_autodrive.py`.
+- **SKILL.md**, rule 8 and the autodrive section, say so.
+
+### In an existing vault
+1. Take `.claude/skills/drive-screen/` from the template.
+
+---
 ## [2026-10-14] - From the first live onboarding test: GitHub scope, routine models, the bundled CLI, plainer setup words
 
 ### Added
