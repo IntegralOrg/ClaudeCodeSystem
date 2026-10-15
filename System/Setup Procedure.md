@@ -68,14 +68,14 @@ Whatever the person's first message says (a greeting, a question, or a pasted br
 1. **Plain text, one message:** "First, tell me your name and role, your company and what it does in one sentence, and the email address I should use when something needs you. Type your answers below and press Enter."
 2. **Two `AskUserQuestion` calls (the tool holds four questions each).** Say first, once: "These are the inputs: pick every place information reaches you; that's what we connect, so your brain hears what you hear. Picking a tool means we connect it. Skipping one means your brain won't see it until you come back to it."
    First call:
-   - "Which email and calendar do you use?" Options: Google (Gmail and Google Calendar); Microsoft (Outlook and Teams); Other.
+   - "Which email and calendar do you use?" Options: Google (Gmail and Google Calendar); Microsoft (Outlook and Teams).
    - "Where does information come in day to day?" (multi-select) Options: Email; Calendar; Slack; Files (Google Drive or OneDrive).
    - "Do you record your meetings?" Options: Yes; No.
-   - "Where does your team chat?" (multi-select) Options: Slack; Microsoft Teams; Neither; Other.
+   - "Where does your team chat?" (multi-select) Options: Slack; Microsoft Teams; Neither.
    Second call (skip the first question when they do not record meetings):
-   - "You record your meetings: which tool?" Options: Fathom; Fireflies; Granola; Other (typed: tl;dv, Grain, Zoom, Tactiq and Circleback all have connectors).
-   - "Where do you keep tasks today?" Options: Asana; ClickUp; Notion; Nowhere yet (Linear and monday are accepted typed).
-   - "Anything else you live in?" (multi-select) Options: HubSpot or another CRM; QuickBooks; Nothing else; Other (typed).
+   - "Which tool records them?" Options: Fathom; Fireflies; Granola. (Typed answers such as tl;dv, Grain, Zoom, Tactiq and Circleback all have connectors.)
+   - "Where do you keep tasks today?" Options: Asana; ClickUp; Notion; Nowhere yet. (Typed answers such as Linear and monday are accepted.)
+   - "Anything else you live in?" (multi-select) Options: HubSpot or another CRM; QuickBooks; Nothing else. (Typed answers welcome.)
    - "Which time zone are you in?" Put the zone you detect first, marked "(Recommended)": in a local session read it from the computer (`readlink /etc/localtime` on a Mac, `tzutil /g` on Windows); a cloud session cannot see it, so offer Eastern, Central, and Pacific. Record the answer as an IANA name (for example `America/New_York`).
 3. **One `AskUserQuestion` call, three questions:**
    - "How does your week usually run?" Options: Meetings in the morning, focus in the afternoon; Focus in the morning, meetings in the afternoon; Meetings scattered all week; Mostly focus time.
@@ -102,7 +102,7 @@ The tools you named are on the ledger, `System/Tools.md`. This step connects the
 For each tool on the ledger with `- status: not connected`, essential ones first:
 
 1. **Find its connector.** Call `search_mcp_registry` with the tool's name (for example `["gmail"]`) and take the `directoryUuid` of the matching result; the ruling for known tools is the table in `System/Connecting Tools.md` (a tool whose ruling is a key skips to section 5). If this session has no registry tools (a cloud session, or an older Desktop), use the Desktop page instead: say "In Claude, open **Customize**, then **Connectors**, find **Gmail** and click **Connect**", and offer to drive the screen after the first one; the last resort is the browser at claude.ai/customize/connectors, with the one-time sign-in sentence from B4.
-2. **Say why, then show the button.** One sentence ("Gmail, so End of Day can read what came in today"), then call `suggest_connectors` with that uuid and a one-word keyword (`email`, `calendar`, `meetings`, `messages`, `tasks`, `files`): the Connect button appears in the chat. Say: "Click Connect, sign in, click Allow, then tell me." Offer the two answers from the Part B rule: **Connected** and **Later**.
+2. **Say why, then show the button.** One sentence ("Gmail, so End of Day can read what came in today"), then call `suggest_connectors` with that uuid and a one-word keyword (`email`, `calendar`, `meetings`, `messages`, `tasks`, `files`): the Connect button appears in the chat. Say: "Click Connect, sign in, click Allow, then tell me." Offer two answers: **Connected** and **Later**. A failed sign-in counts as Later here, so the card never needs a third button.
 3. **Check, then record.** On Connected, call `session_connectors_status`: if the connector is listed, call `set_session_connector_enabled` for it and write `- status: connected <today>` in its ledger section (replace the status bullet; never add a second). If it is not listed (a session started before the connector was added may not see it yet), write `- status: connected <today> (verify next session)`; the next session's status check settles it. On Later, or when the sign-in fails, leave `not connected` and move on. One try per tool during setup.
 4. **After the essential tools**, when others are open: "Those are the ones tonight's routine needs. You also named Slack and ClickUp; connect them now, two minutes each, or later?" On later, stop here; setup never asks about a non-essential tool twice.
 

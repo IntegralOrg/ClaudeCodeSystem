@@ -194,7 +194,7 @@ def test_round_two_is_the_inputs_question_with_next_and_skip_meaning():
     text = read("Setup Procedure")
     sec1 = text[text.index("## 1. Open"):text.index("## 2. Build")]
     has(sec1, "Where does information come in day to day?", "Picking a tool means we connect it", "Skipping one means",
-        "Do you record your meetings?", "Which tool?", "Anything else you live in?", "Google Drive or OneDrive")
+        "Do you record your meetings?", "Which tool records them?", "Anything else you live in?", "Google Drive or OneDrive")
     assert "WhatsApp" not in sec1 and "Text messages" not in sec1
 
 
