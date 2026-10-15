@@ -79,4 +79,4 @@ def test_set_status_preserves_custom_preamble_and_strips_newlines(tmp_path):
     assert tl.set_status(tmp_path, "Gmail", "connected\n- status: evil", "2026-10-15") is True
     text = (tmp_path / "System" / "Tools.md").read_text(encoding="utf-8")
     assert text.startswith(pre)
-    assert text.count("- status:") == 3
+    assert text.count("\n- status:") == 3
