@@ -7,6 +7,8 @@ This is the **cloud edition**: it starts in [Claude Code on the web](https://cod
 > **You do not need to be technical.** Claude walks you through everything step by step.
 >
 > **What you will need:** a GitHub account and a Claude Pro or Max plan (routines and cloud sessions need it). The front door for non-technical readers is a one-page guide whose hosted address you get from whoever introduces the system.
+>
+> Setup connects your email, calendar and meeting recorder before the nightly routines are created, keeps a ledger of the rest in `System/Tools.md`, and reminds you once per session until it is complete.
 
 ## Get Started
 You need a Claude Pro or Max plan and a free GitHub account (setup helps you make one).

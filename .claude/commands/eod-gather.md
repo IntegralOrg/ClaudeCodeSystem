@@ -83,7 +83,7 @@ Process the Brain Dump section in `Inbox/Today.md`. This is the user's quick-cap
    b. Mark routed items in `Today.md` Brain Dump:
       - Tasks: change to `- [x] ~~<original text>~~ moved to <Client>.md ✅ TODAY`
       - Notes: remove from Brain Dump entirely (they now live in the client file's Notes section)
-      - Personal items and ideas: leave in place (they don't route — they carry forward to tomorrow)
+      - Personal items and ideas: leave in place (they don't route; they carry forward to tomorrow)
    c. Append a manifest row for each routed item with Source = "Brain Dump"
 
 6. **Summary**: Print count of items routed per client, items left in Brain Dump, orphans.

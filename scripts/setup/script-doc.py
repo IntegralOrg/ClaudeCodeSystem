@@ -23,7 +23,7 @@ def extract(text, source):
         m = ASK.search(line)
         if m:
             items.append((section, "ask", f"{m.group(1)} Options: {m.group(2).strip()}"))
-            continue
+            line = line.replace(f'"{m.group(1)}"', "", 1)
         for q in QUOTE.findall(line):
             if len(q) >= 20 and len(q.split()) >= 6:
                 items.append((section, "say", q))
