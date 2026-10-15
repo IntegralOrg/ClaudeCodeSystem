@@ -41,7 +41,7 @@ def check_tools_ledger(content):
 
     for line in FENCE.sub("", content).splitlines():
         if line.startswith("## "):
-            if name is not None and statuses > 1:
+            if name is not None and statuses != 1:
                 return bad(name)
             name, bullets, statuses = line[3:].strip(), 0, 0
             continue
@@ -52,7 +52,7 @@ def check_tools_ledger(content):
             statuses += 1
             if bullets != 1 and statuses == 1:
                 return bad(name)
-    if name is not None and statuses > 1:
+    if name is not None and statuses != 1:
         return bad(name)
     return None
 

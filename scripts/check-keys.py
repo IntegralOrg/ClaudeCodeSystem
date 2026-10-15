@@ -99,8 +99,18 @@ def load_routines(vault):
             errors.append((name, f"routine {name}: keys must be a list"))
             continue
         name = fm.get("name") or os.path.splitext(os.path.basename(path))[0]
-        routines[name] = {"title": fm.get("title", name), "keys": fm.get("keys", []) or [],
-                          "optional_keys": fm.get("optional_keys", []) or []}
+        nameless = 0
+        lists = {}
+        for field in ("keys", "optional_keys"):
+            kept = []
+            for item in fm.get(field, []) or []:
+                if isinstance(item, dict) and not item.get("name"):
+                    nameless += 1
+                else:
+                    kept.append(item)
+            lists[field] = kept
+        routines[name] = {"title": fm.get("title", name), "keys": lists["keys"],
+                          "optional_keys": lists["optional_keys"], "nameless": nameless}
     return routines, errors
 
 
@@ -271,6 +281,7 @@ def main(argv=None):
             else:
                 print(msg, file=sys.stderr)
 
+    notes.extend(f"{n}: a key declaration has no name" for n, r in routines.items() for _ in range(r.get("nameless", 0)))
     present = env_names_present(args.vault)
     report, any_missing, where, optional_names = {}, False, [], set()
     for name, r in routines.items():

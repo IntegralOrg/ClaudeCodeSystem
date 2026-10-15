@@ -176,6 +176,12 @@ def test_tools_ledger_write_with_status_not_first_is_blocked(tmp_path):
     assert code == 2
 
 
+def test_tools_ledger_section_without_status_is_blocked(tmp_path):
+    for bad in ("# Tools\n\n## Gmail\n- essential: yes\n", "# Tools\n\n## Gmail\n\n## Slack\n- status: not connected\n"):
+        code, err = _ledger_write(tmp_path, bad)
+        assert code == 2 and "Gmail" in err
+
+
 def test_tools_ledger_good_shape_is_allowed(tmp_path):
     good = "# Tools\n\nIntro line.\n\n## Gmail\n- status: not connected\n- essential: yes\n\n## Slack\n- status: skipped (later)\n- essential: no\n"
     code, _ = _ledger_write(tmp_path, good)

@@ -125,3 +125,14 @@ def test_mac_dialog_keeps_a_non_ascii_label_literal(monkeypatch):
     monkeypatch.setattr(mod.subprocess, "run", fake_run)
     assert mod.ask_mac("clé API") == "abc"
     assert "clé API" in seen["script"] and "\\u" not in seen["script"]
+
+
+def test_mac_dialog_timeout_counts_as_cancelled(monkeypatch):
+    mod = _module()
+
+    def fake_run(cmd, **kw):
+        assert kw["timeout"] == mod.DIALOG_TIMEOUT + 30
+        raise subprocess.TimeoutExpired(cmd, kw["timeout"])
+
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+    assert mod.ask_mac("Rize API key") is None

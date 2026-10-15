@@ -76,7 +76,10 @@ def ask_mac(label):
         "  return text returned of r\n"
         "end tell"
     )
-    r = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+    try:
+        r = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, timeout=DIALOG_TIMEOUT + 30)
+    except subprocess.TimeoutExpired:
+        return None
     if r.returncode != 0:
         return None  # Cancel (osascript error -128) or no dialog at all
     return r.stdout.rstrip("\n")
@@ -87,8 +90,10 @@ def ask_windows(label):
     try:
         r = subprocess.run(
             ["powershell.exe", "-NoProfile", "-STA", "-ExecutionPolicy", "Bypass", "-Command", WIN_FORM],
-            capture_output=True, text=True, env=env,
+            capture_output=True, text=True, env=env, timeout=DIALOG_TIMEOUT + 30,
         )
+    except subprocess.TimeoutExpired:
+        return None
     except OSError:
         return False
     return None if r.returncode != 0 else r.stdout

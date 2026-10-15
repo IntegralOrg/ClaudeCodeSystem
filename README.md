@@ -66,7 +66,7 @@ Connection steps for each tool (calendar, email, tasks, calls, chat) are in [Con
 1. **You work with Claude** (in Claude Desktop, or in a cloud session on the web or your phone): drafting, research, tasks, notes.
 2. **Your work is saved for you.** When Claude finishes a turn, a Stop hook lands the changes on `main`: `scripts/cloud-land.sh` in the cloud, `scripts/land-local.sh` on your computer. You never run Git.
 3. **Routines run on a schedule** from the definitions in `System/routines/`: End of Day (weeknights) and Vault Hygiene (nightly). Which are live is recorded in `System/Routines.md`.
-4. **You are told when something is wrong**, even with no connectors: at the start of every session two hooks speak first. `landing_health.py` says when saves have been failing; `routine_health.py` says when a routine has not run when it should.
+4. **You are told when something is wrong**, even with no connectors: at the start of every session three hooks speak first. `landing_health.py` says when saves have been failing; `routine_health.py` says when a routine has not run when it should; `tools_health.py` reads `System/Tools.md` and says which essential tool is still not connected.
 
 **Keys are one human step.** Routines name the keys they need; `python3 scripts/check-keys.py` reports which names are missing and never prints a value.
 
@@ -121,7 +121,7 @@ ClaudeCodeSystem/
 │   └── daily-workflow.md               # Today.md + /morning + EOD pipeline
 ├── scripts/
 │   ├── hooks/                          # guard_secrets, guard_state_writes, guard_vault_path, log_tool_use,
-│   │                                   #   setup_pending, landing_health, routine_health, session_context
+│   │                                   #   setup_pending, landing_health, routine_health, tools_health, session_context
 │   ├── cloud-land.sh                   # Cloud sessions: land edits on main (Stop hook)
 │   ├── land-local.sh                   # Local sessions: land edits on main (Stop hook)
 │   ├── check-keys.py                   # Which key names each routine needs and which are missing
@@ -209,7 +209,7 @@ End of Day is a scheduled routine, created at setup from `System/routines/eod.md
 
 ## Guardrails
 
-Hooks in `scripts/hooks/` (wired in the committed `.claude/settings.json`) keep the assistant honest: `guard_secrets.py` blocks any attempt to read, print, or search the credentials file or the environment; `log_tool_use.py` writes one masked line per tool call to `_generated/agent-actions/`; `guard_state_writes.py` keeps client profiles to one `## Current State` plus an append-only `## Log`; `session_context.py` starts each session with the branch, uncommitted work, and the newest handoff; and `landing_health.py` and `routine_health.py` say so at session start when saves are failing or a routine has not run. Scripts load credentials themselves through `scripts/envload.py`, and a one-off call goes through `python3 scripts/with-env.py -- <command>`. The full table is in `scripts/hooks/README.md`.
+Hooks in `scripts/hooks/` (wired in the committed `.claude/settings.json`) keep the assistant honest: `guard_secrets.py` blocks any attempt to read, print, or search the credentials file or the environment; `log_tool_use.py` writes one masked line per tool call to `_generated/agent-actions/`; `guard_state_writes.py` keeps client profiles to one `## Current State` plus an append-only `## Log`; `session_context.py` starts each session with the branch, uncommitted work, and the newest handoff; and `landing_health.py`, `routine_health.py`, and `tools_health.py` say so at session start when saves are failing, a routine has not run, or an essential tool is still not connected. Scripts load credentials themselves through `scripts/envload.py`, and a one-off call goes through `python3 scripts/with-env.py -- <command>`. The full table is in `scripts/hooks/README.md`.
 
 Two proof commands, run from the vault root (expect `exit=2`, then `exit=0`):
 

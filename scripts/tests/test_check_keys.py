@@ -261,3 +261,13 @@ def test_probe_never_follows_a_redirect():
         assert [h[0] for h in hits] == ["/start"]
     finally:
         srv.shutdown()
+
+
+def test_nameless_object_key_is_skipped_with_a_note(tmp_path):
+    v = make_vault(tmp_path)
+    r = v / "System" / "routines" / "eod.md"
+    r.write_text(r.read_text().replace("keys: [ALPHA_KEY, BETA_TOKEN]", "keys:\n  - probe_url: https://x.example/ok\n  - ALPHA_KEY"))
+    out = json.loads(run(v, "--json").stdout)
+    assert "eod: a key declaration has no name" in out["notes"]
+    rep = out["routines"]["eod"]
+    assert "" not in rep["present"] + rep["missing"] + rep["unverified"] and "ALPHA_KEY" in rep["missing"]
