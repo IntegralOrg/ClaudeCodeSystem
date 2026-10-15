@@ -66,9 +66,9 @@ def test_routine_files_carry_a_model_and_an_off_the_hour_schedule():
     assert "0 23 * * 1-5" not in eod and "0 1 * * *" not in hyg
 
 
-def test_setup_section_3_writes_the_local_remotetrigger_path_first():
+def test_setup_section_4_writes_the_local_remotetrigger_path_first():
     text = read("Setup Procedure")
-    step3 = text[text.index("## 3. Create the routines"):text.index("## 4. Keys")]
+    step3 = text[text.index("## 4. Create the routines"):text.index("## 5. Keys")]
     has(step3, "`/schedule`", "RemoteTrigger", "`list`", "`create`", "`get`", "`update`", "cron_expression",
         "persist_session", "job_config", "environment_id", "session_context", "model", "sources", "git_repository",
         "events", "7 3 * * 2-6", "7 4 * * 2-6", "11:07 PM")
@@ -76,7 +76,7 @@ def test_setup_section_3_writes_the_local_remotetrigger_path_first():
     has(step3, "model` from the routine's file", "verify")
     assert "0 3 * * 2-6" not in step3 and "0 4 * * 2-6" not in step3
     has(step3, "- model: claude-opus-5-5")
-    has(step3, "Routines (the sidebar may say Scheduled)")
+    has(step3, "the sidebar may say Scheduled")
 
 
 def test_routines_doc_records_the_model_and_the_07_schedules():
@@ -86,7 +86,7 @@ def test_routines_doc_records_the_model_and_the_07_schedules():
     hyg = text[text.index("## Vault Hygiene"):text.index("## How setup creates them")]
     has(eod, "- model: claude-opus-5-5", "7 23 * * 1-5", "11:07 PM", "7 3 * * 2-6")
     has(hyg, "- model: claude-opus-5-5", "7 1 * * *", "1:07 AM")
-    has(text, "7 4 * * 2-6", "Routines (the sidebar may say Scheduled)", "RemoteTrigger", "`/schedule`",
+    has(text, "7 4 * * 2-6", "the sidebar may say Scheduled", "RemoteTrigger", "`/schedule`",
         "start minutes late")
     by_hand = text[text.index("## Create a routine by hand"):text.index("## If a routine is stale")]
     has(by_hand, "Model:", "model:` line")
@@ -106,16 +106,16 @@ def test_superpowers_install_finds_the_bundled_cli_before_any_screen_drive():
     has(line, "scripts/setup/claude_cli.py", "CLI_MISSING", "before")
     assert line.index("claude_cli.py") < line.index("Settings, Plugins")
     setup = read("Setup Procedure")
-    sec7 = setup[setup.index("## 7. Show it working"):setup.index("## Ask the person only when")]
+    sec7 = setup[setup.index("## 8. Show it working"):setup.index("## Ask the person only when")]
     has(sec7, "scripts/setup/claude_cli.py", "CLI_MISSING", "superpowers@superpowers-marketplace")
 
 
-# G7: section 7 and section 2
+# G7: section 8 and section 2
 
 def test_first_computer_checks_list_connectors_and_disclose_the_paid_call():
     setup = read("Setup Procedure")
-    sec7 = setup[setup.index("## 7. Show it working"):setup.index("## Ask the person only when")]
-    has(sec7, "connectors", "missing", "paid", "`claude -p`", "skip it", "session journal")
+    sec7 = setup[setup.index("## 8. Show it working"):setup.index("## Ask the person only when")]
+    has(sec7, "System/Tools.md", "still not connected", "paid", "`claude -p`", "skip it", "session journal")
     adding = read("Adding Your Computer")
     step4 = adding[adding.index("## 4."):adding.index("## 5.")]
     has(step4, "paid call", "says so in one sentence", "skips it", "names the missing ones")
@@ -123,7 +123,7 @@ def test_first_computer_checks_list_connectors_and_disclose_the_paid_call():
 
 def test_build_the_vault_replaces_every_placeholder_and_rewrites_the_schedule_rules():
     setup = read("Setup Procedure")
-    sec2 = setup[setup.index("## 2. Build the vault"):setup.index("## 3. Create the routines")]
+    sec2 = setup[setup.index("## 2. Build the vault"):setup.index("## 3. Connect your tools")]
     has(sec2, "`[Your Name]`", "`[YourCompany]`", "every", "no bracketed placeholder", "rule 12", "rule 13",
         "Meeting Window", "Daily Schedule Skeleton", "week shape", "planning day")
 
@@ -177,3 +177,134 @@ def test_no_em_dashes_in_the_touched_docs():
     for p in (ROOT / "System" / "routines").glob("*.md"):
         assert chr(0x2014) not in p.read_text(encoding="utf-8"), p.name
     assert chr(0x2014) not in (ROOT / "scripts" / "setup" / "claude_cli.py").read_text(encoding="utf-8")
+
+
+# PR B: interview, connect step, routines after it
+
+def test_welcome_lines_mention_the_microphone():
+    has(read("Start"), "press the microphone next to the message box")
+    has(read("Setup Procedure"), "press the microphone next to the message box")
+
+
+def test_round_one_says_type_below_and_press_enter():
+    has(read("Setup Procedure"), "Type your answers below and press Enter.")
+
+
+def test_round_two_is_the_inputs_question_with_next_and_skip_meaning():
+    text = read("Setup Procedure")
+    sec1 = text[text.index("## 1. Open"):text.index("## 2. Build")]
+    has(sec1, "Where does information come in day to day?", "Picking a tool means we connect it", "Skipping one means",
+        "Do you record your meetings?", "Which tool records them?", "Anything else you live in?", "Google Drive or OneDrive")
+    assert "WhatsApp" not in sec1 and "Text messages" not in sec1
+
+
+def test_section_order_is_connect_before_routines():
+    text = read("Setup Procedure")
+    assert text.index("## 3. Connect your tools") < text.index("## 4. Create the routines") < text.index("## 5. Keys")
+
+
+def test_connect_section_never_blocks_and_uses_the_in_chat_cards():
+    text = read("Setup Procedure")
+    sec = text[text.index("## 3. Connect your tools"):text.index("## 4. Create the routines")]
+    has(sec, "search_mcp_registry", "suggest_connectors", "session_connectors_status", "set_session_connector_enabled",
+        "System/Tools.md", "essential", "One try per tool during setup", "never blocks", "connect my tools",
+        "Customize", "Connectors", "Gmail, so End of Day can read what came in today")
+    has(sec, "Those are the ones tonight's routine needs")
+
+
+def test_routine_section_passes_connectors_and_verifies_them():
+    text = read("Setup Procedure")
+    sec = text[text.index("## 4. Create the routines"):text.index("## 5. Keys")]
+    has(sec, "connectors", "connector-missing", "verify", "session_connectors_status")
+    assert "Do not pass `connectors`" not in sec
+
+
+def test_build_section_writes_the_ledger():
+    text = read("Setup Procedure")
+    sec = text[text.index("## 2. Build"):text.index("## 3. Connect")]
+    has(sec, "System/Tools.md", "- status: not connected", "essential: yes")
+
+
+# Task 8: keys through the pop-up and network secrets; the first win replaces the demo
+
+def test_keys_section_names_the_pop_up_and_network_secrets_only():
+    text = read("Setup Procedure")
+    sec = text[text.index("## 5. Keys"):text.index("## 6. Record completion")]
+    has(sec, "scripts/set-key.py", "network secret", "Allowed websites", "Custom headers", "check-keys.py --where",
+        "key present")
+    assert "Environment variables" not in sec
+    for line in sec.splitlines():
+        assert ".env" not in line or "never" in line.lower(), line
+
+
+def test_section_8_is_the_first_win():
+    text = read("Setup Procedure")
+    sec = text[text.index("## 8. Show it working"):text.index("## Ask the person only when")]
+    has(sec, "Summarize the key takeaways from my email over the past week", "/eod", "Your brain is current",
+        "What's something you'd get done today, and how would you go about it?", "Inbox/", "nothing is sent",
+        "Wispr Flow")
+    assert "two-minute demo" not in sec and "render one client page" not in sec
+
+
+def test_completion_line_records_the_ledger_and_the_journal_answer():
+    text = read("Setup Procedure")
+    sec = text[text.index("## 6. Record completion"):text.index("## 7. Land")]
+    has(sec, "tools connected:", "session journal:")
+
+
+# Task 9: Connecting Tools, the table and the two key places
+
+def test_connecting_tools_has_the_table_and_the_two_key_places():
+    text = read("Connecting Tools")
+    has(text, "| Tool | Connector | Covers | Gap | Ruling |", "connector first", "System/Tools.md", "connect my tools",
+        "scripts/set-key.py", "network secret", "Allowed websites", "Custom headers", "X-Api-Key", "check-keys.py --where",
+        "## Appendix")
+    assert "Environment variables" not in text.split("## Appendix")[0]
+    for line in text.split("## Appendix")[0].splitlines():
+        assert ".env" not in line or "never" in line.lower() or "agent" in line.lower(), line
+
+
+def test_connecting_tools_rules_on_the_known_tools():
+    text = read("Connecting Tools")
+    for tool in ("Gmail", "Google Calendar", "Microsoft 365", "Slack", "Fathom", "Fireflies", "Granola", "Asana", "ClickUp",
+                 "Notion", "HubSpot", "QuickBooks", "Google Drive", "Text messages", "WhatsApp"):
+        assert tool in text, tool
+    assert "fathom" "-fetch" not in text and "FATHOM_API_KEY" in text
+
+
+def test_routines_doc_points_keys_at_network_secrets_and_lists_connectors():
+    text = read("Routines")
+    has(text, "- connectors:", "network secret")
+    assert "Environment variables" not in text
+
+
+def test_adding_your_computer_uses_the_pop_up_and_the_ledger():
+    text = read("Adding Your Computer")
+    has(text, "scripts/set-key.py", "System/Tools.md", "session journal:")
+    assert "Command+Shift+Period" not in text
+
+
+def test_start_md_says_the_hand_off_sentence_once():
+    text = read("Start")
+    assert text.count("I'm opening your Brain in a new Claude window") == 1
+    assert "this session is finished" not in text.lower()
+
+
+def test_no_nested_parentheses_around_the_scheduled_remark():
+    for name in ("Setup Procedure", "Routines"):
+        text = read(name)
+        assert "Routines (the sidebar may say Scheduled)" not in text
+        has(text, "the sidebar may say Scheduled")
+
+
+def test_rule_13_has_a_planning_line_to_rewrite():
+    text = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+    rule = [l for l in text.splitlines() if l.startswith("13. ")][0]
+    assert "[Planning day]" in rule
+
+
+def test_how_this_works_table_lists_each_routine_once():
+    text = read("How This Works")
+    assert text.count("| End of Day |") == 1 and text.count("| Vault Hygiene |") == 1
+    has(text, "11:07 PM", "1:07 AM", "_generated/Themes.md")
+    assert "11 PM" not in text and "1 AM" not in text

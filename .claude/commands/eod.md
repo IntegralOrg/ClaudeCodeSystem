@@ -25,7 +25,7 @@ Advanced fallback:
 
 ## Setup
 
-1. Run `python3 scripts/check-keys.py --routine eod` and list the connectors available in this session (name each; note any of Gmail, Google Calendar that is absent). Hold the findings (missing keys, missing connectors) for Section 4 to include in the daily note under `## Routine health`. If this run's keys check exits 0, then in `System/Routines.md`, under this routine's `## <title>` heading, if the first bullet reads `- live_since: not live` (or is missing), change that same bullet to `- live_since: <today's date>`; never add a second live_since bullet. If the script exits 1 or a required connector is absent, continue with what is available.
+1. Run `python3 scripts/check-keys.py --routine eod` and list the connectors available in this session (name each; note any connector listed under `connectors:` in `System/routines/eod.md` that is absent). Hold the findings (missing keys, missing connectors) for Section 4 to include in the daily note under `## Routine health`. If this run's keys check exits 0 AND every connector listed under `connectors:` in `System/routines/eod.md` is available in this session (its tools are present), then in `System/Routines.md`, under this routine's `## <title>` heading, if the first bullet reads `- live_since: not live` (or is missing), change that same bullet to `- live_since: <today's date>`; never add a second live_since bullet. A missing connector means no flip: note it as `connector-missing: <name>` for Routine health. If the script exits 1 or a required connector is absent, continue with what is available.
 2. Compute today's date and time in the owner's time zone, never the container's clock (cloud containers run on UTC, so a bare `date` can already be tomorrow at 11 PM Eastern): read the IANA zone from `## Owner` in `CLAUDE.md`, then run `TZ=<that zone> date +%F` for the date and `TZ=<that zone> date` for the time
 3. Do not read or source the credentials file. Scripts load credentials themselves (`scripts/envload.py`); for a one-off external call use `python3 scripts/with-env.py -- <command>`
 4. Set variables:
@@ -64,10 +64,12 @@ Critical rules:
 Execute these steps in order:
 
 1. BRAIN DUMP TRIAGE: Read `Inbox/[YourCompany].md`. Extract the `## Brain Dump` section. Classify each item by client. Route work items to the correct client inbox file. Remove routed items from the Brain Dump. Leave personal items and ideas in place. Log every routed item to the manifest.
-2. CALL TRANSCRIPTS: If a transcript fetcher script exists (for example `scripts/fathom-fetch.py`), run it and parse the results. For each call, extract action items, decisions, and follow-ups. Route to client inbox files. Log to manifest. If no transcript service is configured, skip this step.
-3. TOMORROW'S CALENDAR: Get a Google OAuth access token using the refresh token. Fetch $TOMORROW's events from Google Calendar API. Format as a readable schedule. Write to `/tmp/eod-calendar-$TODAY.md`.
-4. EMAIL CHECK: Reuse the Google OAuth token. Fetch today's emails via Gmail API (first 15-20 messages). Surface emails needing response. Route actionable items to client inbox files. Log to manifest.
-5. SLACK CHECK: For each workspace token available to the scripts (`SLACK_TOKEN_WORKSPACE_*`), check unread DMs and mentions. Route items to client inbox files. Log to manifest.
+2. CALL TRANSCRIPTS: read `System/Tools.md`; if a notetaker is connected, list today's meetings through its connector and fetch each transcript (Section 1 of eod-gather.md has the tool names per notetaker). For each call, extract action items, decisions, and follow-ups; route to client inbox files; log to manifest. With no notetaker connected, skip with one line held for Routine health.
+3. TOMORROW'S CALENDAR: read `System/Tools.md`; with the calendar connector connected (Google Calendar, or Microsoft 365 for Outlook), list $TOMORROW's events through its tools. Format as a readable schedule. Write to `/tmp/eod-calendar-$TODAY.md`. With no calendar connected, skip with one line held for Routine health.
+4. EMAIL CHECK: read `System/Tools.md`; with the email connector connected (Gmail, or Microsoft 365 for Outlook), read today's mail through its tools (first 15-20 messages). Surface emails needing response. Route actionable items to client inbox files. Log to manifest. With no email connected, skip with one line held for Routine health.
+5. SLACK CHECK: read `System/Tools.md`; with Slack connected, read today's DMs and mentions through the Slack connector. Route items to client inbox files. Log to manifest. With Slack not connected, skip with one line held for Routine health.
+
+Sections 2 to 4 of `eod-gather.md` have the details; a vault on the full control Google path reads Gmail and Google Calendar as the Connecting Tools Appendix (`System/Connecting Tools.md`) describes.
 6. COMPLETION CHECK: Only if at least one `Inbox/*.md` file has open items under `## Open Tasks`. Check every open task against what steps 2 to 5 just read, plus up to 30 targeted lookups of the thread or conversation a task cites. Clear evidence that it is finished (by anyone): check it off and log a `COMPLETED` manifest row. Partial evidence, or an inbound "no longer needed": log a `CONFIRM` row (at most 5) and leave the task alone. No evidence: nothing. Full rules: `eod-gather.md` Section 5.
 
 When done, read back `$MANIFEST` and confirm it exists and has entries. Report totals by source and client.
@@ -112,7 +114,7 @@ Report: total hours tracked, hours per client, hours per work type, number of ga
 
 Read the manifest at `$MANIFEST`. Read the calendar cache at `/tmp/eod-calendar-$TODAY.md`. If `/tmp/eod-time-$TODAY.md` exists, read the time tracking summary. Read the keys-check findings from Setup step 1 and the connectors list from Setup step 1. Read `_generated/vault-hygiene/audit-log.md` to find the newest `## YYYY-MM-DD` heading (Vault Hygiene's last run date). If the audit-log does not exist and `System/Routines.md` shows `live_since: not live` (or no date) under `## Vault Hygiene`, note "Vault Hygiene: not yet run" for the health section (not STALE). If the audit-log does not exist but `System/Routines.md` shows a `live_since` date under `## Vault Hygiene`, that is STALE (the log vanished after the routine went live; open System/Routines.md and check the routine is scheduled). Otherwise, if the newest date in audit-log is more than 2 days old, flag it as STALE (open System/Routines.md and check the routine is scheduled). If `_generated/landing.log` exists, read its last line; otherwise note "cloud session, landing by hook".
 
-Create the daily note at `$VAULT/Work/Daily/$TODAY.md` with these sections:
+Write the daily note at `$VAULT/Work/Daily/$TODAY.md`. Create it when it is absent. When it already exists (setup writes its `Setup completed ...` line there, and an earlier run may have written it), keep every existing line, the `Setup completed` line above all, and add or update the sections below them; never overwrite the file. The sections:
 
 1. Date and day of week as the title
 2. MEETINGS: List meetings attended today
@@ -201,22 +203,17 @@ After all sections complete, print the final summary:
 End the daily note with one status line: `Routine status: <ok | needs you: <reason>>`. If Vault Hygiene is stale (marked STALE in Section 4), or any required keys or connectors are missing, build a list of stable dedupe keys:
 - `vault-hygiene-stale` if Vault Hygiene's last run is more than 2 days old
 - `key-missing:<NAME>` for each missing required key
-- `connector-missing:<NAME>` for each missing required connector (Gmail, Google Calendar)
+- `connector-missing:<NAME>` for each missing required connector (the ones listed under `connectors:` in `System/routines/eod.md`)
 
 For each key, check `_generated/routine-alerts.json` (create if missing; treat malformed or missing as `{}`). Send a push (outside the vault) only if the key is absent from the JSON or its ISO date is 7 or more days ago. After sending, write today's date only for the keys actually sent, merge them into the JSON, and write it back. "Vault Hygiene: not yet run" never produces a push.
 
-To send: read CLAUDE.md's Owner section and extract the owner's email address. If absent, skip email and use the calendar fallback.
+To send: use the Google Calendar connector. Create an all-day event tomorrow. Title: `Brain needs you: <reason>` (the first missing item). Description: what is stale or missing (Vault Hygiene, names of keys, names of connectors) and the fix (from System/Routines.md or System/Connecting Tools.md). End of Day never sends an email.
 
-Email route (preferred): Use the Gmail connector's send tool. Subject: `Brain needs you: <reason>` (the first missing item). Body (3 lines):
-- What is stale or missing (Vault Hygiene, names of keys, names of connectors)
-- The fix (from System/Routines.md or System/Connecting Tools.md)
-- "reply not needed"
+If no calendar connector is present, there is no push: hold the reason for Routine health in the daily note and do not write the key to `_generated/routine-alerts.json`.
 
-If the Gmail connector can only draft (does not send), create the draft AND proceed to calendar fallback.
+On Microsoft 365 (the routine's `connectors:` is `[Microsoft 365]`) the connector cannot create an event, so there is no push: Routine health in the daily note is where End of Day tells the owner, and the line after the status reads `(no push channel on Microsoft 365)`.
 
-Calendar fallback: Use Google Calendar connector. All-day event tomorrow. Title: `Brain needs you: <reason>`. Description: the fix from System/Routines.md or System/Connecting Tools.md.
-
-Record which channel was used in the daily note after the status line: `(sent via Gmail | sent via calendar)`.
+Record the channel in the daily note after the status line: `(sent via calendar)`, or `(no push channel)` when none is connected.
 
 ---
 

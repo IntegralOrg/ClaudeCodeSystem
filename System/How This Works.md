@@ -20,9 +20,7 @@ updated: 2026-10-13
 | Routine | When | What it touches |
 |---|---|---|
 | End of Day | Weeknights, 11:07 PM your time | Reads your calendar and email (and calls and Slack when connected), writes `Work/Daily/<date>.md`, updates client pages, checks that the other routines ran, and reaches you outside the vault when something needs you |
-| Vault Hygiene | Every night, 1:07 AM your time | Backfills missing frontmatter, reports repeated frontmatter keys, finds duplicate subjects, marks canonical files, writes `_generated/vault-hygiene/audit-log.md` |
-| End of Day | Weeknights, 11 PM your time | Reads your calendar and email (and calls and Slack when connected), writes `Work/Daily/<date>.md`, updates client pages, checks that the other routines ran, and reaches you outside the vault when something needs you |
-| Vault Hygiene | Every night, 1 AM your time | Backfills missing frontmatter, reports repeated frontmatter keys, finds duplicate subjects, marks canonical files, tunes the system from the week's sessions (and rewrites `_generated/Themes.md`), writes `_generated/vault-hygiene/audit-log.md` |
+| Vault Hygiene | Every night, 1:07 AM your time | Backfills missing frontmatter, reports repeated frontmatter keys, finds duplicate subjects, marks canonical files, tunes the system from the week's sessions (and rewrites `_generated/Themes.md`), writes `_generated/vault-hygiene/audit-log.md` |
 
 Their definitions are in `System/routines/`; whether each is live is in `System/Routines.md`.
 
@@ -57,12 +55,13 @@ Markdown files use `merge=union`, which means that when two sessions change the 
 
 ## How you are told, even with no connectors
 
-Two small hooks run at the start of every session (cloud or local) and speak first, without needing Gmail or a calendar:
+Three small hooks run at the start of every session (cloud or local) and speak first, without needing Gmail or a calendar:
 
 - `landing_health.py` reads `_generated/landing.log` and says so when saves have been failing, or when landing appears to be switched off (several `on branch` or `locked` lines in a row).
 - `routine_health.py` says when a routine has not run when it should (End of Day or Vault Hygiene), using the daily notes, the hygiene log, and the `live_since` lines in `System/Routines.md`.
+- `tools_health.py` reads `System/Tools.md` (the ledger of the tools you named at setup) and says which essential tool is still not connected, every session until it is; a tool you said you would connect later is mentioned once a week.
 
-When Gmail or Google Calendar is connected, End of Day adds a push outside the vault: an email to the address in the `## Owner` section of `CLAUDE.md`, or, if it cannot send, an all-day calendar event titled "Brain needs you: <reason>". It sends a given reason at most once a week.
+When Google Calendar is connected, End of Day adds a push outside the vault: an all-day calendar event titled "Brain needs you: <reason>". It never sends an email. When no calendar connector is connected, or when Microsoft 365 is connected (it cannot create an event), Routine health in the daily note and the session-start notes are how it tells you. It pushes a given reason at most once a week.
 
 ## Who decides
 

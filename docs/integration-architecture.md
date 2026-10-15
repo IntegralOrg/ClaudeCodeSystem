@@ -37,7 +37,7 @@ The system connects to external platforms through five layers, each serving a di
 │                                                   │
 │  Layer 4: Custom Scripts (Python/Bash helpers)   │
 │  Multi-step recipes for complicated operations   │
-│  fathom-fetch.py, classify-transcript.py, etc.   │
+│  classify-transcript.py, etc.                    │
 │  → Reusable scripts that handle complex tasks    │
 │                                                   │
 │  Layer 5: Scheduled Automation (Routines)        │
@@ -239,7 +239,7 @@ When an operation is too complex for a single curl command, or needs to be reusa
 
 | Script | Language | Purpose |
 |--------|----------|---------|
-| `fathom-fetch.py` | Python | Deterministic Fathom transcript download. Downloads today's calls, classifies per-client routing, returns JSON report. |
+| the notetaker connector (Fathom, Fireflies, ...) | MCP connector | Lists today's meetings and returns each transcript; End of Day reads it through the connector named in `System/Tools.md`. |
 | `classify-transcript.py` | Python | Routes transcript files to the correct client folder based on participant names and call title. |
 | `rize-triage.sh` | Bash | Fetches Rize time tracking sessions, detects gaps, generates classification input. |
 | `rize-classify.py` | Python | Two-axis classification: client (who) + work_type (delivery/sales/audit/meeting/admin/internal). |
@@ -250,10 +250,10 @@ When an operation is too complex for a single curl command, or needs to be reusa
 Call transcripts are auto-routed to the correct folder by `classify-transcript.py`:
 
 ```
-Fathom API
+Notetaker connector (Fathom, Fireflies, ...)
     |
     v
-fathom-fetch.py (downloads transcript)
+End of Day saves the transcript
     |
     v
 classify-transcript.py (determines client from participants + title)
@@ -408,7 +408,7 @@ Interactive command with `AskUserQuestion` at every decision point:
 Here's how data flows through a typical end-of-day:
 
 ```
-Fathom API ─────► fathom-fetch.py ──► classify-transcript.py ──► Client Transcripts/
+Notetaker connector (Fathom, Fireflies, ...) ─► classify-transcript.py ──► Client Transcripts/
                                                                         │
                   Transcript text ──► Action item extraction ──────────┐
                                                                        │

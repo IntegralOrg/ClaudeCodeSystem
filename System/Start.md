@@ -20,7 +20,7 @@ This session has no hooks and no project settings, so these lines are the only g
 
 ## 1. Welcome
 
-Say, in these words: "Welcome. I'll set up your system now. It takes about twenty minutes, and I'll need you for a few clicks along the way: two permission switches on a Mac, an installer, and one approval on GitHub. I'll say exactly what to click each time. Before we start, check that the button next to Send says **Auto**; if not, click it and choose Auto. Your Mac will ask a few times whether Claude may do something: click **Allow** each time." Say it once; if the chat already shows it, skip it. On Windows, leave the Mac sentence out.
+Say, in these words: "Welcome. I'll set up your system now. It takes about twenty minutes, and I'll need you for a few clicks along the way: two permission switches on a Mac, an installer, and one approval on GitHub. I'll say exactly what to click each time. You can talk instead of typing: press the microphone next to the message box. Before we start, check that the button next to Send says **Auto**; if not, click it and choose Auto. Your Mac will ask a few times whether Claude may do something: click **Allow** each time." Say it once; if the chat already shows it, skip it. On Windows, leave the Mac sentence out.
 
 ## 2. Get the system
 
@@ -64,7 +64,7 @@ Check: on a Mac, `xcode-select -p` succeeds and `python3 --version` answers (do 
 1. In the Brain folder, if there is no `.git`: `git init -b main`, then `git config user.name "<name>"` and `git config user.email "<email>"` from the answers file. If there is no commit yet: `git add -A` and `git commit -m "Start my Brain"`.
 2. Percent-encode the Brain folder's full path: on a Mac `python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))' "$HOME/Brain"`; on Windows `[uri]::EscapeDataString("$env:USERPROFILE\Brain")` (a space in a name breaks an unencoded link). Say: "I'm opening your Brain in a new Claude window now. This window is finished; the new one carries on from here." Then wait two seconds (the new window takes the focus, and the person is still reading), and only then open `claude://code/new?folder=<the encoded path>&q=Continue%20setup` (`open "<link>"` on a Mac, `Start-Process "<link>"` on Windows).
 3. Try to do the two clicks yourself, now that `python3` exists. Wait three seconds, then run `python3 ~/Brain/.claude/skills/drive-screen/scripts/screenctl.py list` (on Windows `python3 "$env:USERPROFILE\Brain\.claude\skills\drive-screen\scripts\screenctl.py" list`) and pick the Claude app's window: on a Mac the row whose id starts with `Claude#`; on Windows the row whose title is exactly `Claude`. Never pick it by its title: the front-door page in the browser has Claude in its title too, and a title that matches two windows is refused. Pass that id to every call: `screenctl.py shot --id <id> --out <Brain>/_generated/setup/trust.png`, read the picture, click the **Trust** button with `screenctl.py click --id <id> --x <n> --y <n>`, then `screenctl.py key --id <id> --keys enter`. If the picture is blank, or any of that is refused, say: "Click Trust, then press Enter."
-4. Say that this session is finished and the new window carries on from here. Then stop.
+4. Then stop.
 
 ## When a step fails
 

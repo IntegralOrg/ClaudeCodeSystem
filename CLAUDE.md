@@ -10,7 +10,7 @@ This is [Your Name]'s comprehensive Markdown vault (a Git repository) and person
 
 ## Owner
 
-Setup fills this section; End of Day reads the email to reach the owner outside the vault.
+Setup fills this section. The email is kept for the record only; End of Day never sends email.
 
 - name: [Your Name]
 - role: [Your Role]
@@ -55,7 +55,7 @@ Setup fills this section; End of Day reads the email to reach the owner outside 
 | Client profiles & archives | `Work/Clients/<Client>/Company Profile.md` + `Archive/` subfolder |
 | Call transcripts | Per-client: `Work/Clients/<Client>/Transcripts/`, admin: `Work/Transcripts/`, private: `[YourCompany]/Transcripts/` |
 | Task management | [Your Task Manager] (e.g., ClickUp via MCP) |
-| Credentials/API keys | Environment variables set in the Claude Code environment settings (a session-local, untracked logins file is the fallback; scripts load either via `scripts/envload.py`; `Resources/API Keys/` has references only) |
+| Credentials/API keys | A pop-up on your computer (`python3 scripts/set-key.py NAME`) and a network secret on the routine's cloud environment; see `System/Connecting Tools.md` (scripts load keys via `scripts/envload.py`; `Resources/API Keys/` has references only) |
 | Work projects | `Work/Clients/` |
 | Personal projects | `Projects/Personal/` |
 | System updates | Change Log (bottom of this file) + `CHANGELOG.md` for full history |
@@ -171,7 +171,7 @@ Brain/
 
 (Built-in connections -- once set up, they just work. These are called "MCP servers" in technical documentation.)
 
-- Built-in connections (Gmail, Google Calendar, and other claude.ai connectors) are set up by [Your Name] through claude.ai's **Settings > Connectors** page. **Claude cannot configure these connections itself.** If a new connection is needed, tell [Your Name] what to connect and where to find it in the Connectors settings.
+- Built-in connections (Gmail, Google Calendar, Slack, the notetaker, and other claude.ai connectors) are connected by the agent through the in-chat **Connect** card, with [Your Name] signing in and clicking Allow, and each one is recorded on the ledger `System/Tools.md`. Say "connect my tools" in any session to connect whatever is still open (the steps are in `System/Connecting Tools.md`).
 - Self-configured MCP servers live in the vault's checked-in config (`.mcp.json` at the vault root), so they follow the repository into every cloud session. Only add or change them when [Your Name] explicitly asks.
 - Pre-approve connected tools by adding their `"mcp__...__*"` entries to `permissions.allow` in the vault's `.claude/settings.json` (also checked in).
 
@@ -180,20 +180,16 @@ Brain/
 <!-- - **Google Calendar** -- Calendar events, scheduling, free time lookup -->
 - **Context7** -- Up-to-date library documentation
 
-### Tools That Need Login Credentials (stored in the guarded logins file)
+### Tools That Need Login Credentials (a key: the pop-up and a network secret)
 
 Read `Resources/Reference/API Integration Guide.md` for full docs (endpoints, auth, examples).
 
 <!-- Customize this table with your actual integrations -->
 
+Gmail, Google Calendar, Slack, Google Drive and the notetaker are connectors, not keys: see `System/Tools.md`. This table keeps only tools on the key path (a tool with no good connector).
+
 | Integration                | Type           | Account              | Key Capabilities                           |
 | -------------------------- | -------------- | -------------------- | ------------------------------------------ |
-| Google Drive/Docs/Calendar | OAuth REST     | you@yourcompany.com  | Doc CRUD, calendar events, file management |
-| Gmail                      | OAuth REST     | you@yourcompany.com  | Read/send email (`gmail.modify` scope)     |
-<!-- Add your meeting transcript service if you use one:
-| Fathom                     | API Key REST   | --                   | Meeting transcripts & summaries            |
--->
-| Slack                      | OAuth REST     | N workspaces connected | Channel read/write, DMs, user lookup     |
 <!-- Add time tracking if you use it:
 | Rize                       | Bearer GraphQL | you@yourcompany.com  | Time tracking, sessions, categories        |
 -->
@@ -221,9 +217,7 @@ Read `Resources/Reference/API Integration Guide.md` for full docs (endpoints, au
   - Usage: `python3 scripts/classify-transcript.py <file>` or `--participants "Name1,Name2" --title "Title"`
   - Routing: client contacts -> `Work/Clients/<Client>/Transcripts/`, devs only -> `Work/Transcripts/`, private -> `[YourCompany]/Transcripts/`
 
-- **Transcript Fetcher** -- Downloads transcripts from your service. Script: `scripts/fathom-fetch.py`
-  - Usage: `python3 scripts/fathom-fetch.py --date YYYY-MM-DD --json-file /tmp/fathom-report.json`
-  - Downloads today's call recordings, saves transcripts, classifies per-client routing
+- **Call transcripts** come through the connected notetaker's connector (see `System/Tools.md`); no script.
 -->
 
 <!-- Remove or uncomment the time tracking tools below if you use Rize or a similar service -->
@@ -255,7 +249,7 @@ When working in this vault:
 3. **ClickUp Status**: When marking tasks done in ClickUp, use the done-type status for that list (usually **"done"** or **"completed"**). Never use "closed". Different lists may have different done-status names; check the list's available statuses if unsure.
 -->
 4. **File Organization**: Follow the existing folder structure
-5. **Sensitive Data**: credentials live in a gitignored logins file (local) or pre-exported environment variables (cloud). Scripts load them through `scripts/envload.py`; a one-off external call goes through `python3 scripts/with-env.py -- <command>`. Never read, source, grep, or print the logins file or the environment; a hook blocks it. Never put raw keys in vault markdown; `Resources/API Keys/` is pointers only. Variables are expanded by the shell before the wrapper runs, so put the command in single quotes: `python3 scripts/with-env.py -- bash -c 'curl -H "Authorization: Bearer $TOKEN" https://...'`.
+5. **Sensitive Data**: a key used on this computer and by a cloud routine has two copies: the local copy goes in through the pop-up (`python3 scripts/set-key.py NAME`), and the routine's copy is a network secret on the routine's cloud environment (see `System/Connecting Tools.md`); a cloud routine cannot read the local copy. The gitignored logins file and pre-exported environment variables are only what API scripts and one-off external calls read: scripts load them through `scripts/envload.py`, and a one-off external call goes through `python3 scripts/with-env.py -- <command>`. Never read, source, grep, or print the logins file or the environment; a hook blocks it. Never put raw keys in vault markdown; `Resources/API Keys/` is pointers only. Variables are expanded by the shell before the wrapper runs, so put the command in single quotes: `python3 scripts/with-env.py -- bash -c 'curl -H "Authorization: Bearer $TOKEN" https://...'`.
 6. **Context Awareness**: Read relevant notes before making decisions
 7. **Proactive Assistance**: Suggest improvements, identify patterns, and help optimize workflows
 8. **Timezone Handling**: All times should be interpreted and displayed in **[Your Timezone]**. When querying APIs that return ISO timestamps (typically UTC), convert to your local timezone before reporting dates/times. Evening UTC times may appear as the next day if not converted properly.
@@ -267,7 +261,7 @@ When working in this vault:
 10. **Weekly Planning**: Only plan 2 days ahead for time blocks. Priorities shift too fast to lock in a full week. Re-plan mid-week based on updated action items.
 11. **Fridays**: Calendar is off-limits for calls. Use for deep work, admin, and wrap-up.
 12. **Meeting Window**: 1:00-2:30 PM daily is reserved for meetings. Do not book deep work time blocks in this window; meetings fill it organically.
-13. **Daily Schedule Skeleton**: Morning review 8:00, deep work 8:05, lunch 12:00, meetings 1:00-2:30, deep work 2 after 2:30, wind down 5:30. [Your Name] reads `Inbox/Today.md` first each morning, runs `/morning` (skill) for interactive review.
+13. **Daily Schedule Skeleton**: Morning review 8:00, deep work 8:05, lunch 12:00, meetings 1:00-2:30, deep work 2 after 2:30, wind down 5:30. [Your Name] reads `Inbox/Today.md` first each morning, runs `/morning` (skill) for interactive review. Planning: [Planning day] (dropped when they do not plan the week).
 14. **LinkedIn**: 15-minute slots, 2 days per week (not daily).
 15. **Writing Style Rules**: <!-- Add your own style preferences here. Examples: -->
     - Never use em dashes in any written output. Use commas, periods, colons, semicolons, or parentheses instead.
@@ -280,7 +274,7 @@ When working in this vault:
     4. **Ask [Your Name]** -- If none of the above work, tell [Your Name] what access you need. They may be able to get you API credentials or enable a connection. Do not try to work around it.
     Never install browser automation (agent-browser, Playwright, Puppeteer, or any headless browser tool) to work around a blocked page, missing API, or 403 error. If a service has no API and no Claude.ai integration, it is not connected yet -- say so and ask how [Your Name] wants to handle it.
     **When a step can only be done by clicking through a UI** (a settings page, an installer, an OAuth consent screen, a desktop app), offer to drive the screen with the `drive-screen` skill (`.claude/skills/drive-screen/`). It works on Windows, macOS and Linux, tries a command or scripting surface before touching the screen, and never starts without [Your Name] saying yes in the current session. Follow its `SKILL.md`; do not improvise screen control outside it.
-    **Never configure direct connections (MCP servers) yourself.** Built-in connectors (Gmail, Google Calendar, etc.) can only be added by [Your Name] through claude.ai's **Settings > Connectors** page. Do not attempt to write `mcpServers` configuration, edit MCP config files, or instruct yourself to set up a new MCP connection on your own initiative. Instead, tell [Your Name] what tool to connect and where to add it. Editing the vault's `.mcp.json` is valid only when [Your Name] explicitly requests it.
+    **Never hand-write MCP server configuration yourself.** Do not write `mcpServers` entries or edit MCP config files on your own initiative; editing the vault's `.mcp.json` is valid only when [Your Name] explicitly requests it. Built-in connectors (Gmail, Google Calendar, etc.) are different: when [Your Name] asks ("connect my tools"), connect them through the in-chat **Connect** card and record them on the ledger `System/Tools.md`.
 18. **Script-First for API Calls**: Do not write raw curl commands inline for API interactions. Instead, create a reusable Python script in `scripts/` for any API call that will be used more than once. Scripts must: load credentials through `scripts/envload.py` (environment first, local logins file as fallback), handle errors and non-200 responses gracefully, support `--json` output for machine-readable results, include a `--help` flag, and log what they did. If a script already exists for the task, use it. This makes API interactions consistent, testable, and debuggable instead of fragile one-liners that break silently. One-off exploratory API calls (testing an endpoint, checking a value) are fine as inline curl, but anything that runs in a skill or will be repeated should be a script.
 19. **Self-Updating Documentation**: Every time a new integration, tool, or script is added to the system, immediately update ALL relevant references:
     - **CLAUDE.md**: Add the integration under the appropriate section (Direct Connections, Tools That Need Login Credentials, or Local Tools). Include what it does, how to use it, and any key details.

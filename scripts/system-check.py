@@ -67,11 +67,12 @@ EXPECTED_HOOKS = (
     "SessionStart: scripts/cloud-land.sh --start", "SessionStart: scripts/hooks/guard_vault_path.py",
     "SessionStart: scripts/hooks/landing_health.py", "SessionStart: scripts/hooks/routine_health.py",
     "SessionStart: scripts/hooks/session_context.py", "SessionStart: scripts/hooks/setup_pending.py",
-    "SessionStart: scripts/land-local.sh --pull",
+    "SessionStart: scripts/hooks/tools_health.py", "SessionStart: scripts/land-local.sh --pull",
     "Stop: scripts/cloud-land.sh", "Stop: scripts/land-local.sh", "Stop: scripts/system-journal/cloud-journal.sh",
 )
 EXPECTED_HOOK_FILES = ("_common.py", "bump_updated.py", "guard_secrets.py", "guard_state_writes.py", "guard_vault_path.py",
-                       "landing_health.py", "log_tool_use.py", "routine_health.py", "session_context.py", "setup_pending.py")
+                       "landing_health.py", "log_tool_use.py", "routine_health.py", "session_context.py", "setup_pending.py",
+                       "tools_health.py")
 EXPECTED_DENY = ("Read(./.env)", "Read(./.env.*)", "Read(./**/.env)", "Read(./**/.env.*)")
 EXPECTED_ALLOW = ("Read", "Edit", "Write", "Bash(*)")
 LANDING_SCRIPTS = ("scripts/land-local.sh", "scripts/cloud-land.sh")
@@ -447,7 +448,8 @@ def check_deterministic(ctx):
         if missing:
             ctx.add("key-missing:" + name, "deterministic pieces", "blocks cloud", 2,
                     f"The {r.get('title') or name} routine is missing {n_of(len(missing), 'key')}",
-                    "Add each named key to the environment settings", "System/Connecting Tools.md", count=len(missing),
+                    "Add each named key as a network secret on the routine's environment "
+                    "(python3 scripts/check-keys.py --where says where)", "System/Connecting Tools.md", count=len(missing),
                     names=missing, routine=name)
 
 

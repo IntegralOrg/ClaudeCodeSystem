@@ -27,7 +27,7 @@ def test_all_system_docs_exist_with_frontmatter():
 def test_setup_procedure_covers_every_step():
     text = read("Setup Procedure")
     has(text, "AskUserQuestion", "prepared brief", "three rounds", "CLAUDE.md", "System/routines", "check-keys.py", "SETUP_PENDING",
-        "Adding Your Computer", "two-minute demo", "connect on your call", "cloud session", "local session",
+        "Adding Your Computer", "first win", "your call with Dean finishes those", "cloud session", "local session",
         "not live", "first run", "environment")
     for line in text.splitlines():
         if "check-keys.py" in line:
@@ -38,8 +38,8 @@ def test_setup_procedure_matches_the_hooks_and_routine_tools():
     text = read("Setup Procedure")
     has(text, "create_trigger", "persist_session", "## Owner", "email:", "Setup completed", "live_since: not live",
         "Work/Daily/", "Claude GitHub app")
-    step3 = text[text.index("## 3. Create the routines"):text.index("## 4. Keys")]
-    has(step3, "repository", "get_trigger", "delete_trigger", "Do not pass `connectors`", "created or reused")
+    step3 = text[text.index("## 4. Create the routines"):text.index("## 5. Keys")]
+    has(step3, "repository", "get_trigger", "delete_trigger", "connectors", "created or reused")
     assert "scheduled-tasks" not in text
     # nowhere may the agent be told to open, read, cat, or print the credentials file
     bad = re.compile(r"\b(read|cat|print|echo|source|grep)\b[^.\n]{0,25}(\.env\b|credentials file)", re.I)
@@ -60,9 +60,11 @@ def test_claude_md_support_rule_present():
 
 def test_connecting_tools_sections():
     text = read("Connecting Tools")
-    for h in ["## Gmail", "## Google Calendar", "## Slack", "## Fathom", "## Claude plugins"]:
+    for h in ["## The table", "## How a connector gets connected", "## Keys, for a tool with no good connector",
+              "## When End of Day reports connector-missing", "## Claude plugins", "## Final check",
+              "## Appendix: the full control way for Google (Cloud Console)"]:
         assert h in text, h
-    assert ("/" + "connect") not in text and "AskUserQuestion" not in text
+    assert not re.search(r"(?<![\w/])/" + "connect\\b", text) and "AskUserQuestion" not in text   # no retired slash command (the claude.ai/customize/connectors URL is fine)
     assert "check-keys.py" in text
 
 
@@ -125,31 +127,34 @@ def test_setup_procedure_is_safe_to_re_run():
     has(text, "list_triggers", "reuse it", "instead of creating a duplicate", "in place",
         "Create a routine by hand", "connector-missing", "persist_session: false",
         "Delete `SETUP_PENDING` now, so an interrupted hand-off never restarts setup")
-    # order after the keys step: completion line, then marker deletion, then landing, then the demo
-    keys = text.index("## 4. Keys")
+    # order after the keys step: completion line, then marker deletion, then landing, then the first win
+    keys = text.index("## 5. Keys")
     done = text.index("Setup completed <date>")
     gone = text.index("Delete `SETUP_PENDING` now")
     land = text.index("land-local.sh --final")
-    demo = text.index("Two-minute demo")
+    demo = text.index("Local session: the first win")
     assert keys < done < gone < land < demo
     assert text.count("Delete `SETUP_PENDING`") == 1
 
 
-def test_credentials_file_is_named_once_for_the_human_only():
-    for name in ("Connecting Tools", "Setup Procedure"):
-        has(read(name), "hidden file", "Command+Shift+Period", "The agent never opens it")
-    has(read("Adding Your Computer"), "hidden", "Command+Shift+Period")
-    has(read("Connecting Tools"), "update_trigger", "nothing after the `=`", "connector path")
+def test_credentials_file_is_named_only_to_the_agent():
+    # the person never hears the file's name: the pop-up writes it; the format line is for the agent, in the Appendix
+    ct = read("Connecting Tools")
+    has(ct, "the agent never opens, reads, or names to the person", "the agent never opens it")
+    has(read("Setup Procedure"), "never open or name the file the script writes")
+    has(read("Adding Your Computer"), "opens a box on your screen", "never in the chat")
+    has(ct, "update_trigger", "connector path")
+    assert "nothing after the `=`" in ct[ct.index("## Appendix"):]
     assert "never edits MCP server configuration" not in read("Connecting Tools")
 
 
-def test_connecting_tools_keeps_the_original_walkthroughs():
+def test_connecting_tools_keeps_the_google_walkthrough_in_the_appendix():
+    # the per-tool sections are replaced by the table; the Cloud Console walkthrough moved, verbatim, to the Appendix
     text = read("Connecting Tools")
-    for h in ["## ClickUp", "## Rize", "## Other tools"]:
-        assert h in text, h
-    has(text, "npx", "mcp-remote", "https://mcp.clickup.com/mcp", "clickup-mcp-server", "ENOTFOUND", "apt-get", "nodejs.org", "Download JSON",
-        "already have a project", "organization policy", "rize.io", "Direct Connections", "Tools That Need Login Credentials")
-    assert text.count('"mcpServers"') >= 3
+    appendix = text[text.index("## Appendix"):]
+    has(appendix, "Download JSON", "already have a project", "organization policy", "gws", "oauthplayground",
+        "gmail.modify", "GOOGLE_REFRESH_TOKEN", "If it lists upcoming events")
+    has(text, "Direct Connections", "Tools That Need Login Credentials", "Rize", "ClickUp")
 
 
 def test_adding_your_computer_final_fix_content():
@@ -369,7 +374,7 @@ def test_company_github_organization_doc_covers_setup_move_and_offboarding():
 
 def test_wispr_flow_is_offered_by_name_after_the_demo():
     setup = read("Setup Procedure")
-    sec7 = setup[setup.index("## 7. Show it working"):setup.index("## Ask the person only when")]
+    sec7 = setup[setup.index("## 8. Show it working"):setup.index("## Ask the person only when")]
     has(sec7, "Wispr Flow", "wisprflow.ai", "drive", "on yes")
     adding = read("Adding Your Computer")
     step4 = adding[adding.index("## 4."):adding.index("## 5.")]

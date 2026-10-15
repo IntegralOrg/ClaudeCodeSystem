@@ -78,3 +78,5 @@ Who decides what in a client's system. The client-facing version is `System/Who 
 ## Developing THIS repo (maintainers, not vault users)
 
 Everything above is for a maintainer changing this template. The engineering playbook (branching, review, the CodeRabbit loop) does **not** live in this repo: it is kept in one internal copy and linked from here by maintainers' own notes, so that copies never drift. Do not add a second copy of it here; vault-setup tooling is not where an engineering playbook belongs.
+
+After editing a setup document, run `python3 scripts/setup/script-doc.py`; the test fails when `docs/setup-script.md` is stale.

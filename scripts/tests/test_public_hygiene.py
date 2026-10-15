@@ -5,13 +5,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SELF = Path(__file__).resolve()
-SKIP_DIRS = {".git", "node_modules", ".pytest_cache", "__pycache__", ".venv", ".superpowers"}  # .superpowers: git-ignored agent scratch, never shipped
+SKIP_DIRS = {".git", "node_modules", ".pytest_cache", "__pycache__", ".venv", ".superpowers", "worktrees"}  # .superpowers: git-ignored agent scratch, never shipped; worktrees: Claude Code's worktrees live under .claude/worktrees/ and are never shipped
 EXTS = {".md", ".py", ".sh", ".json", ".yml", ".yaml", ".html", ".txt", ".example", ".toml", ".cfg", ".css", ".js", ".ps1", ".csv"}
 NAMES = {".gitignore", ".gitattributes", "LICENSE", ".gitkeep"}
 # Built from pieces so this file is not its own first hit.
 FORBIDDEN = re.compile("|".join(["ste" + "phen", "go" + "integral", "integral" + "/sops", "brain" + "-private"]), re.IGNORECASE)
 PEOPLE = re.compile(r"\b(" + "|".join(["de" + "an", "e" + "va"]) + r")\b", re.IGNORECASE)
-PEOPLE_ALLOWED = {"System/Getting Help.md", "System/Setup Procedure.md"}
+# docs/setup-script.md is generated verbatim from Setup Procedure.md (scripts/setup/script-doc.py), so it carries the same sentence.
+PEOPLE_ALLOWED = {"System/Getting Help.md", "System/Setup Procedure.md", "docs/setup-script.md"}
 # LICENSE carries the public company attribution URL on purpose; test_system_docs.py asserts the names are absent.
 EXEMPT = {"LICENSE", "scripts/tests/test_system_docs.py"}
 

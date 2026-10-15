@@ -113,3 +113,11 @@ def test_under_home_is_component_aware(tmp_path):
     assert cc.under_home(str(home / "AppData" / "claude.exe"), str(home))
     assert not cc.under_home(str(tmp_path / "Users" / "alice-elsewhere" / "claude.exe"), str(home))
     assert not cc.under_home(str(tmp_path / "Users"), str(home))
+
+
+def test_exit_codes_distinguish_missing_from_failed(tmp_path):
+    extra = {"PATH": str(tmp_path / "nothing"), "SETUP_CLAUDE_HOME": str(tmp_path), "SETUP_CLAUDE_PS": ""}
+    p = run_script([], extra)
+    assert p.returncode == 3 and p.stdout.strip() == "CLI_MISSING"
+    p = run_script(["--", "--version"], extra)
+    assert p.returncode == 1 and p.stdout.startswith("CLI_MISSING")   # running with no CLI is a failure, not "missing"

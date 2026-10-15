@@ -72,8 +72,8 @@ what carries into tomorrow. Write in first person, plain language.]
 
 ## Write
 
-1. Use the Write tool to create `Work/Daily/YYYY-MM-DD.md` (new file)
-2. If the file already exists, warn the user and ask before overwriting
+1. When `Work/Daily/YYYY-MM-DD.md` is absent, create it with the Write tool
+2. When it already exists (setup writes its `Setup completed ...` line there, and an earlier run may have written it), keep every existing line, the `Setup completed` line above all, and add or update the sections below them with the Edit tool; never overwrite the file
 
 ---
 

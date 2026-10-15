@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """PreToolUse gate on Edit/Write/MultiEdit: state-bearing files keep their shape.
 
-Scope: Company Profile.md, CLAUDE.md, MEMORY.md, memory/*.md, Templates/Client Note.md.
+Scope: Company Profile.md, CLAUDE.md, MEMORY.md, memory/*.md, Templates/Client Note.md,
+System/Tools.md (status-bullet shape).
 Rules apply only when the file (after the edit) has a `## Current State` block:
   one Current State, one Log, no Recent Activity/Decisions beside it,
   every state line is `- **Key** (YYYY-MM-DD): text`, keys unique.
@@ -25,7 +26,40 @@ def is_template(path):
     return "/Templates/" in p or p.startswith("Templates/") or Path(p).name == "Client Note.md"
 
 
+def is_tools_ledger(path):
+    p = str(path).replace("\\", "/")
+    return p.endswith("/System/Tools.md") or p == "System/Tools.md"
+
+
+def check_tools_ledger(content):
+    """One `- status:` bullet per `## ` section, and it is the first bullet. None when fine."""
+    name, bullets, statuses = None, 0, 0
+
+    def bad(n):
+        return ("BLOCKED: System/Tools.md keeps one '- status:' bullet per tool, and it is the first bullet under "
+                f"the heading. Offending section: {n}")
+
+    for line in FENCE.sub("", content).splitlines():
+        if line.startswith("## "):
+            if name is not None and statuses != 1:
+                return bad(name)
+            name, bullets, statuses = line[3:].strip(), 0, 0
+            continue
+        if name is None or not line.startswith("- "):
+            continue
+        bullets += 1
+        if line.startswith("- status:"):
+            statuses += 1
+            if bullets != 1 and statuses == 1:
+                return bad(name)
+    if name is not None and statuses != 1:
+        return bad(name)
+    return None
+
+
 def in_scope(path):
+    if is_tools_ledger(path):
+        return True
     p = Path(str(path))
     if p.name in IN_SCOPE_BASENAMES:
         return True
@@ -40,6 +74,8 @@ def _section(content, title):
 def check_content(path, content):
     if not in_scope(path):
         return None
+    if is_tools_ledger(path):
+        return check_tools_ledger(content)
     content = FENCE.sub("", content)
     state_re = TEMPLATE_STATE_LINE if is_template(path) else STATE_LINE
     headings = [h.strip() for h in HEADING.findall(content)]

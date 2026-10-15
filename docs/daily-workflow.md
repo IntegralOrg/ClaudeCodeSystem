@@ -141,7 +141,7 @@ _(empty on fresh day; populated if items rolled from yesterday)_
 ### Conventions
 
 #### Brain Dump
-The `## Brain Dump` section sits at the top of Today.md for quick capture throughout the day. Jot anything — tasks, ideas, notes, reminders — without worrying about where it belongs.
+The `## Brain Dump` section sits at the top of Today.md for quick capture throughout the day. Jot anything (tasks, ideas, notes, reminders) without worrying about where it belongs.
 
 At EOD:
 - **Phase 1 (Section 0)** reads the Brain Dump, classifies each item, and routes client-specific tasks to the correct inbox file
@@ -149,7 +149,7 @@ At EOD:
 - **Phase 5** carries unrouted items forward into tomorrow's Brain Dump
 - Routed items (marked with strikethrough) are dropped
 
-This means you never lose a thought — everything either gets filed or carries forward until it does.
+This means you never lose a thought: everything either gets filed or carries forward until it does.
 
 #### Source Tags
 Every work task includes an invisible HTML comment linking back to its source:

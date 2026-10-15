@@ -144,3 +144,130 @@ def test_other_routine_malformed_does_not_abort_when_routine_specified(tmp_path)
     p = run(v, "--routine", "eod")
     assert p.returncode == 0
     assert "missing: none" in p.stdout
+
+
+def make_probe_vault(tmp_path):
+    (tmp_path / "System" / "routines").mkdir(parents=True)
+    (tmp_path / "System" / "routines" / "eod.md").write_text(
+        "---\nname: eod\ntitle: End of Day\nschedule: \"7 23 * * 1-5\"\nprompt: /eod\nconnectors: [Gmail]\nkeys: []\n"
+        "optional_keys:\n"
+        "  - name: FATHOM_API_KEY\n    probe_url: https://api.fathom.ai/external/v1/meetings?limit=1\n    header: X-Api-Key\n    header_prefix: \"\"\n"
+        "  - SLACK_TOKEN_WORKSPACE_A\n---\n# EOD\n")
+    (tmp_path / (CRED + ".example")).write_text("FATHOM_API_KEY=\nSLACK_TOKEN_WORKSPACE_A=\n")
+    return tmp_path
+
+
+def run_probe(vault, results, *args):
+    return run(vault, *args, env_extra={"CHECK_KEYS_PROBE_RESULTS": json.dumps(results)})
+
+
+def test_object_and_bare_keys_mix_in_one_list(tmp_path):
+    v = make_probe_vault(tmp_path)
+    p = run_probe(v, {"https://api.fathom.ai/external/v1/meetings?limit=1": 401}, "--json")
+    rep = json.loads(p.stdout)["routines"]["eod"]
+    assert "FATHOM_API_KEY" in rep["optional_missing"] and "SLACK_TOKEN_WORKSPACE_A" in rep["optional_missing"]
+
+
+def test_probe_200_means_present_even_with_no_variable(tmp_path):
+    v = make_probe_vault(tmp_path)   # the cloud case: a network secret, nothing in the environment
+    p = run_probe(v, {"https://api.fathom.ai/external/v1/meetings?limit=1": 200}, "--json")
+    rep = json.loads(p.stdout)["routines"]["eod"]
+    assert "FATHOM_API_KEY" in rep["present"] and "FATHOM_API_KEY" not in rep["optional_missing"]
+
+
+def test_probe_error_is_unverified_not_missing(tmp_path):
+    v = make_probe_vault(tmp_path)
+    p = run_probe(v, {"https://api.fathom.ai/external/v1/meetings?limit=1": "error"}, "--json")
+    rep = json.loads(p.stdout)["routines"]["eod"]
+    assert rep["unverified"] == ["FATHOM_API_KEY"] and "FATHOM_API_KEY" not in rep["optional_missing"]
+    assert p.returncode == 0
+
+
+def test_probe_sends_the_header_only_when_the_variable_is_set(tmp_path, monkeypatch):
+    seen = {}
+    def fake_open(req, timeout):
+        seen["headers"] = dict(req.header_items())
+        class R:
+            status = 200
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+        return R()
+    monkeypatch.setattr(check_keys._opener, "open", fake_open)
+    spec = {"name": "FATHOM_API_KEY", "probe_url": "https://api.fathom.ai/x", "header": "X-Api-Key", "header_prefix": ""}
+    assert check_keys.probe_key(spec, "") == "present"
+    assert "X-api-key" not in seen["headers"] and "X-Api-Key" not in seen["headers"]
+    assert check_keys.probe_key(spec, "abc") == "present"
+    assert seen["headers"].get("X-api-key") == "abc"
+
+
+def test_probe_2xx_with_ok_false_body_is_missing(monkeypatch):
+    # Slack's auth.test answers 200 with {"ok": false} when no token reaches it.
+    def fake_open(req, timeout):
+        class R:
+            status = 200
+            def read(self, n=-1): return b'{"ok":false,"error":"not_authed"}'
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+        return R()
+    monkeypatch.setattr(check_keys._opener, "open", fake_open)
+    spec = {"name": "SLACK_TOKEN_WORKSPACE_A", "probe_url": "https://slack.com/api/auth.test",
+            "header": "Authorization", "header_prefix": "Bearer "}
+    assert check_keys.probe_key(spec, "") == "missing"
+
+
+def test_where_names_both_places_and_never_the_value(tmp_path):
+    v = make_probe_vault(tmp_path)
+    (v / "System" / "Routines.md").write_text("## End of Day\n- live_since: not live\n- environment id: env_123\n")
+    p = run_probe(v, {"https://api.fathom.ai/external/v1/meetings?limit=1": 401}, "--where")
+    assert "FATHOM_API_KEY (optional): on this computer run python3 scripts/set-key.py FATHOM_API_KEY" in p.stdout
+    assert "network secret" in p.stdout and "api.fathom.ai" in p.stdout and "X-Api-Key" in p.stdout and "env_123" in p.stdout
+    assert ".env" not in p.stdout
+
+
+def test_where_marks_only_optional_keys(tmp_path):
+    v = make_vault(tmp_path, keys=("ALPHA_KEY",), optional=("GAMMA_KEY",))
+    p = run(v, "--where")
+    assert "ALPHA_KEY: on this computer run" in p.stdout
+    assert "GAMMA_KEY (optional): on this computer run" in p.stdout
+    assert "ALPHA_KEY (optional)" not in p.stdout
+
+
+def test_probe_never_follows_a_redirect():
+    # a 302 to another URL that would answer 200: the probe stops at the 302 and reports "could not check"
+    import http.server
+    import threading
+
+    hits = []
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            hits.append((self.path, self.headers.get("X-Api-Key")))
+            if self.path == "/start":
+                self.send_response(302)
+                self.send_header("Location", "/elsewhere")
+            else:
+                self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        spec = {"name": "SOME_KEY", "probe_url": f"http://127.0.0.1:{srv.server_port}/start",
+                "header": "X-Api-Key", "header_prefix": ""}
+        assert check_keys.probe_key(spec, "secret") == "unknown"
+        assert [h[0] for h in hits] == ["/start"]
+    finally:
+        srv.shutdown()
+
+
+def test_nameless_object_key_is_skipped_with_a_note(tmp_path):
+    v = make_vault(tmp_path)
+    r = v / "System" / "routines" / "eod.md"
+    r.write_text(r.read_text().replace("keys: [ALPHA_KEY, BETA_TOKEN]", "keys:\n  - probe_url: https://x.example/ok\n  - ALPHA_KEY"))
+    out = json.loads(run(v, "--json").stdout)
+    assert "eod: a key declaration has no name" in out["notes"]
+    rep = out["routines"]["eod"]
+    assert "" not in rep["present"] + rep["missing"] + rep["unverified"] and "ALPHA_KEY" in rep["missing"]

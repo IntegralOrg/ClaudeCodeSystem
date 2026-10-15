@@ -5,7 +5,7 @@ description: EOD Phase 1: Data gathering. Triage brain dump, fetch transcripts, 
 
 # EOD Phase 1: Gather
 
-Data gathering phase. Triages Brain Dump first, then fetches Fathom transcripts, tomorrow's calendar, email, and Slack. Routes all items to inbox files immediately. Creates the manifest.
+Data gathering phase. Triages Brain Dump first, then fetches call transcripts through the connected notetaker, tomorrow's calendar, email, and Slack. Routes all items to inbox files immediately. Creates the manifest.
 
 **This phase runs independently and writes all state to disk.** Later phases read from the manifest and inbox files, not from conversation context.
 
@@ -88,72 +88,72 @@ Process the Brain Dump section in `Inbox/Today.md`. This is the user's quick-cap
    b. Mark routed items in `Today.md` Brain Dump:
       - Tasks: change to `- [x] ~~<original text>~~ moved to <Client>.md ✅ TODAY`
       - Notes: remove from Brain Dump entirely (they now live in the client file's Notes section)
-      - Personal items and ideas: leave in place (they don't route — they carry forward to tomorrow)
+      - Personal items and ideas: leave in place (they don't route; they carry forward to tomorrow)
    c. Append a manifest row for each routed item with Source = "Brain Dump"
 
 6. **Summary**: Print count of items routed per client, items left in Brain Dump, orphans.
 
 ---
 
-## Section 1: Fathom Call Transcripts
+## Section 1: Call Transcripts (through the connected notetaker)
 
-1. Run the deterministic Fathom fetch script:
-   ```bash
-   python3 scripts/fathom-fetch.py --date $TODAY --json-file /tmp/fathom-report-$TODAY.json 2>/tmp/fathom-fetch-$TODAY.log
-   FATHOM_EXIT=$?
-   ```
+A connector counts as connected only when its ledger status starts with `connected` and its tools are present in this session; otherwise treat it as not connected, below and in Sections 2 to 4.
+
+1. Read `System/Tools.md`. Find the notetaker section (Fathom, Fireflies, Granola, tl;dv, Grain, Zoom, Tactiq, Circleback) that is connected (as stated at the top of this section). If there is none, hold the line `no notetaker connected; call transcripts skipped` with the Routine health findings from the keys and connectors check in `eod.md` step 1 (the note phase places them) and go to Section 2.
+
+2. List today's meetings with that connector's tools, then fetch each transcript (and summary where the connector has one):
+
+   | Notetaker | List today's meetings | Transcript (and summary) |
+   |---|---|---|
+   | Fathom | `list_meetings` (today's date range) | `get_meeting_transcript`, `get_meeting_summary` |
+   | Fireflies | `get_transcripts` (today) | the transcript text in the same result |
+   | Granola | `list_meetings` | `get_meeting_transcript` |
+   | tldv | `search-meetings` (today) | `get-meeting-transcript`, `get-meeting-notes` |
+   | Grain | `list_meetings` | `fetch_meeting_transcript`, `fetch_meeting_notes` |
+   | Zoom | `recordings_list` (today) | `get_meeting_assets` |
+   | Tactiq | `list_recent_meetings` | `get_transcript` |
+   | Circleback | `SearchMeetings` (today) | `GetTranscriptsForMeetings` |
+
+   The tool names come from the connector's own list in the session (the exact names can differ by version; use the ones the session shows). Save each transcript under `Work/Clients/<Client>/Transcripts/<date> - <title>.md` when the client is known, else `Work/Transcripts/`.
+
+3. For each transcript, extract: action items for you (with deadlines), action items for others (as follow-ups), research items, decisions, follow-ups. Summary-only results are flagged low confidence.
+
 Gather still routes tasks and Inbox notes from each transcript (step 5 below). What it does not do is write transcript takeaways into the client profile: decisions and other durable facts land in the profile's `## Log` (and `## Current State` when a fact changed) during the graph sync phase (`/graph-daily`), under the write-path rule in CLAUDE.md. A decision-only transcript therefore produces a note here and a Log entry there, never two profile writes.
 
-2. Check the exit code and stderr log:
-   - Exit 0: all calls processed OK
-   - Exit 1: fatal error (API failure, missing env). Read the log for details. Alert the user.
-   - Exit 2: partial success. Some calls failed. Continue with what succeeded.
-
-3. Parse the JSON report from `/tmp/fathom-report-$TODAY.json`.
-
-4. For each item in the report:
-   - If status is `ok` or `summary_only`: read the written transcript file and extract:
-     - **Action items** for you (with deadlines if mentioned)
-     - **Action items for others** (framed as follow-ups)
-     - **Research items**
-     - **Decisions made**
-     - **Follow-ups needed**
-   - If status is `summary_only`: flag low confidence on extracted items
-   - If status is `no_content`: flag the call in the manifest
-   - If status is `already_exists`: still read it and extract action items if this is the first EOD run for the day.
+4. Handle each meeting by what came back:
+   - A transcript: extract as in step 3.
+   - A summary only: extract from it and flag low confidence on the items.
+   - Nothing (no transcript or summary): flag the call in the manifest.
+   - Already saved by an earlier run today: still read it and extract action items if this is the first EOD run for the day.
 
    **Task vs. Note distinction**: Only create `- [ ]` items for clear, specific next actions. Meeting recaps without action items, status updates, and finalized decisions are Type `note` (not tasks).
 
 5. **ROUTE IMMEDIATELY** (edit the Inbox files directly):
-   a. Determine the client from the JSON report's `client` field (already classified by the script)
+   a. Determine the client from the client named in the transcript's title or attendees (unknown routes to `Inbox/[YourCompany].md` and is marked ORPHAN)
    b. Tasks -> `Inbox/<Client>.md` under `Open Tasks`; cross-client/agency/hiring/internal -> `Inbox/[YourCompany].md` under `Open Tasks`
    c. Notes/decisions -> `## Notes` section (plain bullets, NOT checkboxes)
    d. Append a row to the manifest for each item
-   e. If client is null in the report, route to `Inbox/[YourCompany].md` and mark `ORPHAN`
+   e. If the client is unknown, route to `Inbox/[YourCompany].md` and mark `ORPHAN`
 6. Confirm manifest item count matches extraction count
 
 ---
 
 ## Section 2: Tomorrow's Calendar
 
-1. Get a Google OAuth access token using the refresh token flow
-2. Fetch tomorrow's events:
-   ```
-   curl -s "https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=TOMORROWT00:00:00-05:00&timeMax=TOMORROWT23:59:59-05:00&singleEvents=true&orderBy=startTime" -H "Authorization: Bearer $ACCESS_TOKEN"
-   ```
+1. Read `System/Tools.md`. Find the calendar section (Google Calendar, or Microsoft 365 for Outlook) that is connected (as Section 1 defines it). If there is none, hold the line `no calendar connected; tomorrow's calendar skipped` with the Routine health findings from the keys and connectors check in `eod.md` step 1 (the note phase places them), write `No calendar connected` to `/tmp/eod-calendar-TODAY.md`, and go to Section 3.
+2. List tomorrow's events (`TOMORROW`, start to end of day in the owner's time zone) with that connector's tools: the Google Calendar connector's event list, or the Microsoft 365 connector's calendar search. Use the tool names the session shows.
 3. Format as readable list with times (your timezone), titles, attendees
 4. Flag early meetings (before 9 AM) and back-to-backs
 5. Write formatted schedule to `/tmp/eod-calendar-TODAY.md` for later phases
+
+A vault on the full control Google path (the Connecting Tools Appendix, `System/Connecting Tools.md`) reads the calendar the way that Appendix's test does, through `python3 scripts/with-env.py`.
 
 ---
 
 ## Section 3: Email Check
 
-1. Reuse Google OAuth access token
-2. Fetch today's emails:
-   ```
-   curl -s "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=newer_than:1d" -H "Authorization: Bearer $ACCESS_TOKEN"
-   ```
+1. Read `System/Tools.md`. Find the email section (Gmail, or Microsoft 365 for Outlook) that is connected (as Section 1 defines it). If there is none, hold the line `no email connected; email check skipped` with the Routine health findings from the keys and connectors check in `eod.md` step 1 and go to Section 4.
+2. Search today's mail with that connector's tools: the Gmail connector's search (today's messages, for example `newer_than:1d`), or the Microsoft 365 connector's mail search. Use the tool names the session shows.
 3. Get headers (From, To, Subject, Date) and body preview for first 15-20 messages
 4. Surface emails requiring response, client/team emails, time-sensitive items
 
@@ -163,15 +163,16 @@ Gather still routes tasks and Inbox notes from each transcript (step 5 below). W
    a. Tasks -> client file `Open Tasks`; Notes -> `## Notes` section
    b. Append manifest rows
 
+A vault on the full control Google path (the Connecting Tools Appendix, `System/Connecting Tools.md`) reads Gmail through `python3 scripts/with-env.py` with the values that Appendix saves.
+
 ---
 
 ## Section 4: Slack Check
 
-For each workspace (customize with your workspace names):
-1. Check unread DMs and mentions using `SLACK_TOKEN_<WORKSPACE>`
-2. Use `conversations.list` (types=im,mpim) then `conversations.history` with `unreads=true`
+1. Read `System/Tools.md`. If Slack is not connected (as Section 1 defines it), hold the line `Slack not connected; Slack check skipped` with the Routine health findings from the keys and connectors check in `eod.md` step 1 and go to Section 5.
+2. With the Slack connector's tools (the names the session shows), read today's direct messages, group messages, and mentions of you, for each workspace the connector can see
 3. Surface unread DMs, mentions, time-sensitive items
-4. Skip channels with no unread activity
+4. Skip channels with no activity today
 5. **ROUTE IMMEDIATELY**:
    a. Append items to client file `Open Tasks`
    b. Append manifest rows

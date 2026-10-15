@@ -131,7 +131,7 @@ The system operates on a daily loop: EOD generates tomorrow's plan, morning conf
 
 `Inbox/Today.md` is an ephemeral file overwritten each time you run `/eod`. It contains:
 
-- **Brain Dump**: Quick-capture area at the top. Jot anything throughout the day — EOD Phase 1 routes client-specific items and Phase 5 carries unrouted items forward to tomorrow
+- **Brain Dump**: Quick-capture area at the top. Jot anything throughout the day. EOD Phase 1 routes client-specific items and Phase 5 carries unrouted items forward to tomorrow
 - **Schedule table**: Time blocks with the day's skeleton (deep work, meetings, breaks)
 - **Morning exceptions**: Any calls before 1 PM, with fragmentation cost notes
 - **Tasks section**: Prioritized tasks assigned to time blocks, with source tags linking back to client inbox files
