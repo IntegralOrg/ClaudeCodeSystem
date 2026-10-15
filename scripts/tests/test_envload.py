@@ -83,15 +83,3 @@ def test_with_env_falls_back_to_script_repo(tmp_path):
                         "import os;print(os.environ.get('FALLBACK_T'))"],
                        cwd=elsewhere, env=env, capture_output=True, text=True)
     assert p.stdout.strip() == "viaroot"
-
-def test_fathom_env_file_does_not_override_exported(tmp_path, monkeypatch):
-    import importlib.util
-    if not (SCRIPTS / "fathom-fetch.py").exists():
-        import pytest
-        pytest.skip("fathom-fetch.py is not part of the template")
-    spec = importlib.util.spec_from_file_location("ff", SCRIPTS / "fathom-fetch.py")
-    ff = importlib.util.module_from_spec(spec); spec.loader.exec_module(ff)
-    f = tmp_path / "x.env"; f.write_text("DUMMY_EXPORTED=fromfile\nDUMMY_NEW=fromfile\n")
-    monkeypatch.setenv("DUMMY_EXPORTED", "exported"); monkeypatch.setenv("DUMMY_NEW", "t"); monkeypatch.delenv("DUMMY_NEW")
-    ff.apply_env_file(str(f))
-    assert os.environ["DUMMY_EXPORTED"] == "exported" and os.environ["DUMMY_NEW"] == "fromfile"

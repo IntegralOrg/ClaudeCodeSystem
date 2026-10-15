@@ -269,7 +269,7 @@ def test_connecting_tools_rules_on_the_known_tools():
     for tool in ("Gmail", "Google Calendar", "Microsoft 365", "Slack", "Fathom", "Fireflies", "Granola", "Asana", "ClickUp",
                  "Notion", "HubSpot", "QuickBooks", "Google Drive", "Text messages", "WhatsApp"):
         assert tool in text, tool
-    assert "fathom-fetch" not in text and "FATHOM_API_KEY" in text
+    assert "fathom" "-fetch" not in text and "FATHOM_API_KEY" in text
 
 
 def test_routines_doc_points_keys_at_network_secrets_and_lists_connectors():

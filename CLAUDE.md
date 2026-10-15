@@ -221,9 +221,7 @@ Read `Resources/Reference/API Integration Guide.md` for full docs (endpoints, au
   - Usage: `python3 scripts/classify-transcript.py <file>` or `--participants "Name1,Name2" --title "Title"`
   - Routing: client contacts -> `Work/Clients/<Client>/Transcripts/`, devs only -> `Work/Transcripts/`, private -> `[YourCompany]/Transcripts/`
 
-- **Transcript Fetcher** -- Downloads transcripts from your service. Script: `scripts/fathom-fetch.py`
-  - Usage: `python3 scripts/fathom-fetch.py --date YYYY-MM-DD --json-file /tmp/fathom-report.json`
-  - Downloads today's call recordings, saves transcripts, classifies per-client routing
+- **Call transcripts** come through the connected notetaker's connector (see `System/Tools.md`); no script.
 -->
 
 <!-- Remove or uncomment the time tracking tools below if you use Rize or a similar service -->

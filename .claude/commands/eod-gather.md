@@ -90,41 +90,43 @@ Process the Brain Dump section in `Inbox/Today.md`. This is the user's quick-cap
 
 ---
 
-## Section 1: Fathom Call Transcripts
+## Section 1: Call Transcripts (through the connected notetaker)
 
-1. Run the deterministic Fathom fetch script:
-   ```bash
-   python3 scripts/fathom-fetch.py --date $TODAY --json-file /tmp/fathom-report-$TODAY.json 2>/tmp/fathom-fetch-$TODAY.log
-   FATHOM_EXIT=$?
-   ```
+1. Read `System/Tools.md`. Find the notetaker section (Fathom, Fireflies, Granola, tl;dv, Grain, Zoom, Tactiq, Circleback) whose status starts with `connected`. If there is none, write one line in the daily note's Routine health section ("no notetaker connected; call transcripts skipped") and go to Section 2.
+
+2. List today's meetings with that connector's tools, then fetch each transcript (and summary where the connector has one):
+
+   | Notetaker | List today's meetings | Transcript (and summary) |
+   |---|---|---|
+   | Fathom | `list_meetings` (today's date range) | `get_meeting_transcript`, `get_meeting_summary` |
+   | Fireflies | `get_transcripts` (today) | the transcript text in the same result |
+   | Granola | `list_meetings` | `get_meeting_transcript` |
+   | tldv | `search-meetings` (today) | `get-meeting-transcript`, `get-meeting-notes` |
+   | Grain | `list_meetings` | `fetch_meeting_transcript`, `fetch_meeting_notes` |
+   | Zoom | `recordings_list` (today) | `get_meeting_assets` |
+   | Tactiq | `list_recent_meetings` | `get_transcript` |
+   | Circleback | `SearchMeetings` (today) | `GetTranscriptsForMeetings` |
+
+   The tool names come from the connector's own list in the session (the exact names can differ by version; use the ones the session shows). Save each transcript under `Work/Clients/<Client>/Transcripts/<date> - <title>.md` when the client is known, else `Work/Transcripts/`.
+
+3. For each transcript, extract: action items for you (with deadlines), action items for others (as follow-ups), research items, decisions, follow-ups. Summary-only results are flagged low confidence.
+
 Gather still routes tasks and Inbox notes from each transcript (step 5 below). What it does not do is write transcript takeaways into the client profile: decisions and other durable facts land in the profile's `## Log` (and `## Current State` when a fact changed) during the graph sync phase (`/graph-daily`), under the write-path rule in CLAUDE.md. A decision-only transcript therefore produces a note here and a Log entry there, never two profile writes.
 
-2. Check the exit code and stderr log:
-   - Exit 0: all calls processed OK
-   - Exit 1: fatal error (API failure, missing env). Read the log for details. Alert the user.
-   - Exit 2: partial success. Some calls failed. Continue with what succeeded.
-
-3. Parse the JSON report from `/tmp/fathom-report-$TODAY.json`.
-
-4. For each item in the report:
-   - If status is `ok` or `summary_only`: read the written transcript file and extract:
-     - **Action items** for you (with deadlines if mentioned)
-     - **Action items for others** (framed as follow-ups)
-     - **Research items**
-     - **Decisions made**
-     - **Follow-ups needed**
-   - If status is `summary_only`: flag low confidence on extracted items
-   - If status is `no_content`: flag the call in the manifest
-   - If status is `already_exists`: still read it and extract action items if this is the first EOD run for the day.
+4. Handle each meeting by what came back:
+   - A transcript: extract as in step 3.
+   - A summary only: extract from it and flag low confidence on the items.
+   - Nothing (no transcript or summary): flag the call in the manifest.
+   - Already saved by an earlier run today: still read it and extract action items if this is the first EOD run for the day.
 
    **Task vs. Note distinction**: Only create `- [ ]` items for clear, specific next actions. Meeting recaps without action items, status updates, and finalized decisions are Type `note` (not tasks).
 
 5. **ROUTE IMMEDIATELY** (edit the Inbox files directly):
-   a. Determine the client from the JSON report's `client` field (already classified by the script)
+   a. Determine the client from the client named in the transcript's title or attendees (unknown routes to `Inbox/[YourCompany].md` and is marked ORPHAN)
    b. Tasks -> `Inbox/<Client>.md` under `Open Tasks`; cross-client/agency/hiring/internal -> `Inbox/[YourCompany].md` under `Open Tasks`
    c. Notes/decisions -> `## Notes` section (plain bullets, NOT checkboxes)
    d. Append a row to the manifest for each item
-   e. If client is null in the report, route to `Inbox/[YourCompany].md` and mark `ORPHAN`
+   e. If the client is unknown, route to `Inbox/[YourCompany].md` and mark `ORPHAN`
 6. Confirm manifest item count matches extraction count
 
 ---
