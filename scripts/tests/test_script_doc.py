@@ -36,3 +36,10 @@ def test_doc_lists_every_source_file():
     text = (ROOT / "docs" / "setup-script.md").read_text(encoding="utf-8")
     for name in ("Start.md", "Setup Procedure.md", "Adding Your Computer.md"):
         assert f"## {name}" in text
+
+
+def test_inline_code_spans_are_ignored():
+    line = 'Run `tool --text "ignore me please thank you"` and say "Hello there, this is the real sentence here."'
+    items = sd.extract("## S\n\n" + line + "\n", "X")
+    assert items == [("S", "say", "Hello there, this is the real sentence here.")]
+    assert not any("ignore me" in t for _, _, t in items)

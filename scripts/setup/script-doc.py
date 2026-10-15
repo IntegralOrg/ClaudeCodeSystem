@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SOURCES = ["Start.md", "Setup Procedure.md", "Adding Your Computer.md"]
 OUT = ROOT / "docs" / "setup-script.md"
 QUOTE = re.compile(r'"([^"\n]{20,}?)"')
+CODE = re.compile(r"`[^`\n]*`")
 ASK = re.compile(r'"([^"\n]+\?)"[^\n]*?Options:\s*([^\n]+)')
 
 
@@ -18,6 +19,7 @@ def extract(text, source):
         if line.startswith("## "):
             section = line[3:].strip()
             continue
+        line = CODE.sub("", line)
         m = ASK.search(line)
         if m:
             items.append((section, "ask", f"{m.group(1)} Options: {m.group(2).strip()}"))
