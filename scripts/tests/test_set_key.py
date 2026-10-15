@@ -55,6 +55,47 @@ def test_bad_name_exits_1(tmp_path):
     assert p.returncode == 1 and p.stdout.startswith("BAD_NAME")
 
 
+def test_export_prefix_and_spaces_around_equals(tmp_path):
+    v = vault(tmp_path)
+    run(v, "FATHOM_API_KEY", value="export FATHOM_API_KEY=abc")
+    assert (v / ".env").read_text() == "FATHOM_API_KEY=abc\n"
+    run(v, "FATHOM_API_KEY", value='FATHOM_API_KEY = "def"')
+    assert (v / ".env").read_text() == "FATHOM_API_KEY=def\n"
+
+
+def test_value_with_equals_is_kept_verbatim(tmp_path):
+    v = vault(tmp_path)
+    run(v, "FATHOM_API_KEY", value="YWJj==")
+    assert (v / ".env").read_text() == "FATHOM_API_KEY=YWJj==\n"
+
+
+def test_failed_write_leaves_no_temp_file(tmp_path, monkeypatch):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("set_key_mod", SCRIPT)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    def boom(*a, **k):
+        raise OSError("nope")
+
+    monkeypatch.setattr(mod.os, "replace", boom)
+    try:
+        mod.save(tmp_path / ".env", "FATHOM_API_KEY", "secret")
+    except OSError:
+        pass
+    else:
+        raise AssertionError("expected OSError")
+    assert list(tmp_path.glob(".setkey-*")) == []
+
+
+def test_non_utf8_credentials_file_reports_failed(tmp_path):
+    v = vault(tmp_path)
+    (v / ".env").write_bytes(b"\xff\xfe\x00bad\n")
+    p = run(v, "FATHOM_API_KEY", value="abc")
+    assert p.returncode == 1 and p.stdout.startswith("FAILED") and "Traceback" not in p.stderr
+    assert list(v.glob(".setkey-*")) == []
+
+
 def test_windows_dialog_script_is_a_masked_winforms_box():
     src = SCRIPT.read_text(encoding="utf-8")
     assert "UseSystemPasswordChar" in src and "-NoProfile" in src and "-STA" in src

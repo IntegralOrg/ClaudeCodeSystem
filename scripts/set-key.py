@@ -10,7 +10,7 @@ never reaches the chat or the session transcript. Output is the key's NAME only.
 macOS: a native dialog with a hidden answer box. Windows: a masked WinForms box.
 Elsewhere: a hidden terminal prompt (getpass) when a terminal is attached.
 
-Stdout first token: SAVED, CANCELLED, EMPTY, BAD_NAME, NO_PROMPT.
+Stdout first token: SAVED, CANCELLED, EMPTY, BAD_NAME, NO_PROMPT, FAILED.
 Exit: 0 saved, 1 failed, 3 cancelled or empty (ask the person again or move on).
 
 Test hook: SET_KEY_FAKE_VALUE is the value the dialog would return
@@ -123,13 +123,20 @@ def save(path, name, value):
     if not replaced:
         lines.append(f"{name}={value}")
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=".setkey-")
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
     try:
-        os.chmod(tmp, 0o600)
-    except OSError:
-        pass  # Windows: permissions are inherited from the folder
-    os.replace(tmp, path)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+        try:
+            os.chmod(tmp, 0o600)
+        except OSError:
+            pass  # Windows: permissions are inherited from the folder
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def vault_root():
@@ -162,14 +169,15 @@ def main():
     if value is None:
         say("CANCELLED", a.name, a.json, 3)
     value = clean(value)
-    if value.startswith(a.name + "="):
-        value = clean(value[len(a.name) + 1:])
+    m = re.match(rf"^(?:export\s+)?{re.escape(a.name)}\s*=\s*", value)
+    if m:
+        value = clean(value[m.end():])
     if not value or "\n" in value or "\r" in value:
         say("EMPTY", a.name, a.json, 3)
 
     try:
         save(vault_root() / ".env", a.name, value)
-    except OSError:
+    except (OSError, ValueError):
         say("FAILED", a.name, a.json, 1)
     say("SAVED", a.name, a.json, 0)
 
