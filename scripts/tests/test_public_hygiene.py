@@ -11,7 +11,8 @@ NAMES = {".gitignore", ".gitattributes", "LICENSE", ".gitkeep"}
 # Built from pieces so this file is not its own first hit.
 FORBIDDEN = re.compile("|".join(["ste" + "phen", "go" + "integral", "integral" + "/sops", "brain" + "-private"]), re.IGNORECASE)
 PEOPLE = re.compile(r"\b(" + "|".join(["de" + "an", "e" + "va"]) + r")\b", re.IGNORECASE)
-PEOPLE_ALLOWED = {"System/Getting Help.md", "System/Setup Procedure.md"}
+# docs/setup-script.md is generated verbatim from Setup Procedure.md (scripts/setup/script-doc.py), so it carries the same sentence.
+PEOPLE_ALLOWED = {"System/Getting Help.md", "System/Setup Procedure.md", "docs/setup-script.md"}
 # LICENSE carries the public company attribution URL on purpose; test_system_docs.py asserts the names are absent.
 EXEMPT = {"LICENSE", "scripts/tests/test_system_docs.py"}
 
