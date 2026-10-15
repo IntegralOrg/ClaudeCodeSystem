@@ -43,3 +43,9 @@ def test_inline_code_spans_are_ignored():
     items = sd.extract("## S\n\n" + line + "\n", "X")
     assert items == [("S", "say", "Hello there, this is the real sentence here.")]
     assert not any("ignore me" in t for _, _, t in items)
+
+
+def test_short_quotes_do_not_shift_pairing():
+    line = 'Say "SETUP_PENDING" then: "Welcome to your brain, this is the long sentence." and move on.'
+    items = sd.extract("## S\n\n" + line + "\n", "X")
+    assert items == [("S", "say", "Welcome to your brain, this is the long sentence.")]
