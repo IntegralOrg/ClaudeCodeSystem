@@ -137,7 +137,7 @@ Rules for both paths:
 - **Environment:** create the routine on the current session's environment when the tool reports one, or without naming an environment when the tool allows. Use "Create a routine by hand" in `System/Routines.md` (it includes creating the environment and installing the Claude GitHub app) only when creation fails, or when a routine's first run reports no repository access; tell the user you will verify on the next run.
 - Record each routine's id, model, and the environment id in `System/Routines.md`.
 
-If neither tool set is available in this session, follow "Create a routine by hand" in `System/Routines.md` (in Claude the page is Routines (the sidebar may say Scheduled)) and tell the user you will verify on the next run. Mark every routine "not live" until its first run reports its keys present.
+If neither tool set is available in this session, follow "Create a routine by hand" in `System/Routines.md` (in Claude the page is Routines, and the sidebar may say Scheduled) and tell the user you will verify on the next run. Mark every routine "not live" until its first run reports its keys present.
 
 `System/Routines.md` is read by the vault's health hooks, so keep its shape exactly: one `## <title>` heading per routine using the `title:` from its file in `System/routines/` (`End of Day`, `Vault Hygiene`), and the **first** bullet under each heading is `- live_since: not live` (or `- live_since: YYYY-MM-DD` once the first run has reported its keys present). Then bullets for the schedule, the model, the connectors it carries, what it needs (keys, connectors), the routine id, and the environment id:
 

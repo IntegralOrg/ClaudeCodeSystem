@@ -184,11 +184,21 @@ def token_scopes(gh):
     return set(re.findall(r"'([^']+)'", (r.stdout or "") + (r.stderr or "")))
 
 
+def current_login(gh):
+    """The signed-in login: `gh api user`, else parsed from `gh auth status`, else ''."""
+    r = run([gh, "api", "user", "--jq", ".login"])
+    if r.returncode == 0 and r.stdout.strip():
+        return r.stdout.strip()
+    r = run([gh, "auth", "status", "-h", "github.com"])
+    m = re.search(r"account\s+(\S+)", (r.stdout or "") + (r.stderr or ""))
+    return m.group(1) if m else ""
+
+
 def cmd_login_start(a):
     gh = need_gh()
     if signed_in(gh):
         if "workflow" in token_scopes(gh):
-            return out("SIGNED_IN", run([gh, "api", "user", "--jq", ".login"]).stdout.strip())
+            return out("SIGNED_IN", current_login(gh))
         # Signed in before setup, or by an older setup, without the workflow scope: the first push of
         # .github/workflows/vault-autosync.yml would be rejected. One more device-code approval adds it.
         argv = [gh, "auth", "refresh", "-h", "github.com", *LOGIN_SCOPES]
@@ -229,7 +239,7 @@ def cmd_login_wait(a):
     deadline = time.time() + a.timeout
     while time.time() < deadline:
         if login_ready(gh):
-            return out("SIGNED_IN", run([gh, "api", "user", "--jq", ".login"]).stdout.strip())
+            return out("SIGNED_IN", current_login(gh))
         time.sleep(3)
     fail("LOGIN_TIMEOUT", "the GitHub approval did not finish; run login-start again for a fresh code")
 
@@ -239,7 +249,8 @@ def cmd_logout(a):
     Already signed out counts as done, so the step can be re-run."""
     gh = need_gh()
     if signed_in(gh):
-        r = run([gh, "auth", "logout", "-h", "github.com"])
+        login = current_login(gh)
+        r = run([gh, "auth", "logout", "-h", "github.com"] + (["-u", login] if login else []))
         if r.returncode != 0 and signed_in(gh):
             fail("LOGOUT_FAILED", (r.stderr.strip() or "could not sign out")[:300])
     out("SIGNED_OUT")

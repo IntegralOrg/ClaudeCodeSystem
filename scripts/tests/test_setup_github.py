@@ -19,10 +19,12 @@ FAKE_GH = textwrap.dedent(r'''
     def load():
         return json.load(open(st)) if os.path.exists(st) else {}
     s, a = load(), sys.argv[1:]
+    with open(st + ".calls", "a") as f: f.write(json.dumps(a) + "\n")
     if a[:1] == ["--version"]:
         print("gh version 9.9.9"); sys.exit(0)
     if a[:2] == ["auth", "status"]:
         if not s.get("signed_in"): sys.exit(1)
+        if s.get("auth_status_text"): print(s["auth_status_text"])
         print("  - Token scopes: " + ", ".join("'%s'" % x for x in s.get("scopes", ["gist", "read:org", "repo", "workflow"])))
         sys.exit(0)
     if a[:2] == ["auth", "refresh"]:
@@ -47,6 +49,7 @@ FAKE_GH = textwrap.dedent(r'''
         for o in s.get("orgs", []): print(o)
         sys.exit(0)
     if a[:2] == ["api", "user"]:
+        if s.get("api_user_fails"): sys.exit(1)
         print("pat"); sys.exit(0)
     if a[:2] == ["repo", "view"]:
         r = s.get("repos", {}).get(a[2], s.get("remote_repo") if a[2] == "pat/brain" else None)
@@ -92,6 +95,11 @@ def setstate(w, **kw):
     s.update(kw); w["state"].write_text(json.dumps(s))
 
 
+def calls(w):
+    f = Path(str(w["state"]) + ".calls")
+    return [json.loads(l) for l in f.read_text().splitlines()] if f.exists() else []
+
+
 @pytest.mark.parametrize("system,machine,want", [
     ("Darwin", "arm64", "gh_2.1.0_macOS_arm64.zip"), ("Darwin", "x86_64", "gh_2.1.0_macOS_amd64.zip"),
     ("Windows", "AMD64", "gh_2.1.0_windows_amd64.zip"), ("Windows", "ARM64", "gh_2.1.0_windows_arm64.zip"),
@@ -123,6 +131,20 @@ def test_login_wait_reports_signed_in(world):
     setstate(world, signed_in=True)
     rc, out = run(world, "login-wait", "--timeout", "5")
     assert rc == 0 and "SIGNED_IN pat" in out
+
+
+def test_login_wait_falls_back_to_auth_status_when_api_user_fails(world):
+    setstate(world, signed_in=True, api_user_fails=True,
+             auth_status_text="github.com\n  Logged in to github.com account patty (keyring)")
+    rc, out = run(world, "login-wait", "--timeout", "5")
+    assert rc == 0 and "SIGNED_IN patty" in out
+
+
+def test_logout_names_the_host_and_the_user(world):
+    setstate(world, signed_in=True)
+    rc, out = run(world, "logout")
+    assert rc == 0 and out.startswith("SIGNED_OUT")
+    assert ["auth", "logout", "-h", "github.com", "-u", "pat"] in calls(world)
 
 
 def test_connect_creates_private_repo_and_sets_helper(world):

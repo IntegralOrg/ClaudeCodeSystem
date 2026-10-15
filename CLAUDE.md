@@ -265,7 +265,7 @@ When working in this vault:
 10. **Weekly Planning**: Only plan 2 days ahead for time blocks. Priorities shift too fast to lock in a full week. Re-plan mid-week based on updated action items.
 11. **Fridays**: Calendar is off-limits for calls. Use for deep work, admin, and wrap-up.
 12. **Meeting Window**: 1:00-2:30 PM daily is reserved for meetings. Do not book deep work time blocks in this window; meetings fill it organically.
-13. **Daily Schedule Skeleton**: Morning review 8:00, deep work 8:05, lunch 12:00, meetings 1:00-2:30, deep work 2 after 2:30, wind down 5:30. [Your Name] reads `Inbox/Today.md` first each morning, runs `/morning` (skill) for interactive review.
+13. **Daily Schedule Skeleton**: Morning review 8:00, deep work 8:05, lunch 12:00, meetings 1:00-2:30, deep work 2 after 2:30, wind down 5:30. [Your Name] reads `Inbox/Today.md` first each morning, runs `/morning` (skill) for interactive review. Planning: [Planning day] (dropped when they do not plan the week).
 14. **LinkedIn**: 15-minute slots, 2 days per week (not daily).
 15. **Writing Style Rules**: <!-- Add your own style preferences here. Examples: -->
     - Never use em dashes in any written output. Use commas, periods, colons, semicolons, or parentheses instead.

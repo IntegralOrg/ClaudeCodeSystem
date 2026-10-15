@@ -70,7 +70,7 @@ def test_start_asks_the_questions_during_the_wait_and_opens_the_home_with_python
     home = t[t.index("## 5."):t.index("## When a step fails")]
     has(home, "xcode-select -p", "python3 --version", "git init -b main", "Start my Brain",
         "claude://code/new?folder=", "Continue%20setup", "screenctl.py", "Trust", "enter",
-        "Click Trust, then press Enter", "new window carries on")
+        "Click Trust, then press Enter", "the new one carries on")
     assert home.index("git init") < home.index("claude://code/new")
     # Windows: Git's own path (a fresh install is not on this session's PATH), no `~`, and the link's path encoded
     has(home, "Programs\\Git\\cmd\\git.exe", "[uri]::EscapeDataString", "urllib.parse.quote", "$env:USERPROFILE\\Brain")

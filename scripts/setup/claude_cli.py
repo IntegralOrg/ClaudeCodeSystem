@@ -11,7 +11,8 @@ it is the running process whose path contains `claude-code` and ends in `claude.
   python3 scripts/setup/claude_cli.py -- <args...>    runs that CLI with the arguments, with the three variables a
                                                       session sets (CLAUDECODE, CLAUDE_CODE_ENTRYPOINT,
                                                       CLAUDE_CODE_CHILD_SESSION) unset so it starts clean; the
-                                                      CLI's output and exit code come back unchanged.
+                                                      CLI's output and exit code come back unchanged;
+                                                      with no CLI it prints `CLI_MISSING` and exits 1.
 
 Test hooks: SETUP_CLAUDE_HOME (home folder), SETUP_CLAUDE_PS (a file with process lines, or empty for none).
 """
@@ -128,10 +129,11 @@ def clean_env(env):
 
 def main(argv):
     cli = find_cli(home=os.environ.get("SETUP_CLAUDE_HOME"))
+    running = bool(argv) and argv[0] == "--"
     if not cli:
         print("CLI_MISSING", flush=True)
-        return 3
-    if argv and argv[0] == "--":
+        return 1 if running else 3   # asking is "missing" (3); trying to run with none is a failure (1)
+    if running:
         r = subprocess.run([cli, *argv[1:]], env=clean_env(os.environ))
         return r.returncode
     print(f"CLI {cli}", flush=True)
