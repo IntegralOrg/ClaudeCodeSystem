@@ -13,7 +13,7 @@ mechanical work on all three operating systems.
 |---|---|
 | `scripts/screenctl.py` | Window discovery, focus, typing, pasting, keys, clicks, scrolling, screenshots |
 | `scripts/session_watch.py` | Reads a driven Claude Code session's transcript: is it done, what did it say, what did it touch |
-| `scripts/autodrive.py` | Runs a driven session to the end of a turn, answering its permission prompts and stopping on anything that needs a human |
+| `scripts/autodrive.py` | Runs a driven session to the end of a turn, answering its permission prompts and stopping on anything that needs a human; brings Claude back to the front when it ends, however it ends |
 
 Run `python scripts/screenctl.py doctor` before the first drive in a session, while
 the person is still at the keyboard. It reports the missing binary or the ungranted
@@ -112,7 +112,10 @@ stopped>"`. It brings the Claude window back to the front (through the operating
 system's own app launcher, so it works even when driving has broken), plays a
 sound, and posts a notification. The person is reading the chat in that window; a
 "done" they cannot see leaves them hanging. If it prints `claude_in_front: NO`,
-the first line of your reply says to switch back to Claude. **The one exception
+the first line of your reply says to switch back to Claude. `autodrive.py` runs
+`handback` itself on every exit, so a turn that completes in another window
+brings Claude back without you remembering to; you still run it after a drive
+that ends any other way. **The one exception
 is the person taking the machine back** (a focus check failed because they
 started using another app): end with `handback --quiet --text "<where it
 stopped>"`, which only notifies and leaves their app in front.
@@ -277,8 +280,17 @@ nobody is watching. It answers prompts inside that session's terminal UI, and
 cannot answer an operating-system dialog.
 
 ```bash
-python scripts/autodrive.py --title "<window>" --repo <path> [--dry-run]
+python scripts/autodrive.py --title "<window>" --repo <path> [--dry-run] [--no-handback]
 ```
+
+**It hands back on its own.** Every exit, whatever the code, ends with
+`screenctl.py handback`: the driven session's window is in front when the turn
+completes, the person is reading the chat in the Claude window, and a result
+they cannot see leaves them hanging. The notification says how the run ended
+(turn complete, timed out, stopped for a human, dry run). When a focus check
+failed because the person started using another app, the hand-back is
+`--quiet` and leaves their app in front (rule 8). `--no-handback` skips it, for
+a caller that runs `handback` itself.
 
 Start with `--dry-run` on any new task. It reports the first prompt and the exact
 command behind it, then stops without sending anything.

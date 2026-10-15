@@ -36,7 +36,15 @@ settings, unattended, which is not a thing to do while nobody is watching.
 
   autodrive.py --title "<window>" --repo <path> [--session <uuid>]
                [--max 25] [--timeout 900] [--idle 45]
-               [--shot-dir <dir>] [--dry-run]
+               [--shot-dir <dir>] [--dry-run] [--no-handback]
+
+Every exit, whatever the code, ends with `screenctl.py handback`: Claude is
+brought back to the front, a sound plays, and a notification says how the run
+ended. The drive leaves the driven session's window in front, and the person is
+reading the chat in the Claude window, so a result they cannot see leaves them
+hanging. When a focus check failed because the person started using another
+app, the hand-back is `--quiet`: it notifies and leaves their app in front.
+--no-handback skips it, for a caller that hands back itself.
 
 Exit codes
   0  the turn completed
@@ -114,16 +122,57 @@ def _target(a) -> list:
     return ["--id", a.id] if a.id else ["--title", a.title]
 
 
+# Set when a screenctl call reported FOCUS_FAILED: the person took the machine
+# back, and the hand-back must then leave their app in front (SKILL.md rule 8).
+FOCUS_LOST = False
+
+
+def took_machine_back(output: str) -> bool:
+    return "FOCUS_FAILED" in output
+
+
 def screenctl(*args: str) -> subprocess.CompletedProcess:
+    global FOCUS_LOST
     cmd = [sys.executable, os.path.join(HERE, "screenctl.py"), *args]
     try:
-        return subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
     except subprocess.TimeoutExpired:
         return subprocess.CompletedProcess(
             cmd, 124, stdout="", stderr="TIMEOUT: screenctl exceeded 90 seconds")
+    if took_machine_back((r.stdout or "") + (r.stderr or "")):
+        FOCUS_LOST = True
+    return r
 
 
-def main() -> int:
+HANDBACK_TEXT = {
+    0: "Autodrive: the driven session finished its turn. Your computer is yours again.",
+    1: "Autodrive timed out. The driven session may still be working.",
+    2: "Autodrive stopped: approvals are not landing, or the prompt could not be photographed.",
+    3: "Autodrive stopped for you: a prompt needs reading.",
+}
+
+
+def handback_text(code: int, dry_run: bool) -> str:
+    if dry_run:
+        return "Autodrive: Dry run stopped at the first prompt. Nothing was sent."
+    return HANDBACK_TEXT.get(code, HANDBACK_TEXT[2])
+
+
+def hand_back(code: int, dry_run: bool, quiet: bool) -> None:
+    """Bring Claude back to the front, on every exit alike (SKILL.md rule 8).
+
+    Delegated to screenctl.py handback, which never exits non-zero: the
+    hand-back must not become one more failure to recover from.
+    """
+    args = ["handback", "--text", handback_text(code, dry_run)]
+    if quiet:
+        args.append("--quiet")
+    r = screenctl(*args)
+    out = ((r.stdout or "") + (r.stderr or "")).strip()
+    print("\n" + (out[:400] or "HANDBACK: screenctl printed nothing"))
+
+
+def parse_args(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--title", help="window holding the driven session")
     # Prefer --id for a driven agent. Claude Code renames its own terminal window
@@ -145,8 +194,30 @@ def main() -> int:
                     help="press Enter on a detected prompt without reading it")
     ap.add_argument("--dry-run", action="store_true",
                     help="report the first prompt and what it would do, approve nothing")
-    a = ap.parse_args()
+    ap.add_argument("--no-handback", action="store_true",
+                    help="do not bring Claude back to the front at the end "
+                         "(for a caller that runs screenctl.py handback itself)")
+    return ap.parse_args(argv)
 
+
+def main(argv=None) -> int:
+    a = parse_args(argv)
+    try:
+        code = drive(a)
+    except SystemExit as e:
+        # session_watch exits directly when it cannot find a transcript.
+        code = e.code if isinstance(e.code, int) else 2
+    except Exception:
+        # A traceback leaves the person hanging exactly like a silent exit would.
+        import traceback
+        traceback.print_exc()
+        code = 2
+    if not a.no_handback:
+        hand_back(code, dry_run=a.dry_run, quiet=FOCUS_LOST)
+    return code
+
+
+def drive(a) -> int:
     if not (a.title or a.id):
         print("NO_TARGET: pass --title or --id")
         return 3
