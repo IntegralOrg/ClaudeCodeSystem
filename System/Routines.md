@@ -9,14 +9,14 @@ updated: 2026-10-15
 
 **Schedules are in UTC.** Routine cron expressions run in UTC, not in your time zone. Setup converts each definition's local schedule (the `timezone:` in `System/routines/<name>.md`) to UTC when it creates the routine, using the offset in force that day. Example: 11:07 PM Monday to Friday in America/New_York is `7 3 * * 2-6` in daylight time and `7 4 * * 2-6` in standard time. The fire time therefore shifts by an hour at the daylight-saving change (11:07 PM becomes 12:07 AM, or 10:07 PM) until someone updates the routine's cron; End of Day computes its dates in your own zone, so its notes stay correct either way. The schedules sit at seven minutes past the hour on purpose: Claude warns that a routine set for :00 can start minutes late.
 
-A routine is **not live** until its first run has reported its keys present; that run then replaces `not live` with the date. The first run of a routine is also the proof that its schedule, environment, and GitHub app access all work.
+A routine is **not live** until a run's keys check exits 0 and every connector listed under `connectors:` in its file is present in that run; that run then replaces `not live` with the date. The first run of a routine is also the proof that its schedule, environment, and GitHub app access all work.
 
 ## End of Day
 - live_since: not live
 - schedule: weeknights at 11:07 PM your time (`7 23 * * 1-5` local; created as the UTC equivalent, for example `7 3 * * 2-6` in New York daylight time)
 - model: claude-opus-5-5
 - connectors: not attached yet
-- needs: connectors Gmail and Google Calendar; optional keys `FATHOM_API_KEY`, `SLACK_TOKEN_WORKSPACE_A`
+- needs: connectors Gmail and Google Calendar (setup writes Microsoft 365 instead for a Microsoft owner); no keys
 - routine id: not created yet
 - environment id: not created yet
 
@@ -50,15 +50,27 @@ Do this once per routine, in a browser on claude.ai.
 5. Repository: choose `brain` (this vault repository, whatever you named it), branch `main`. A routine with no repository runs in an empty container, so do not skip this step.
 6. Prompt: the `prompt:` line from that file (`/eod` or `/vault-audit`).
 7. Model: the `model:` line from that file (`claude-opus-5-5` for both End of Day and Vault Hygiene), not the form's default.
-8. Connectors: the ones listed under `connectors:` in that file (End of Day: Gmail and Google Calendar).
+8. Connectors: the ones listed under `connectors:` in that file (End of Day: Gmail and Google Calendar, or Microsoft 365).
 9. Environment: the one you created or chose. A key a routine uses goes on it as a **network secret** (see `System/Connecting Tools.md`).
 10. Save. Then record the routine's id and the environment id in the matching section above, and leave `live_since: not live` until its first run succeeds.
 
+**A routine that needs a key.** A tool with no good connector (its ruling in `System/Connecting Tools.md` is a key) is declared in the routine's file under `keys:` (required) or `optional_keys:`. A bare name counts as present when this computer has a value for it. An object adds a probe, so `python3 scripts/check-keys.py` can prove a cloud network secret with one small call. For illustration only (End of Day ships with no keys):
+
+```yaml
+optional_keys:
+  - name: RIZE_API_KEY
+    probe_url: https://api.rize.io/api/v1/...
+    header: Authorization
+    header_prefix: "Bearer "
+```
+
+2xx is present, 401 or 403 is missing, anything else (including a redirect, which is never followed) is "could not check". A tool whose API wants a custom header names it in `header` (for example `X-Api-Key`) with `header_prefix: ""`.
+
 ## If a routine is stale or not live
 
-There are two channels. The session-start note from `routine_health.py` says, with no connector needed, when End of Day has not run when it should. End of Day's **Routine health** section in `Work/Daily/<date>.md` records Vault Hygiene staleness and any missing keys or connectors (a missing connector shows as `connector-missing`), and the same reasons are pushed outside the vault: emailed to you when Gmail is connected, otherwise a "Brain needs you: <reason>" all-day event on your calendar. A reason is sent at most once a week.
+There are two channels. The session-start note from `routine_health.py` says, with no connector needed, when End of Day has not run when it should. End of Day's **Routine health** section in `Work/Daily/<date>.md` records Vault Hygiene staleness and any missing keys or connectors (a missing connector shows as `connector-missing`), and the same reasons are pushed outside the vault: emailed to you when Gmail is connected, otherwise a "Brain needs you: <reason>" all-day event on your calendar (on Microsoft 365 there is no push, so Routine health is where it tells you). A reason is sent at most once a week.
 
 There are two fixes:
 
 1. **Re-create it.** The routine may have been deleted, paused, or lost with an account change. Create it again (the tools above, or "Create a routine by hand") and update its id here.
-2. **Add the missing key.** If the message names a key such as `FATHOM_API_KEY`, add it as a network secret on the routine's environment (`python3 scripts/check-keys.py --where` says the host and header). The next run proves it through the probe and flips the routine to live.
+2. **Add the missing key or connector.** If the message names a key (for example `RIZE_API_KEY`, for a routine that declares one), add it as a network secret on the routine's environment (`python3 scripts/check-keys.py --where` says the host and header). If it names a connector (`connector-missing`), follow "When End of Day reports connector-missing" in `System/Connecting Tools.md`. The next run proves it (the keys check exits 0 and every listed connector is present) and flips the routine to live.

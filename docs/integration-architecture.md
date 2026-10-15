@@ -250,10 +250,10 @@ When an operation is too complex for a single curl command, or needs to be reusa
 Call transcripts are auto-routed to the correct folder by `classify-transcript.py`:
 
 ```
-Fathom API
+Notetaker connector (Fathom, Fireflies, ...)
     |
     v
-the notetaker connector (Fathom, Fireflies, ...) (downloads transcript)
+End of Day saves the transcript
     |
     v
 classify-transcript.py (determines client from participants + title)

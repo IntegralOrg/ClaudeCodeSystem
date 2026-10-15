@@ -60,3 +60,23 @@ def test_daily_note_step_keeps_the_setup_completed_line():
         text = (ROOT / f).read_text(encoding="utf-8")
         assert "Create the daily note" not in text and "ask before overwriting" not in text, f
         assert "keep every existing line" in text and "Setup completed" in text and "never overwrite" in text, f
+
+
+def test_end_of_day_declares_no_keys_and_setup_writes_its_connectors():
+    eod = (ROOT / "System" / "routines" / "eod.md").read_text(encoding="utf-8")
+    assert "optional_keys: []" in eod and "FATHOM_API_KEY" not in eod and "SLACK_TOKEN" not in eod
+    setup = (ROOT / "System" / "Setup Procedure.md").read_text(encoding="utf-8")
+    build = setup[setup.index("## 2. Build the vault"):setup.index("## 3. Connect your tools")]
+    assert "`[Gmail, Google Calendar]` for Google" in build and "`[Microsoft 365]` for Microsoft" in build
+    ct = (ROOT / "System" / "Connecting Tools.md").read_text(encoding="utf-8")
+    row = [line for line in ct.splitlines() if line.startswith("| Outlook and Teams")][0]
+    assert "not available on Microsoft today, so Routine health is where it tells you" in row
+    assert "falls back to the calendar event path" not in ct
+    routines = (ROOT / "System" / "Routines.md").read_text(encoding="utf-8")
+    assert "RIZE_API_KEY" in routines and "probe_url:" in routines
+
+
+def test_first_local_session_opens_a_pop_up_only_for_a_ledger_key():
+    text = (ROOT / "System" / "Adding Your Computer.md").read_text(encoding="utf-8")
+    step = [line for line in text.splitlines() if line.startswith("2. ") and "check-keys.py --where" in line][0]
+    assert "System/Tools.md" in step and "key <NAME>" in step and "(optional)" in step
