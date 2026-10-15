@@ -1,7 +1,7 @@
 ---
 type: reference
 created: 2026-10-08
-updated: 2026-10-13
+updated: 2026-10-15
 ---
 # Routines
 
@@ -15,6 +15,7 @@ A routine is **not live** until its first run has reported its keys present; tha
 - live_since: not live
 - schedule: weeknights at 11:07 PM your time (`7 23 * * 1-5` local; created as the UTC equivalent, for example `7 3 * * 2-6` in New York daylight time)
 - model: claude-opus-5-5
+- connectors: not attached yet
 - needs: connectors Gmail and Google Calendar; optional keys `FATHOM_API_KEY`, `SLACK_TOKEN_WORKSPACE_A`
 - routine id: not created yet
 - environment id: not created yet
@@ -25,6 +26,7 @@ Output: `Work/Daily/<date>.md`, including a **Routine health** section.
 - live_since: not live
 - schedule: every night at 1:07 AM your time (`7 1 * * *` local; created as the UTC equivalent)
 - model: claude-opus-5-5
+- connectors: none
 - needs: nothing
 - routine id: not created yet
 - environment id: not created yet
@@ -42,14 +44,14 @@ In a cloud session the agent uses the tools `mcp__Claude_Code_Remote__create_tri
 Do this once per routine, in a browser on claude.ai.
 
 1. Go to **claude.ai**, open **Routines**, and click **New**.
-2. If there is no environment yet, create one when asked (an **environment** is the container each run starts in, and holds the environment variables, your keys). If asked to install the **Claude GitHub app**, install it and grant it this repository (`brain`, or whatever you named it). Without the GitHub app on this repository the routine cannot read or save the vault.
+2. If there is no environment yet, create one when asked (an **environment** is the container each run starts in, and holds your keys as network secrets). If asked to install the **Claude GitHub app**, install it and grant it this repository (`brain`, or whatever you named it). Without the GitHub app on this repository the routine cannot read or save the vault.
 3. Name: copy it from the routine's file in `System/routines/` (`End of Day` or `Vault Hygiene`).
 4. Schedule: the cron expression from that file, converted to UTC for your time zone (see "Schedules are in UTC" above).
 5. Repository: choose `brain` (this vault repository, whatever you named it), branch `main`. A routine with no repository runs in an empty container, so do not skip this step.
 6. Prompt: the `prompt:` line from that file (`/eod` or `/vault-audit`).
 7. Model: the `model:` line from that file (`claude-opus-5-5` for both End of Day and Vault Hygiene), not the form's default.
 8. Connectors: the ones listed under `connectors:` in that file (End of Day: Gmail and Google Calendar).
-9. Environment: the one you created or chose. Keys go in its **Environment variables** (see `System/Connecting Tools.md`).
+9. Environment: the one you created or chose. A key a routine uses goes on it as a **network secret** (see `System/Connecting Tools.md`).
 10. Save. Then record the routine's id and the environment id in the matching section above, and leave `live_since: not live` until its first run succeeds.
 
 ## If a routine is stale or not live
@@ -59,4 +61,4 @@ There are two channels. The session-start note from `routine_health.py` says, wi
 There are two fixes:
 
 1. **Re-create it.** The routine may have been deleted, paused, or lost with an account change. Create it again (the tools above, or "Create a routine by hand") and update its id here.
-2. **Add the missing key.** If the message names a key such as `FATHOM_API_KEY`, add it under the environment's **Environment variables** (Routines, the environment, Environment variables). A new value is read when the next run starts its container, and the run after that flips the routine to live.
+2. **Add the missing key.** If the message names a key such as `FATHOM_API_KEY`, add it as a network secret on the routine's environment (`python3 scripts/check-keys.py --where` says the host and header). The next run proves it through the probe and flips the routine to live.

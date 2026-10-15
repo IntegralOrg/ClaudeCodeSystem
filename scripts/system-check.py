@@ -448,7 +448,8 @@ def check_deterministic(ctx):
         if missing:
             ctx.add("key-missing:" + name, "deterministic pieces", "blocks cloud", 2,
                     f"The {r.get('title') or name} routine is missing {n_of(len(missing), 'key')}",
-                    "Add each named key to the environment settings", "System/Connecting Tools.md", count=len(missing),
+                    "Add each named key as a network secret on the routine's environment "
+                    "(python3 scripts/check-keys.py --where says where)", "System/Connecting Tools.md", count=len(missing),
                     names=missing, routine=name)
 
 

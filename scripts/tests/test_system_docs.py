@@ -60,9 +60,11 @@ def test_claude_md_support_rule_present():
 
 def test_connecting_tools_sections():
     text = read("Connecting Tools")
-    for h in ["## Gmail", "## Google Calendar", "## Slack", "## Fathom", "## Claude plugins"]:
+    for h in ["## The table", "## How a connector gets connected", "## Keys, for a tool with no good connector",
+              "## When End of Day reports connector-missing", "## Claude plugins", "## Final check",
+              "## Appendix: the full control way for Google (Cloud Console)"]:
         assert h in text, h
-    assert ("/" + "connect") not in text and "AskUserQuestion" not in text
+    assert not re.search(r"(?<![\w/])/" + "connect\\b", text) and "AskUserQuestion" not in text   # no retired slash command (the claude.ai/customize/connectors URL is fine)
     assert "check-keys.py" in text
 
 
@@ -135,21 +137,24 @@ def test_setup_procedure_is_safe_to_re_run():
     assert text.count("Delete `SETUP_PENDING`") == 1
 
 
-def test_credentials_file_is_named_once_for_the_human_only():
-    has(read("Connecting Tools"), "hidden file", "Command+Shift+Period", "The agent never opens it")
+def test_credentials_file_is_named_only_to_the_agent():
+    # the person never hears the file's name: the pop-up writes it; the format line is for the agent, in the Appendix
+    ct = read("Connecting Tools")
+    has(ct, "the agent never opens, reads, or names to the person", "the agent never opens it")
     has(read("Setup Procedure"), "never open or name the file the script writes")
-    has(read("Adding Your Computer"), "hidden", "Command+Shift+Period")
-    has(read("Connecting Tools"), "update_trigger", "nothing after the `=`", "connector path")
+    has(read("Adding Your Computer"), "opens a box on your screen", "never in the chat")
+    has(ct, "update_trigger", "connector path")
+    assert "nothing after the `=`" in ct[ct.index("## Appendix"):]
     assert "never edits MCP server configuration" not in read("Connecting Tools")
 
 
-def test_connecting_tools_keeps_the_original_walkthroughs():
+def test_connecting_tools_keeps_the_google_walkthrough_in_the_appendix():
+    # the per-tool sections are replaced by the table; the Cloud Console walkthrough moved, verbatim, to the Appendix
     text = read("Connecting Tools")
-    for h in ["## ClickUp", "## Rize", "## Other tools"]:
-        assert h in text, h
-    has(text, "npx", "mcp-remote", "https://mcp.clickup.com/mcp", "clickup-mcp-server", "ENOTFOUND", "apt-get", "nodejs.org", "Download JSON",
-        "already have a project", "organization policy", "rize.io", "Direct Connections", "Tools That Need Login Credentials")
-    assert text.count('"mcpServers"') >= 3
+    appendix = text[text.index("## Appendix"):]
+    has(appendix, "Download JSON", "already have a project", "organization policy", "gws", "oauthplayground",
+        "gmail.modify", "GOOGLE_REFRESH_TOKEN", "If it lists upcoming events")
+    has(text, "Direct Connections", "Tools That Need Login Credentials", "Rize", "ClickUp")
 
 
 def test_adding_your_computer_final_fix_content():

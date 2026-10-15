@@ -250,3 +250,35 @@ def test_completion_line_records_the_ledger_and_the_journal_answer():
     text = read("Setup Procedure")
     sec = text[text.index("## 6. Record completion"):text.index("## 7. Land")]
     has(sec, "tools connected:", "session journal:")
+
+
+# Task 9: Connecting Tools, the table and the two key places
+
+def test_connecting_tools_has_the_table_and_the_two_key_places():
+    text = read("Connecting Tools")
+    has(text, "| Tool | Connector | Covers | Gap | Ruling |", "connector first", "System/Tools.md", "connect my tools",
+        "scripts/set-key.py", "network secret", "Allowed websites", "Custom headers", "X-Api-Key", "check-keys.py --where",
+        "## Appendix")
+    assert "Environment variables" not in text.split("## Appendix")[0]
+    for line in text.split("## Appendix")[0].splitlines():
+        assert ".env" not in line or "never" in line.lower() or "agent" in line.lower(), line
+
+
+def test_connecting_tools_rules_on_the_known_tools():
+    text = read("Connecting Tools")
+    for tool in ("Gmail", "Google Calendar", "Microsoft 365", "Slack", "Fathom", "Fireflies", "Granola", "Asana", "ClickUp",
+                 "Notion", "HubSpot", "QuickBooks", "Google Drive", "Text messages", "WhatsApp"):
+        assert tool in text, tool
+    assert "fathom-fetch" not in text and "FATHOM_API_KEY" in text
+
+
+def test_routines_doc_points_keys_at_network_secrets_and_lists_connectors():
+    text = read("Routines")
+    has(text, "- connectors:", "network secret")
+    assert "Environment variables" not in text
+
+
+def test_adding_your_computer_uses_the_pop_up_and_the_ledger():
+    text = read("Adding Your Computer")
+    has(text, "scripts/set-key.py", "System/Tools.md", "session journal:")
+    assert "Command+Shift+Period" not in text
