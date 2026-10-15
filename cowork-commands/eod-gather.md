@@ -5,7 +5,7 @@ description: EOD Phase 1: Data gathering. Triage brain dump, fetch transcripts, 
 
 # EOD Phase 1: Gather
 
-Data gathering phase. Triages Brain Dump first, then fetches Fathom transcripts, tomorrow's calendar, email, and Slack. Routes all items to inbox files immediately. Creates the manifest.
+Data gathering phase. Triages Brain Dump first, then fetches call transcripts through the connected notetaker, tomorrow's calendar, email, and Slack. Routes all items to inbox files immediately. Creates the manifest.
 
 **This phase runs independently and writes all state to disk.** Later phases read from the manifest and inbox files, not from conversation context.
 
@@ -97,7 +97,7 @@ Process the Brain Dump section in `Inbox/Today.md`. This is the user's quick-cap
 
 ## Section 1: Call Transcripts (through the connected notetaker)
 
-1. Read `System/Tools.md`. Find the notetaker section (Fathom, Fireflies, Granola, tl;dv, Grain, Zoom, Tactiq, Circleback) whose status starts with `connected`. If there is none, write one line in the daily note's Routine health section ("no notetaker connected; call transcripts skipped") and go to Section 2.
+1. Read `System/Tools.md`. Find the notetaker section (Fathom, Fireflies, Granola, tl;dv, Grain, Zoom, Tactiq, Circleback) whose status starts with `connected`. If there is none, hold the line `no notetaker connected; call transcripts skipped` with the Routine health findings from Setup step 1 (the note phase places them) and go to Section 2.
 
 2. List today's meetings with that connector's tools, then fetch each transcript (and summary where the connector has one):
 

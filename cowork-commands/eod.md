@@ -69,7 +69,7 @@ Critical rules:
 Execute these steps in order:
 
 1. BRAIN DUMP TRIAGE: Read `Inbox/[YourCompany].md`. Extract the `## Brain Dump` section. Classify each item by client. Route work items to the correct client inbox file. Remove routed items from the Brain Dump. Leave personal items and ideas in place. Log every routed item to the manifest.
-2. CALL TRANSCRIPTS: read `System/Tools.md`; if a notetaker is connected, list today's meetings through its connector and fetch each transcript (Section 1 of eod-gather.md has the tool names per notetaker). For each call, extract action items, decisions, and follow-ups; route to client inbox files; log to manifest. With no notetaker connected, skip with one line in Routine health.
+2. CALL TRANSCRIPTS: read `System/Tools.md`; if a notetaker is connected, list today's meetings through its connector and fetch each transcript (Section 1 of eod-gather.md has the tool names per notetaker). For each call, extract action items, decisions, and follow-ups; route to client inbox files; log to manifest. With no notetaker connected, skip with one line held for Routine health.
 3. TOMORROW'S CALENDAR: Get a Google OAuth access token using the refresh token. Fetch $TOMORROW's events from Google Calendar API. Format as a readable schedule. Write to `/tmp/eod-calendar-$TODAY.md`.
 4. EMAIL CHECK: Reuse the Google OAuth token. Fetch today's emails via Gmail API (first 15-20 messages). Surface emails needing response. Route actionable items to client inbox files. Log to manifest.
 5. SLACK CHECK: For each workspace token available to the scripts (`SLACK_TOKEN_WORKSPACE_*`), check unread DMs and mentions. Route items to client inbox files. Log to manifest.
