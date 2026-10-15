@@ -20,7 +20,7 @@ This session has no hooks and no project settings, so these lines are the only g
 
 ## 1. Welcome
 
-Say, in these words: "Welcome. I'll set up your system now. It takes about twenty minutes, and I'll need you for a few clicks along the way: two permission switches on a Mac, an installer, and one approval on GitHub. I'll say exactly what to click each time. Before we start, check that the button next to Send says **Auto**; if not, click it and choose Auto. Your Mac will ask a few times whether Claude may do something: click **Allow** each time." Say it once; if the chat already shows it, skip it. On Windows, leave the Mac sentence out.
+Say, in these words: "Welcome. I'll set up your system now. It takes about twenty minutes, and I'll need you for a few clicks along the way: two permission switches on a Mac, an installer, and one approval on GitHub. I'll say exactly what to click each time. You can talk instead of typing: press the microphone next to the message box. Before we start, check that the button next to Send says **Auto**; if not, click it and choose Auto. Your Mac will ask a few times whether Claude may do something: click **Allow** each time." Say it once; if the chat already shows it, skip it. On Windows, leave the Mac sentence out.
 
 ## 2. Get the system
 

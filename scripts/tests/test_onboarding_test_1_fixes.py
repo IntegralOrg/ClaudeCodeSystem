@@ -66,9 +66,9 @@ def test_routine_files_carry_a_model_and_an_off_the_hour_schedule():
     assert "0 23 * * 1-5" not in eod and "0 1 * * *" not in hyg
 
 
-def test_setup_section_3_writes_the_local_remotetrigger_path_first():
+def test_setup_section_4_writes_the_local_remotetrigger_path_first():
     text = read("Setup Procedure")
-    step3 = text[text.index("## 3. Create the routines"):text.index("## 4. Keys")]
+    step3 = text[text.index("## 4. Create the routines"):text.index("## 5. Keys")]
     has(step3, "`/schedule`", "RemoteTrigger", "`list`", "`create`", "`get`", "`update`", "cron_expression",
         "persist_session", "job_config", "environment_id", "session_context", "model", "sources", "git_repository",
         "events", "7 3 * * 2-6", "7 4 * * 2-6", "11:07 PM")
@@ -106,15 +106,15 @@ def test_superpowers_install_finds_the_bundled_cli_before_any_screen_drive():
     has(line, "scripts/setup/claude_cli.py", "CLI_MISSING", "before")
     assert line.index("claude_cli.py") < line.index("Settings, Plugins")
     setup = read("Setup Procedure")
-    sec7 = setup[setup.index("## 7. Show it working"):setup.index("## Ask the person only when")]
+    sec7 = setup[setup.index("## 8. Show it working"):setup.index("## Ask the person only when")]
     has(sec7, "scripts/setup/claude_cli.py", "CLI_MISSING", "superpowers@superpowers-marketplace")
 
 
-# G7: section 7 and section 2
+# G7: section 8 and section 2
 
 def test_first_computer_checks_list_connectors_and_disclose_the_paid_call():
     setup = read("Setup Procedure")
-    sec7 = setup[setup.index("## 7. Show it working"):setup.index("## Ask the person only when")]
+    sec7 = setup[setup.index("## 8. Show it working"):setup.index("## Ask the person only when")]
     has(sec7, "connectors", "missing", "paid", "`claude -p`", "skip it", "session journal")
     adding = read("Adding Your Computer")
     step4 = adding[adding.index("## 4."):adding.index("## 5.")]
@@ -123,7 +123,7 @@ def test_first_computer_checks_list_connectors_and_disclose_the_paid_call():
 
 def test_build_the_vault_replaces_every_placeholder_and_rewrites_the_schedule_rules():
     setup = read("Setup Procedure")
-    sec2 = setup[setup.index("## 2. Build the vault"):setup.index("## 3. Create the routines")]
+    sec2 = setup[setup.index("## 2. Build the vault"):setup.index("## 3. Connect your tools")]
     has(sec2, "`[Your Name]`", "`[YourCompany]`", "every", "no bracketed placeholder", "rule 12", "rule 13",
         "Meeting Window", "Daily Schedule Skeleton", "week shape", "planning day")
 
@@ -177,3 +177,49 @@ def test_no_em_dashes_in_the_touched_docs():
     for p in (ROOT / "System" / "routines").glob("*.md"):
         assert chr(0x2014) not in p.read_text(encoding="utf-8"), p.name
     assert chr(0x2014) not in (ROOT / "scripts" / "setup" / "claude_cli.py").read_text(encoding="utf-8")
+
+
+# PR B: interview, connect step, routines after it
+
+def test_welcome_lines_mention_the_microphone():
+    has(read("Start"), "press the microphone next to the message box")
+    has(read("Setup Procedure"), "press the microphone next to the message box")
+
+
+def test_round_one_says_type_below_and_press_enter():
+    has(read("Setup Procedure"), "Type your answers below and press Enter.")
+
+
+def test_round_two_is_the_inputs_question_with_next_and_skip_meaning():
+    text = read("Setup Procedure")
+    sec1 = text[text.index("## 1. Open"):text.index("## 2. Build")]
+    has(sec1, "Where does information come in day to day?", "Picking a tool means we connect it", "Skipping one means",
+        "Do you record your meetings?", "Which tool?", "Anything else you live in?", "Google Drive or OneDrive")
+    assert "WhatsApp" not in sec1 and "Text messages" not in sec1
+
+
+def test_section_order_is_connect_before_routines():
+    text = read("Setup Procedure")
+    assert text.index("## 3. Connect your tools") < text.index("## 4. Create the routines") < text.index("## 5. Keys")
+
+
+def test_connect_section_never_blocks_and_uses_the_in_chat_cards():
+    text = read("Setup Procedure")
+    sec = text[text.index("## 3. Connect your tools"):text.index("## 4. Create the routines")]
+    has(sec, "search_mcp_registry", "suggest_connectors", "session_connectors_status", "set_session_connector_enabled",
+        "System/Tools.md", "essential", "One try per tool during setup", "never blocks", "connect my tools",
+        "Customize", "Connectors", "Gmail, so End of Day can read what came in today")
+    has(sec, "Those are the ones tonight's routine needs")
+
+
+def test_routine_section_passes_connectors_and_verifies_them():
+    text = read("Setup Procedure")
+    sec = text[text.index("## 4. Create the routines"):text.index("## 5. Keys")]
+    has(sec, "connectors", "connector-missing", "verify", "session_connectors_status")
+    assert "Do not pass `connectors`" not in sec
+
+
+def test_build_section_writes_the_ledger():
+    text = read("Setup Procedure")
+    sec = text[text.index("## 2. Build"):text.index("## 3. Connect")]
+    has(sec, "System/Tools.md", "- status: not connected", "essential: yes")

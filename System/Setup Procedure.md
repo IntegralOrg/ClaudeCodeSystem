@@ -1,7 +1,7 @@
 ---
 type: sop
 created: 2026-10-08
-updated: 2026-10-13
+updated: 2026-10-15
 ---
 # Setup Procedure
 
@@ -12,9 +12,9 @@ You are reading this because `SETUP_PENDING` exists at the vault root. Run every
 Check, in this order, and go to the first that fits:
 
 - **A session with no vault** (no `CLAUDE.md` in the folder you are in, usually the home folder, because the person pressed the start button or pasted the start line): follow `System/Start.md` instead of this file. Download it with `curl -L` (`Invoke-WebRequest` on Windows) from `https://raw.githubusercontent.com/IntegralOrg/ClaudeCodeSystem/main/System/Start.md` into a temporary folder and read the whole file (a summarising fetch can change its commands), or read `Brain/System/Start.md` once the download in its step 2 is done. Come back to this file in the session it opens.
-- **A cloud session** (home directory `/root`, nothing on the person's computer): skip Part A and Part B; run sections 1 to 7 (the cloud branches).
+- **A cloud session** (home directory `/root`, nothing on the person's computer): skip Part A and Part B; run sections 1 to 8 (the cloud branches).
 - **A local session in a folder with no `.git`** (usually inside `Downloads`): this is the downloaded copy. Run **Part A**.
-- **A local session in the vault's home** (`~/Brain` on a Mac, `%USERPROFILE%\Brain` on Windows, with `.git`): run **Part B**, then sections 1 to 7 for whatever is not done yet.
+- **A local session in the vault's home** (`~/Brain` on a Mac, `%USERPROFILE%\Brain` on Windows, with `.git`): run **Part B**, then sections 1 to 8 for whatever is not done yet.
 
 Every step below starts with a check and skips itself when the check passes, so any session can pick up where an earlier one stopped. The person never types a command: you run everything and tell them, in one plain sentence, the one thing to click.
 
@@ -55,40 +55,60 @@ Two rules for every browser step in this part (the GitHub sign-in, the Claude Gi
 6. Run the landing script now (`bash scripts/land-local.sh` with the `--final` flag) and confirm the last line of `_generated/landing.log` is "landed on main" or "nothing to push". On Windows, if `bash` is not found in this session, run it through Git's own copy: `& "$env:LOCALAPPDATA\Programs\Git\bin\bash.exe" scripts/land-local.sh` with the `--final` flag (or `$env:ProgramFiles\Git\bin\bash.exe` for a machine-wide Git).
 **B4. Claude GitHub app.** Say, once, before this page (it is the first page that needs the browser signed in to Claude, which a Desktop-only person has not done): "Your browser will ask you to sign in to Claude once; use the same email as the app." Then open `https://github.com/apps/claude/installations/new` and say: "Choose your account (or your company's organization, if the vault lives there), pick **Only select repositories**, choose your vault repository, and click Install." Ask "Did you install it?" with the two answers from the Part B rule, **Installed** and **It did not work**, and bring Claude back to the front when they answer. In an organization where they are not an owner, GitHub turns the install into a request and emails the owners; say so, and that routines stay "not live" until an owner approves it. Routines need the app to read and save the vault from the cloud. Its proof is the first routine run (a routine stays "not live" until its first run reports).
 
-Then continue with section 1 (skip its opening line, and skip any field already in `_generated/setup/answers.md`), section 2 (build the vault from the answers), section 3 (routines: in Claude Desktop use the `/schedule` skill and `RemoteTrigger` when the session has them; otherwise "Create a routine by hand" in `System/Routines.md`, offering to drive the screen through it), and sections 4 to 7. Delete `_generated/setup/answers.md` when you write the completion line.
+Then continue with section 1 (skip its opening line, and skip any field already in `_generated/setup/answers.md`), section 2 (build the vault from the answers), section 3 (connect the tools they named), section 4 (routines: in Claude Desktop use the `/schedule` skill and `RemoteTrigger` when the session has them; otherwise "Create a routine by hand" in `System/Routines.md`, offering to drive the screen through it), and sections 5 to 8. Delete `_generated/setup/answers.md` when you write the completion line.
 
 ## 1. Open, then learn who this is for
 
-Whatever the person's first message says (a greeting, a question, or a pasted brief), setup starts with it. Open with one short message, in these words: "Welcome. I will set up your system now. It takes about ten minutes: a few quick questions, most of them a click, then I build everything and show it working."
+Whatever the person's first message says (a greeting, a question, or a pasted brief), setup starts with it. Open with one short message, in these words: "Welcome. I will set up your system now. It takes about ten minutes: a few quick questions, most of them a click, then I build everything and show it working. You can talk instead of typing: press the microphone next to the message box."
 
 **If the first message is a prepared brief.** Your onboarding team may give the person a prompt to paste as their first message (interview notes, a company summary, a list of answers). Read it, fill every field below that it covers, and ask only for the fields it leaves out. Never ask whether they have a brief: a person who has one pastes it.
 
 **Otherwise, ask, in three rounds.** Use the question tool (`AskUserQuestion`: up to four questions per call, two to four options each, and it always adds "Other" for a typed answer) wherever the answer is likely one of a few, and plain text for the rest. Skip any question an earlier answer already settled.
 
-1. **Plain text, one message:** "First, tell me your name and role, your company and what it does in one sentence, and the email address I should use when something needs you."
-2. **One `AskUserQuestion` call, four questions:**
-   - "Which email and calendar do you use?" Options: Google (Gmail and Google Calendar); Microsoft (Outlook).
-   - "Where does your team chat?" (multi-select) Options: Slack; Microsoft Teams; Text messages; WhatsApp.
-   - "Do you record your meetings?" Options: Fathom; Zoom; Another notetaker; No.
-   - "Where do you keep tasks today?" Options: Asana; ClickUp; Notion; Nowhere yet.
-3. **One `AskUserQuestion` call, four questions:**
+1. **Plain text, one message:** "First, tell me your name and role, your company and what it does in one sentence, and the email address I should use when something needs you. Type your answers below and press Enter."
+2. **Two `AskUserQuestion` calls (the tool holds four questions each).** Say first, once: "These are the inputs: pick every place information reaches you; that's what we connect, so your brain hears what you hear. Picking a tool means we connect it. Skipping one means your brain won't see it until you come back to it."
+   First call:
+   - "Which email and calendar do you use?" Options: Google (Gmail and Google Calendar); Microsoft (Outlook and Teams); Other.
+   - "Where does information come in day to day?" (multi-select) Options: Email; Calendar; Slack; Files (Google Drive or OneDrive).
+   - "Do you record your meetings?" Options: Yes; No.
+   - "Where does your team chat?" (multi-select) Options: Slack; Microsoft Teams; Neither; Other.
+   Second call (skip the first question when they do not record meetings):
+   - "You record your meetings: which tool?" Options: Fathom; Fireflies; Granola; Other (typed: tl;dv, Grain, Zoom, Tactiq and Circleback all have connectors).
+   - "Where do you keep tasks today?" Options: Asana; ClickUp; Notion; Nowhere yet (Linear and monday are accepted typed).
+   - "Anything else you live in?" (multi-select) Options: HubSpot or another CRM; QuickBooks; Nothing else; Other (typed).
    - "Which time zone are you in?" Put the zone you detect first, marked "(Recommended)": in a local session read it from the computer (`readlink /etc/localtime` on a Mac, `tzutil /g` on Windows); a cloud session cannot see it, so offer Eastern, Central, and Pacific. Record the answer as an IANA name (for example `America/New_York`).
+3. **One `AskUserQuestion` call, three questions:**
    - "How does your week usually run?" Options: Meetings in the morning, focus in the afternoon; Focus in the morning, meetings in the afternoon; Meetings scattered all week; Mostly focus time.
    - "When do you plan your week?" Options: I do not plan the week (first, so it is the quiet default; only a chosen day changes rule 13); Monday morning; Sunday evening; Friday afternoon.
    - "What should this system carry for you first?" (multi-select) Options: My task list, from email and meetings; Prep before each meeting; Notes on each client; Process automation (a repeated chore handed to the system). The evening summary is not an option because End of Day writes it every weeknight whatever they choose.
 
 If the question tool is not available in this session, ask the same three rounds as plain text, one message per round.
 
-Fields: owner name, role, company, company one-liner, tools, week shape (including the planning day), first jobs (every one they picked, in the order they rank them; ask which comes first only if they picked more than one), time zone, and the owner's email address (the address End of Day uses to reach the owner when something needs them). Ask once, in one line each, for any of those the brief or the answers did not give. One more field, `github owner`, is filled only from a prepared brief that names the company's GitHub organization for these vaults; it is never asked here (B3 asks it, only when the account belongs to an organization).
+Fields: owner name, role, company, company one-liner, tools, week shape (including the planning day), first jobs (every one they picked, in the order they rank them; ask which comes first only if they picked more than one), time zone, and the owner's email address (the address End of Day uses to reach the owner when something needs them). `tools` is the full list of named tools with, for each, whether it is essential (email and calendar always; the notetaker when they record). Ask once, in one line each, for any of those the brief or the answers did not give. One more field, `github owner`, is filled only from a prepared brief that names the company's GitHub organization for these vaults; it is never asked here (B3 asks it, only when the account belongs to an organization).
 
 ## 2. Build the vault
 
 - Write `CLAUDE.md` from the skeleton: fill the `## Owner` section (name, role, company, time zone as an IANA name, and `email: <owner email>` on its own line), then replace the placeholder line under each of `## Company`, `## Tools I live in`, `## The shape of my week`, and `## First jobs for this system`; keep every rule and the `System/` reference intact. Then replace every remaining placeholder in the file: every `[Your Name]`, `[YourCompany]`, `[Your Role]`, `[Your Timezone]`, and `[Your Task Manager]` becomes the answer (the company's folder name is the company name), so that no bracketed placeholder is left anywhere in `CLAUDE.md`. Rewrite rule 12 (Meeting Window) and rule 13 (Daily Schedule Skeleton) from the week shape and planning day answers: the meeting window and the deep-work blocks follow the shape they chose, and the planning line names their planning day, or is dropped when they said they do not plan the week; keep the rule numbers.
 - Create folders: `Work/Clients/`, `Work/Projects/`, `Work/Daily/`, `Personal/`, `Resources/Reference/`, `Inbox/`.
+- Write `System/Tools.md`, the tools ledger, from the answers: the header line, then one `## <tool>` section per tool named, in this order: email, calendar, the notetaker, then the rest. Each section's first bullet is `- status: not connected`, then `- essential: yes` (email, calendar, and the notetaker when they record) or `- essential: no`, `- how: connector "<registry name>"` (or `key <NAME>` for a tool whose ruling in `System/Connecting Tools.md` is a key), `- used by: <routine and what for>`, `- updated: <today>`. A tool nothing can read (text messages, WhatsApp) gets `- status: skipped (no route reads it today)` and is never asked about again. The hooks read only the status bullet, so keep that shape.
+- Text messages and WhatsApp are not offered: no route reads them today; when the person names one, say so in one sentence and move on.
 - For each client or project the user named, create a page from `Templates/Client Note.md`.
 - Set `timezone:` in every file under `System/routines/` to the user's zone as an IANA name (for example `America/New_York`), then edit the two routine sections of `System/Routines.md` in place (the `## End of Day` and `## Vault Hygiene` sections) to match those files; keep every other section of the file, including "Create a routine by hand" and "If a routine is stale or not live".
 
-## 3. Create the routines
+## 3. Connect your tools
+
+The tools you named are on the ledger, `System/Tools.md`. This step connects the essential ones (email, calendar, and the notetaker when they record) now, and never blocks: one try per tool during setup, then setup moves on and the ledger keeps the item open. The person hears one reminder line per session until the essential ones are done (the `tools_health.py` hook), and "connect my tools" in any session runs this step again for whatever is open.
+
+For each tool on the ledger with `- status: not connected`, essential ones first:
+
+1. **Find its connector.** Call `search_mcp_registry` with the tool's name (for example `["gmail"]`) and take the `directoryUuid` of the matching result; the ruling for known tools is the table in `System/Connecting Tools.md` (a tool whose ruling is a key skips to section 5). If this session has no registry tools (a cloud session, or an older Desktop), use the Desktop page instead: say "In Claude, open **Customize**, then **Connectors**, find **Gmail** and click **Connect**", and offer to drive the screen after the first one; the last resort is the browser at claude.ai/customize/connectors, with the one-time sign-in sentence from B4.
+2. **Say why, then show the button.** One sentence ("Gmail, so End of Day can read what came in today"), then call `suggest_connectors` with that uuid and a one-word keyword (`email`, `calendar`, `meetings`, `messages`, `tasks`, `files`): the Connect button appears in the chat. Say: "Click Connect, sign in, click Allow, then tell me." Offer the two answers from the Part B rule: **Connected** and **Later**.
+3. **Check, then record.** On Connected, call `session_connectors_status`: if the connector is listed, call `set_session_connector_enabled` for it and write `- status: connected <today>` in its ledger section (replace the status bullet; never add a second). If it is not listed (a session started before the connector was added may not see it yet), write `- status: connected <today> (verify next session)`; the next session's status check settles it. On Later, or when the sign-in fails, leave `not connected` and move on. One try per tool during setup.
+4. **After the essential tools**, when others are open: "Those are the ones tonight's routine needs. You also named Slack and ClickUp; connect them now, two minutes each, or later?" On later, stop here; setup never asks about a non-essential tool twice.
+
+For every connector that is now connected, add `"mcp__<connector>__*"` to `permissions.allow` in `.claude/settings.json` (the entry name is the connector's tool prefix as `session_connectors_status` shows it).
+
+## 4. Create the routines
 
 There is one routine per file in `System/routines/`; the name, local schedule, time zone, model, and prompt come from that file. Two tool paths do the same job; use whichever this session has, local first.
 
@@ -111,7 +131,7 @@ Rules for both paths:
 - **The cron expression is in UTC.** The routine files give the schedule in the owner's local time, with `timezone:` set to their IANA zone. Convert it to UTC before creating, using the offset in force today. Example: 11:07 PM Monday to Friday in America/New_York is `7 3 * * 2-6` in UTC during daylight time (EDT) and `7 4 * * 2-6` in standard time (EST); the weekday field moves by one because 3 AM UTC is the next day. The schedules sit at seven minutes past the hour on purpose: a routine set for :00 can start minutes late. Write the UTC expression and the local intent in `System/Routines.md` (the fire time shifts by an hour at each daylight-saving change, see that file).
 - **Pass `model` from the routine's file** and verify it in `get` (or `get_trigger`): a routine created from a skill's template default runs on the wrong model every night.
 - Create every routine with `persist_session: false` (each run is a fresh session, so nothing a previous run left in memory is relied on).
-- **Do not pass `connectors`.** The parameter is refused for some organizations ("not available for this organization"). The user attaches each routine's connectors by hand afterwards (see `System/Connecting Tools.md`); a run without them degrades and Routine health reports `connector-missing`.
+- **Pass the connected connectors.** Read `session_connectors_status`; for End of Day, put the connected ones its file lists under `connectors:` (Gmail, Google Calendar, the notetaker) in the create body's `connectors` field when the tool accepts it (try once; a refusal names the parameter, and some organizations refuse it). When it is refused, create without, then tell the person the one by-hand step: "In Claude, open Routines, End of Day, the arrow by its name, Edit, Advanced settings, the **Connectors** tab, and tick Gmail and Google Calendar." Either way verify with `get` that the routine lists them, and write which connectors it carries in its `System/Routines.md` section (`- connectors: Gmail, Google Calendar`); a run without them reports `connector-missing` in Routine health.
 - **Attach this repository to every routine.** A routine created without a repository source runs in an empty container with no vault. In a cloud session, before creating, read the `create_trigger` tool's input schema and find the field that names the repository or sources (the name varies: `repository`, `sources`, `git_repository`, `repo_url`). Pass this repository's HTTPS URL in it.
 - **Verify each routine, created or reused.** After every `create_trigger`, and for every routine you reuse, call `get_trigger` and confirm the result lists this repository as a source (it appears under `session_request.config`, as `sources`). If a reused routine's source is missing, repair it with `update_trigger` when the tool has a field for it. If the tool has no such field, or the source list is still empty, call `delete_trigger` on that routine and use "Create a routine by hand" in `System/Routines.md` for it instead; write "created by hand" in its section.
 - **Environment:** create the routine on the current session's environment when the tool reports one, or without naming an environment when the tool allows. Use "Create a routine by hand" in `System/Routines.md` (it includes creating the environment and installing the Claude GitHub app) only when creation fails, or when a routine's first run reports no repository access; tell the user you will verify on the next run.
@@ -119,13 +139,14 @@ Rules for both paths:
 
 If neither tool set is available in this session, follow "Create a routine by hand" in `System/Routines.md` (in Claude the page is Routines (the sidebar may say Scheduled)) and tell the user you will verify on the next run. Mark every routine "not live" until its first run reports its keys present.
 
-`System/Routines.md` is read by the vault's health hooks, so keep its shape exactly: one `## <title>` heading per routine using the `title:` from its file in `System/routines/` (`End of Day`, `Vault Hygiene`), and the **first** bullet under each heading is `- live_since: not live` (or `- live_since: YYYY-MM-DD` once the first run has reported its keys present). Then bullets for the schedule, the model, what it needs (keys, connectors), the routine id, and the environment id:
+`System/Routines.md` is read by the vault's health hooks, so keep its shape exactly: one `## <title>` heading per routine using the `title:` from its file in `System/routines/` (`End of Day`, `Vault Hygiene`), and the **first** bullet under each heading is `- live_since: not live` (or `- live_since: YYYY-MM-DD` once the first run has reported its keys present). Then bullets for the schedule, the model, the connectors it carries, what it needs (keys, connectors), the routine id, and the environment id:
 
 ```markdown
 ## End of Day
 - live_since: not live
 - schedule: 11:07 PM Monday to Friday America/New_York, cron `7 3 * * 2-6` UTC (EDT; `7 4 * * 2-6` in standard time)
 - model: claude-opus-5-5
+- connectors: <the ones attached, or none yet>
 - needs: connectors Gmail, Google Calendar; optional keys FATHOM_API_KEY, SLACK_TOKEN_WORKSPACE_A
 - routine id: <id from create, or "not created yet">
 - environment id: <environment id, or "not created yet">
@@ -133,7 +154,7 @@ If neither tool set is available in this session, follow "Create a routine by ha
 
 Write the same shape for `## Vault Hygiene`, after End of Day.
 
-## 4. Keys
+## 5. Keys
 
 Run `python3 scripts/check-keys.py` (local session: `python3 scripts/check-keys.py --init` first, which creates the credentials file with blank values). For every missing name, tell the user: the name, what it is for (from `System/Connecting Tools.md`), where to get it, and where to paste it.
 
@@ -142,17 +163,17 @@ Run `python3 scripts/check-keys.py` (local session: `python3 scripts/check-keys.
 
 Never ask the user to paste a value into the chat.
 
-## 5. Record completion, then release the marker
+## 6. Record completion, then release the marker
 
 1. Write one line to `Work/Daily/<today>.md`: "Setup completed <date> in a <cloud|local> session; routines: <names, live or not live>; keys missing: <names or none>."
 2. Delete `SETUP_PENDING` now, so an interrupted hand-off never restarts setup.
 
-## 6. Land
+## 7. Land
 
 - **Cloud session:** landing happens when this turn ends (the Stop hook). Nothing to run.
 - **Local session:** run `bash scripts/land-local.sh --final` now.
 
-## 7. Show it working, then step two
+## 8. Show it working, then step two
 
 Two-minute demo on the user's own data: capture one task they mentioned into `Inbox/`, render one client page, and show today's daily note. Then:
 

@@ -38,8 +38,8 @@ def test_setup_procedure_matches_the_hooks_and_routine_tools():
     text = read("Setup Procedure")
     has(text, "create_trigger", "persist_session", "## Owner", "email:", "Setup completed", "live_since: not live",
         "Work/Daily/", "Claude GitHub app")
-    step3 = text[text.index("## 3. Create the routines"):text.index("## 4. Keys")]
-    has(step3, "repository", "get_trigger", "delete_trigger", "Do not pass `connectors`", "created or reused")
+    step3 = text[text.index("## 4. Create the routines"):text.index("## 5. Keys")]
+    has(step3, "repository", "get_trigger", "delete_trigger", "connectors", "created or reused")
     assert "scheduled-tasks" not in text
     # nowhere may the agent be told to open, read, cat, or print the credentials file
     bad = re.compile(r"\b(read|cat|print|echo|source|grep)\b[^.\n]{0,25}(\.env\b|credentials file)", re.I)
@@ -126,7 +126,7 @@ def test_setup_procedure_is_safe_to_re_run():
         "Create a routine by hand", "connector-missing", "persist_session: false",
         "Delete `SETUP_PENDING` now, so an interrupted hand-off never restarts setup")
     # order after the keys step: completion line, then marker deletion, then landing, then the demo
-    keys = text.index("## 4. Keys")
+    keys = text.index("## 5. Keys")
     done = text.index("Setup completed <date>")
     gone = text.index("Delete `SETUP_PENDING` now")
     land = text.index("land-local.sh --final")
@@ -364,7 +364,7 @@ def test_company_github_organization_doc_covers_setup_move_and_offboarding():
 
 def test_wispr_flow_is_offered_by_name_after_the_demo():
     setup = read("Setup Procedure")
-    sec7 = setup[setup.index("## 7. Show it working"):setup.index("## Ask the person only when")]
+    sec7 = setup[setup.index("## 8. Show it working"):setup.index("## Ask the person only when")]
     has(sec7, "Wispr Flow", "wisprflow.ai", "drive", "on yes")
     adding = read("Adding Your Computer")
     step4 = adding[adding.index("## 4."):adding.index("## 5.")]
