@@ -280,6 +280,11 @@ def test_drive_screen_hands_back_and_requests_permissions():
         "responsibility_get_pid_responsible_for_pid", "com.anthropic.claudefordesktop")
     ref = (skill / "references" / "driving-agents.md").read_text(encoding="utf-8")
     has(ref, "Claude Code", "Nothing to install")
+    # autodrive hands back on its own, so a turn that completes in another
+    # window brings Claude to the front without the driving agent remembering.
+    has(text, "It hands back on its own", "--no-handback", "`autodrive.py` runs\n`handback` itself")
+    auto = (skill / "scripts" / "autodrive.py").read_text(encoding="utf-8")
+    has(auto, "def hand_back", "def handback_text", "def took_machine_back", '"--no-handback"', "FOCUS_LOST")
 
 
 def test_claude_md_carries_the_setup_trigger_for_a_clean_machine():
