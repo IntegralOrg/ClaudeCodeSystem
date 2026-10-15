@@ -55,7 +55,7 @@ Setup fills this section; End of Day reads the email to reach the owner outside 
 | Client profiles & archives | `Work/Clients/<Client>/Company Profile.md` + `Archive/` subfolder |
 | Call transcripts | Per-client: `Work/Clients/<Client>/Transcripts/`, admin: `Work/Transcripts/`, private: `[YourCompany]/Transcripts/` |
 | Task management | [Your Task Manager] (e.g., ClickUp via MCP) |
-| Credentials/API keys | Environment variables set in the Claude Code environment settings (a session-local, untracked logins file is the fallback; scripts load either via `scripts/envload.py`; `Resources/API Keys/` has references only) |
+| Credentials/API keys | A pop-up on your computer (`python3 scripts/set-key.py NAME`) and a network secret on the routine's cloud environment; see `System/Connecting Tools.md` (scripts load keys via `scripts/envload.py`; `Resources/API Keys/` has references only) |
 | Work projects | `Work/Clients/` |
 | Personal projects | `Projects/Personal/` |
 | System updates | Change Log (bottom of this file) + `CHANGELOG.md` for full history |
@@ -171,7 +171,7 @@ Brain/
 
 (Built-in connections -- once set up, they just work. These are called "MCP servers" in technical documentation.)
 
-- Built-in connections (Gmail, Google Calendar, and other claude.ai connectors) are set up by [Your Name] through claude.ai's **Settings > Connectors** page. **Claude cannot configure these connections itself.** If a new connection is needed, tell [Your Name] what to connect and where to find it in the Connectors settings.
+- Built-in connections (Gmail, Google Calendar, Slack, the notetaker, and other claude.ai connectors) are connected by the agent through the in-chat **Connect** card, with [Your Name] signing in and clicking Allow, and each one is recorded on the ledger `System/Tools.md`. Say "connect my tools" in any session to connect whatever is still open (the steps are in `System/Connecting Tools.md`).
 - Self-configured MCP servers live in the vault's checked-in config (`.mcp.json` at the vault root), so they follow the repository into every cloud session. Only add or change them when [Your Name] explicitly asks.
 - Pre-approve connected tools by adding their `"mcp__...__*"` entries to `permissions.allow` in the vault's `.claude/settings.json` (also checked in).
 
@@ -180,20 +180,16 @@ Brain/
 <!-- - **Google Calendar** -- Calendar events, scheduling, free time lookup -->
 - **Context7** -- Up-to-date library documentation
 
-### Tools That Need Login Credentials (stored in the guarded logins file)
+### Tools That Need Login Credentials (a key: the pop-up and a network secret)
 
 Read `Resources/Reference/API Integration Guide.md` for full docs (endpoints, auth, examples).
 
 <!-- Customize this table with your actual integrations -->
 
+Gmail, Google Calendar, Slack, Google Drive and the notetaker are connectors, not keys: see `System/Tools.md`. This table keeps only tools on the key path (a tool with no good connector).
+
 | Integration                | Type           | Account              | Key Capabilities                           |
 | -------------------------- | -------------- | -------------------- | ------------------------------------------ |
-| Google Drive/Docs/Calendar | OAuth REST     | you@yourcompany.com  | Doc CRUD, calendar events, file management |
-| Gmail                      | OAuth REST     | you@yourcompany.com  | Read/send email (`gmail.modify` scope)     |
-<!-- Add your meeting transcript service if you use one:
-| Fathom                     | API Key REST   | --                   | Meeting transcripts & summaries            |
--->
-| Slack                      | OAuth REST     | N workspaces connected | Channel read/write, DMs, user lookup     |
 <!-- Add time tracking if you use it:
 | Rize                       | Bearer GraphQL | you@yourcompany.com  | Time tracking, sessions, categories        |
 -->
