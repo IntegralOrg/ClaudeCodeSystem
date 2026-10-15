@@ -38,7 +38,7 @@ def test_essential_open_tools_are_named_every_session(tmp_path):
            + section("Slack", "not connected", False))
     rc, text = run_hook(tmp_path)
     assert rc == 0 and text == ("Tell the user first: Gmail and Fathom are not connected yet; say 'connect my tools' "
-                                "when you have two minutes.")
+                                "when you have two minutes. (System/Connecting Tools.md)")
     rc, text2 = run_hook(tmp_path)
     assert text2 == text
 
@@ -46,7 +46,7 @@ def test_essential_open_tools_are_named_every_session(tmp_path):
 def test_non_essential_open_tools_are_named_once_a_week(tmp_path):
     ledger(tmp_path, "# Tools\n\n" + section("Gmail", "connected 2026-10-14", True) + section("Slack", "not connected", False))
     rc, text = run_hook(tmp_path)
-    assert text == "Tell the user first: Slack is not connected yet; say 'connect my tools' when you want it."
+    assert text == "Tell the user first: Slack is not connected yet; say 'connect my tools' when you want it. (System/Connecting Tools.md)"
     assert json.loads((tmp_path / "_generated" / "tools-reminder.json").read_text())["last"] == "2026-10-15"
     assert run_hook(tmp_path, TODAY + timedelta(days=3)) == (0, "")
     rc, text = run_hook(tmp_path, TODAY + timedelta(days=7))
@@ -62,4 +62,20 @@ def test_skipped_and_key_present_are_not_open(tmp_path):
 def test_one_essential_uses_singular_wording(tmp_path):
     ledger(tmp_path, "# Tools\n\n" + section("Gmail", "not connected", True))
     assert run_hook(tmp_path)[1] == ("Tell the user first: Gmail is not connected yet; say 'connect my tools' when you "
-                                     "have two minutes.")
+                                     "have two minutes. (System/Connecting Tools.md)")
+
+
+def test_an_essential_tool_waiting_for_its_check_is_named(tmp_path):
+    ledger(tmp_path, "# Tools\n\n" + section("Gmail", "connected 2026-10-14 (verify next session)", True))
+    assert run_hook(tmp_path)[1] == ("Tell the user first: Gmail needs a quick check; say 'connect my tools'. "
+                                     "(System/Connecting Tools.md)")
+
+
+def test_not_connected_comes_before_the_check_in_one_line(tmp_path):
+    ledger(tmp_path, "# Tools\n\n" + section("Gmail", "connected 2026-10-14 (verify next session)", True)
+           + section("Google Calendar", "connected 2026-10-14 (verify next session)", True)
+           + section("Fathom", "not connected", True)
+           + section("Slack", "connected 2026-10-14 (verify next session)", False))
+    assert run_hook(tmp_path)[1] == (
+        "Tell the user first: Fathom is not connected yet; say 'connect my tools' when you have two minutes. "
+        "Gmail and Google Calendar need a quick check; say 'connect my tools'. (System/Connecting Tools.md)")

@@ -99,3 +99,29 @@ def test_non_utf8_credentials_file_reports_failed(tmp_path):
 def test_windows_dialog_script_is_a_masked_winforms_box():
     src = SCRIPT.read_text(encoding="utf-8")
     assert "UseSystemPasswordChar" in src and "-NoProfile" in src and "-STA" in src
+
+
+def _module():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("set_key_mod2", SCRIPT)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_dialog_sentence_never_names_the_credentials_file():
+    text = _module().prompt_text("Rize API key")
+    assert "credentials file" not in text and "It is saved on this computer; Claude never sees it." in text
+
+
+def test_mac_dialog_keeps_a_non_ascii_label_literal(monkeypatch):
+    mod = _module()
+    seen = {}
+
+    def fake_run(cmd, **kw):
+        seen["script"] = cmd[-1]
+        return subprocess.CompletedProcess(cmd, 0, stdout="abc\n", stderr="")
+
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+    assert mod.ask_mac("clé API") == "abc"
+    assert "clé API" in seen["script"] and "\\u" not in seen["script"]

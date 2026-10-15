@@ -55,7 +55,7 @@ def say(token, name, as_json, code):
 
 
 def prompt_text(label):
-    return f"Paste your {label}, then click Save. It goes straight into your vault's credentials file; Claude never sees it."
+    return f"Paste your {label}, then click Save. It is saved on this computer; Claude never sees it."
 
 
 def ask_fake():
@@ -69,7 +69,7 @@ def ask_mac(label):
     script = (
         'tell application "System Events"\n'
         "  activate\n"
-        f"  set r to display dialog {json.dumps(prompt_text(label))} default answer \"\" with hidden answer "
+        f"  set r to display dialog {json.dumps(prompt_text(label), ensure_ascii=False)} default answer \"\" with hidden answer "
         f'with title "Brain: add a key" buttons {{"Cancel", "Save"}} default button "Save" '
         f"cancel button \"Cancel\" giving up after {DIALOG_TIMEOUT}\n"
         "  if gave up of r then return \"\"\n"

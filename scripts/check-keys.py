@@ -10,11 +10,11 @@ A `keys:` / `optional_keys:` item is either a bare name (present when the enviro
 credentials file has a value) or an object with `name`, `probe_url`, `header`, `header_prefix`.
 An object key is proven by one GET to its probe URL (10 second timeout): the header is sent only
 when the variable has a value, so a cloud network secret is proven the same way. 2xx is present,
-401/403 is missing, anything else (network error, 5xx, timeout) is "could not check", which never
-counts as missing. Slack's auth.test answers 200 even with no token, with a JSON body of ok:false;
+401/403 is missing, anything else (network error, 5xx, timeout, or a redirect, which is never
+followed so the header never reaches another host) is "could not check", which never counts as missing. Slack's auth.test answers 200 even with no token, with a JSON body of ok:false;
 a 2xx JSON body with "ok": false therefore counts as missing.
 
-`--where` prints, for each missing key, both places it can go. `--init` copies the shipped example
+`--where` prints, for each missing key, both places it can go, with "(optional)" after an optional key's name. `--init` copies the shipped example
 into the real credentials file once (blank values); use it in a local session only (a cloud
 container is thrown away). The agent runs this script; it never opens or names the credentials
 file itself (the guard hook forbids that by design). Test hook: CHECK_KEYS_PROBE_RESULTS, a JSON
@@ -132,6 +132,17 @@ def normalize_key(item):
     return {"name": str(item), "probe_url": "", "header": "", "header_prefix": ""}
 
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Never follow a redirect: the probe's header must not travel to another URL. urllib then raises the 3xx
+    as an HTTPError, which probe_key counts as "could not check"."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_opener = urllib.request.build_opener(NoRedirect)
+
+
 def says_not_ok(response):
     """True when a 2xx body is a JSON object with "ok": false (Slack's way of refusing a missing or bad token)."""
     try:
@@ -144,7 +155,7 @@ def says_not_ok(response):
 def probe_key(spec, value):
     """One GET to the key's probe URL. The header is added only when the variable has a value, so a cloud
     network secret (which the proxy adds after the request leaves) is proven the same way. present: 2xx;
-    missing: 401 or 403; unknown: anything else (network error, 5xx, timeout)."""
+    missing: 401 or 403; unknown: anything else (network error, 5xx, timeout, a redirect)."""
     fake = os.environ.get("CHECK_KEYS_PROBE_RESULTS")
     if fake:
         code = json.loads(fake).get(spec["probe_url"], "error")
@@ -156,7 +167,7 @@ def probe_key(spec, value):
     if value:
         req.add_header(spec["header"], f"{spec['header_prefix']}{value}")
     try:
-        with urllib.request.urlopen(req, timeout=PROBE_TIMEOUT) as r:
+        with _opener.open(req, timeout=PROBE_TIMEOUT) as r:
             if not 200 <= r.status < 300:
                 return "unknown"
             return "missing" if says_not_ok(r) else "present"
@@ -196,14 +207,15 @@ def environment_id(vault):
         return ""
 
 
-def where_lines(vault, specs):
+def where_lines(vault, specs, optional=()):
     env = environment_id(vault) or "the routine's cloud environment"
     out = []
     for s in specs:
+        label = s["name"] + (" (optional)" if s["name"] in optional else "")
         host = re.sub(r"^https?://([^/]+).*$", r"\1", s["probe_url"]) if s["probe_url"] else "the API's host"
         header = s["header"] or "Authorization"
         prefix = f' with prefix "{s["header_prefix"].strip()}"' if s["header_prefix"].strip() else " with no prefix"
-        out.append(f"{s['name']}: on this computer run python3 scripts/set-key.py {s['name']} (a pop-up asks for it); "
+        out.append(f"{label}: on this computer run python3 scripts/set-key.py {s['name']} (a pop-up asks for it); "
                    f"for the nightly routines add it as a network secret on {env} (Allowed websites {host}, "
                    f"header {header}{prefix}).")
     return out
@@ -260,7 +272,7 @@ def main(argv=None):
                 print(msg, file=sys.stderr)
 
     present = env_names_present(args.vault)
-    report, any_missing, where = {}, False, []
+    report, any_missing, where, optional_names = {}, False, [], set()
     for name, r in routines.items():
         req = [normalize_key(k) for k in r["keys"]]
         opt = [normalize_key(k) for k in r["optional_keys"]]
@@ -273,6 +285,7 @@ def main(argv=None):
         report[name] = {"title": r["title"], "present": have, "missing": missing, "optional_missing": opt_missing,
                         "unverified": unverified}
         where.extend(s for s in req + opt if states[s["name"]] == "missing")
+        optional_names.update(s["name"] for s in opt if s["name"] not in {q["name"] for q in req})
     if args.json:
         print(json.dumps({"notes": notes, "routines": report}, indent=1))
     else:
@@ -286,7 +299,7 @@ def main(argv=None):
             if r["unverified"]:
                 print("  could not check (network): " + ", ".join(r["unverified"]))
         if args.where:
-            for w in where_lines(args.vault, where):
+            for w in where_lines(args.vault, where, optional_names):
                 print(w)
         elif any_missing:
             print("Run this script with --where to see where each missing key goes.")

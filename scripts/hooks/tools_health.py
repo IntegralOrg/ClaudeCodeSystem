@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""SessionStart: one line while a tool on the ledger (System/Tools.md) is still not connected.
+"""SessionStart: one line while a tool on the ledger (System/Tools.md) is still not connected, or an essential one
+is `connected <date> (verify next session)` and still needs the check that "connect my tools" runs first.
 Essential tools (email, calendar, the notetaker) are named every session; the rest at most once every 7 days
 (last date in _generated/tools-reminder.json). Silent when the ledger is absent or complete, silent in the template
 repository, fails open. TOOLS_HEALTH_TODAY=YYYY-MM-DD overrides today (tests)."""
@@ -51,10 +52,22 @@ def record_reminder(root, today):
         pass
 
 
+def needs_verify(entries):
+    return [e["name"] for e in entries if e["essential"] and e["status"].startswith("connected")
+            and "(verify next session)" in e["status"]]
+
+
 def line_for(root, today):
-    ess, other = tools_ledger.open_items(tools_ledger.load(root))
+    entries = tools_ledger.load(root)
+    ess, other = tools_ledger.open_items(entries)
+    check = needs_verify(entries)
+    parts = []
     if ess:
-        return f"{join(ess)} {verb(ess)} not connected yet; say 'connect my tools' when you have two minutes."
+        parts.append(f"{join(ess)} {verb(ess)} not connected yet; say 'connect my tools' when you have two minutes.")
+    if check:
+        parts.append(f"{join(check)} {'needs' if len(check) == 1 else 'need'} a quick check; say 'connect my tools'.")
+    if parts:
+        return " ".join(parts)
     if other and reminder_due(root, today):
         record_reminder(root, today)
         return f"{join(other)} {verb(other)} not connected yet; say 'connect my tools' when you want it."
@@ -69,7 +82,8 @@ def main(payload):
     if not text:
         return
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart",
-                                             "additionalContext": "Tell the user first: " + text}}))
+                                             "additionalContext": "Tell the user first: " + text
+                                                                  + " (System/Connecting Tools.md)"}}))
 
 
 if __name__ == "__main__":

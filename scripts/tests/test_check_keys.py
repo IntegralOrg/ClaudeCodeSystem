@@ -192,7 +192,7 @@ def test_probe_sends_the_header_only_when_the_variable_is_set(tmp_path, monkeypa
             def __enter__(self): return self
             def __exit__(self, *a): return False
         return R()
-    monkeypatch.setattr(check_keys.urllib.request, "urlopen", fake_open)
+    monkeypatch.setattr(check_keys._opener, "open", fake_open)
     spec = {"name": "FATHOM_API_KEY", "probe_url": "https://api.fathom.ai/x", "header": "X-Api-Key", "header_prefix": ""}
     assert check_keys.probe_key(spec, "") == "present"
     assert "X-api-key" not in seen["headers"] and "X-Api-Key" not in seen["headers"]
@@ -209,7 +209,7 @@ def test_probe_2xx_with_ok_false_body_is_missing(monkeypatch):
             def __enter__(self): return self
             def __exit__(self, *a): return False
         return R()
-    monkeypatch.setattr(check_keys.urllib.request, "urlopen", fake_open)
+    monkeypatch.setattr(check_keys._opener, "open", fake_open)
     spec = {"name": "SLACK_TOKEN_WORKSPACE_A", "probe_url": "https://slack.com/api/auth.test",
             "header": "Authorization", "header_prefix": "Bearer "}
     assert check_keys.probe_key(spec, "") == "missing"
@@ -219,6 +219,45 @@ def test_where_names_both_places_and_never_the_value(tmp_path):
     v = make_probe_vault(tmp_path)
     (v / "System" / "Routines.md").write_text("## End of Day\n- live_since: not live\n- environment id: env_123\n")
     p = run_probe(v, {"https://api.fathom.ai/external/v1/meetings?limit=1": 401}, "--where")
-    assert "FATHOM_API_KEY: on this computer run python3 scripts/set-key.py FATHOM_API_KEY" in p.stdout
+    assert "FATHOM_API_KEY (optional): on this computer run python3 scripts/set-key.py FATHOM_API_KEY" in p.stdout
     assert "network secret" in p.stdout and "api.fathom.ai" in p.stdout and "X-Api-Key" in p.stdout and "env_123" in p.stdout
     assert ".env" not in p.stdout
+
+
+def test_where_marks_only_optional_keys(tmp_path):
+    v = make_vault(tmp_path, keys=("ALPHA_KEY",), optional=("GAMMA_KEY",))
+    p = run(v, "--where")
+    assert "ALPHA_KEY: on this computer run" in p.stdout
+    assert "GAMMA_KEY (optional): on this computer run" in p.stdout
+    assert "ALPHA_KEY (optional)" not in p.stdout
+
+
+def test_probe_never_follows_a_redirect():
+    # a 302 to another URL that would answer 200: the probe stops at the 302 and reports "could not check"
+    import http.server
+    import threading
+
+    hits = []
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            hits.append((self.path, self.headers.get("X-Api-Key")))
+            if self.path == "/start":
+                self.send_response(302)
+                self.send_header("Location", "/elsewhere")
+            else:
+                self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        spec = {"name": "SOME_KEY", "probe_url": f"http://127.0.0.1:{srv.server_port}/start",
+                "header": "X-Api-Key", "header_prefix": ""}
+        assert check_keys.probe_key(spec, "secret") == "unknown"
+        assert [h[0] for h in hits] == ["/start"]
+    finally:
+        srv.shutdown()
