@@ -158,6 +158,30 @@ def test_fenced_only_state_is_not_a_state_section():
     assert gsw.check_content("/v/CLAUDE.md", only) is None
 
 
+# ---------------- tools ledger shape ----------------
+def _ledger_write(tmp_path, content):
+    payload = {"tool_name": "Write", "tool_input": {"file_path": str(tmp_path / "System" / "Tools.md"), "content": content}}
+    return run_hook("guard_state_writes.py", payload, {"CLAUDE_PROJECT_DIR": str(tmp_path)})
+
+
+def test_tools_ledger_write_with_two_status_bullets_is_blocked(tmp_path):
+    bad = "# Tools\n\n## Gmail\n- status: not connected\n- status: connected 2026-10-15\n- essential: yes\n"
+    code, err = _ledger_write(tmp_path, bad)
+    assert code == 2 and "one '- status:' bullet" in err and "Gmail" in err
+
+
+def test_tools_ledger_write_with_status_not_first_is_blocked(tmp_path):
+    bad = "# Tools\n\n## Gmail\n- essential: yes\n- status: not connected\n"
+    code, _ = _ledger_write(tmp_path, bad)
+    assert code == 2
+
+
+def test_tools_ledger_good_shape_is_allowed(tmp_path):
+    good = "# Tools\n\nIntro line.\n\n## Gmail\n- status: not connected\n- essential: yes\n\n## Slack\n- status: skipped (later)\n- essential: no\n"
+    code, _ = _ledger_write(tmp_path, good)
+    assert code == 0
+
+
 # ---------------- I8 ----------------
 def test_i8_blocked_call_is_logged(tmp_path):
     secret_path = "/v/" + ENVNAME
