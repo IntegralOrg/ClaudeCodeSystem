@@ -1,12 +1,27 @@
 #!/usr/bin/env python3
 """Keys are the one human step. This script makes it a loop: it says which key NAMES each routine
-needs and which are missing, never a value. `--init` copies the shipped example into the real
-credentials file once (blank values) so the human has a place to paste; use it in a local session
-only (a cloud container is thrown away). The agent runs this script; it never opens or names the
-credentials file itself (the guard hook forbids that by design).
+needs and which are missing, never a value. A key lives in one of two places: on this computer,
+where `python3 scripts/set-key.py NAME` opens a hidden-input pop-up and writes it into the
+credentials file (.env, which only the pop-up and this script touch); or, for the nightly cloud
+routines, as a network secret on the routine's cloud environment (the proxy adds the header after
+the request leaves, so the variable is empty inside the container).
+
+A `keys:` / `optional_keys:` item is either a bare name (present when the environment or the
+credentials file has a value) or an object with `name`, `probe_url`, `header`, `header_prefix`.
+An object key is proven by one GET to its probe URL (10 second timeout): the header is sent only
+when the variable has a value, so a cloud network secret is proven the same way. 2xx is present,
+401/403 is missing, anything else (network error, 5xx, timeout) is "could not check", which never
+counts as missing. Slack's auth.test answers 200 even with no token, with a JSON body of ok:false;
+a 2xx JSON body with "ok": false therefore counts as missing.
+
+`--where` prints, for each missing key, both places it can go. `--init` copies the shipped example
+into the real credentials file once (blank values); use it in a local session only (a cloud
+container is thrown away). The agent runs this script; it never opens or names the credentials
+file itself (the guard hook forbids that by design). Test hook: CHECK_KEYS_PROBE_RESULTS, a JSON
+object {url: status_code | "error"}; when set, no network call is made.
 
 Usage:
-  check-keys.py [--vault PATH] [--routine NAME] [--json] [--init]
+  check-keys.py [--vault PATH] [--routine NAME] [--json] [--init] [--where]
 Exit: 0 nothing required is missing; 1 something is missing; 2 usage error.
 """
 import argparse
@@ -15,9 +30,12 @@ import json
 import os
 import re
 import sys
+import urllib.error
+import urllib.request
 
 ENV_NAME = ".env"
 EXAMPLE_NAME = ".env.example"
+PROBE_TIMEOUT = 10
 
 
 def parse_frontmatter(text):
@@ -38,13 +56,22 @@ def parse_frontmatter(text):
         v = v.strip()
         k_stripped = k.strip()
 
-        # Check for block-style YAML list (empty value followed by - items)
+        # Block-style YAML list (empty value followed by - items); an item may be an object
         if k_stripped in ("keys", "optional_keys") and v == "":
             items = []
             i += 1
-            while i < len(lines) and lines[i].lstrip().startswith("- "):
-                item = lines[i].lstrip()[2:].strip().strip("'\"")
-                items.append(item)
+            while i < len(lines) and lines[i].startswith((" ", "\t", "- ")) and lines[i].strip():
+                item = lines[i].strip()
+                if item.startswith("- "):
+                    body = item[2:].strip()
+                    if ":" in body and not body.startswith(("'", '"')):
+                        ik, _, iv = body.partition(":")
+                        items.append({ik.strip(): iv.strip().strip("'\"")})
+                    else:
+                        items.append(body.strip("'\""))
+                elif items and isinstance(items[-1], dict) and ":" in item:
+                    ik, _, iv = item.partition(":")
+                    items[-1][ik.strip()] = iv.strip().strip("'\"")
                 i += 1
             out[k_stripped] = items
         elif v.startswith("[") and v.endswith("]"):
@@ -98,6 +125,90 @@ def env_names_present(vault):
     return present
 
 
+def normalize_key(item):
+    if isinstance(item, dict):
+        return {"name": item.get("name", ""), "probe_url": item.get("probe_url", ""),
+                "header": item.get("header", "Authorization"), "header_prefix": item.get("header_prefix", "Bearer ")}
+    return {"name": str(item), "probe_url": "", "header": "", "header_prefix": ""}
+
+
+def says_not_ok(response):
+    """True when a 2xx body is a JSON object with "ok": false (Slack's way of refusing a missing or bad token)."""
+    try:
+        body = json.loads(response.read(65536).decode("utf-8", "replace"))
+    except Exception:
+        return False
+    return isinstance(body, dict) and body.get("ok") is False
+
+
+def probe_key(spec, value):
+    """One GET to the key's probe URL. The header is added only when the variable has a value, so a cloud
+    network secret (which the proxy adds after the request leaves) is proven the same way. present: 2xx;
+    missing: 401 or 403; unknown: anything else (network error, 5xx, timeout)."""
+    fake = os.environ.get("CHECK_KEYS_PROBE_RESULTS")
+    if fake:
+        code = json.loads(fake).get(spec["probe_url"], "error")
+        if code == "error":
+            return "unknown"
+        code = int(code)
+        return "present" if 200 <= code < 300 else ("missing" if code in (401, 403) else "unknown")
+    req = urllib.request.Request(spec["probe_url"], headers={"User-Agent": "check-keys"})
+    if value:
+        req.add_header(spec["header"], f"{spec['header_prefix']}{value}")
+    try:
+        with urllib.request.urlopen(req, timeout=PROBE_TIMEOUT) as r:
+            if not 200 <= r.status < 300:
+                return "unknown"
+            return "missing" if says_not_ok(r) else "present"
+    except urllib.error.HTTPError as e:
+        return "missing" if e.code in (401, 403) else "unknown"
+    except Exception:
+        return "unknown"
+
+
+def env_value(vault, name):
+    """The variable's value: environment first, then the credentials file. Never printed."""
+    if os.environ.get(name):
+        return os.environ[name]
+    try:
+        with open(os.path.join(vault, ENV_NAME), encoding="utf-8", errors="replace") as f:
+            for line in f:
+                k, _, v = line.strip().partition("=")
+                if k.strip().removeprefix("export ").strip() == name:
+                    return v.strip().strip("'\"")
+    except OSError:
+        pass
+    return ""
+
+
+def key_state(vault, spec, present):
+    if spec["probe_url"]:
+        return probe_key(spec, env_value(vault, spec["name"]))
+    return "present" if spec["name"] in present else "missing"
+
+
+def environment_id(vault):
+    try:
+        with open(os.path.join(vault, "System", "Routines.md"), encoding="utf-8") as f:
+            m = re.search(r"environment id:\s*(env_\w+)", f.read())
+            return m.group(1) if m else ""
+    except OSError:
+        return ""
+
+
+def where_lines(vault, specs):
+    env = environment_id(vault) or "the routine's cloud environment"
+    out = []
+    for s in specs:
+        host = re.sub(r"^https?://([^/]+).*$", r"\1", s["probe_url"]) if s["probe_url"] else "the API's host"
+        header = s["header"] or "Authorization"
+        prefix = f' with prefix "{s["header_prefix"].strip()}"' if s["header_prefix"].strip() else " with no prefix"
+        out.append(f"{s['name']}: on this computer run python3 scripts/set-key.py {s['name']} (a pop-up asks for it); "
+                   f"for the nightly routines add it as a network secret on {env} (Allowed websites {host}, "
+                   f"header {header}{prefix}).")
+    return out
+
+
 def init_env(vault):
     dst, src = os.path.join(vault, ENV_NAME), os.path.join(vault, EXAMPLE_NAME)
     if os.path.exists(dst):
@@ -121,6 +232,7 @@ def main(argv=None):
     ap.add_argument("--routine", default="")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--init", action="store_true")
+    ap.add_argument("--where", action="store_true")
     args = ap.parse_args(argv)
 
     notes = [init_env(args.vault)] if args.init else []
@@ -148,13 +260,19 @@ def main(argv=None):
                 print(msg, file=sys.stderr)
 
     present = env_names_present(args.vault)
-    report, any_missing = {}, False
+    report, any_missing, where = {}, False, []
     for name, r in routines.items():
-        missing = [k for k in r["keys"] if k not in present]
-        have = [k for k in r["keys"] if k in present]
-        opt_missing = [k for k in r["optional_keys"] if k not in present]
+        req = [normalize_key(k) for k in r["keys"]]
+        opt = [normalize_key(k) for k in r["optional_keys"]]
+        states = {s["name"]: key_state(args.vault, s, present) for s in req + opt}
+        have = [s["name"] for s in req + opt if states[s["name"]] == "present"]
+        missing = [s["name"] for s in req if states[s["name"]] == "missing"]
+        opt_missing = [s["name"] for s in opt if states[s["name"]] == "missing"]
+        unverified = [s["name"] for s in req + opt if states[s["name"]] == "unknown"]
         any_missing = any_missing or bool(missing)
-        report[name] = {"title": r["title"], "present": have, "missing": missing, "optional_missing": opt_missing}
+        report[name] = {"title": r["title"], "present": have, "missing": missing, "optional_missing": opt_missing,
+                        "unverified": unverified}
+        where.extend(s for s in req + opt if states[s["name"]] == "missing")
     if args.json:
         print(json.dumps({"notes": notes, "routines": report}, indent=1))
     else:
@@ -165,9 +283,13 @@ def main(argv=None):
             if r["optional_missing"]:
                 line += "; " + ", ".join(k + " (optional)" for k in r["optional_missing"])
             print(line)
-        if any_missing:
-            print("Paste the missing values after their names in the credentials file at the vault root "
-                  "(or the environment settings for cloud runs), then run this again.")
+            if r["unverified"]:
+                print("  could not check (network): " + ", ".join(r["unverified"]))
+        if args.where:
+            for w in where_lines(args.vault, where):
+                print(w)
+        elif any_missing:
+            print("Run this script with --where to see where each missing key goes.")
     return 1 if any_missing else 0
 
 

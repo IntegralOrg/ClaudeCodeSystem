@@ -7,7 +7,15 @@ model: claude-opus-5-5
 prompt: "/eod"
 connectors: [Gmail, Google Calendar]
 keys: []
-optional_keys: [FATHOM_API_KEY, SLACK_TOKEN_WORKSPACE_A]
+optional_keys:
+  - name: FATHOM_API_KEY
+    probe_url: https://api.fathom.ai/external/v1/meetings?limit=1
+    header: X-Api-Key
+    header_prefix: ""
+  - name: SLACK_TOKEN_WORKSPACE_A
+    probe_url: https://slack.com/api/auth.test
+    header: Authorization
+    header_prefix: "Bearer "
 description: Reads the day (calendar, email, calls, Slack when connected), extracts action items, writes the daily note, updates client pages, checks that the other routines ran, and reaches you when something needs you.
 ---
 # End of Day
