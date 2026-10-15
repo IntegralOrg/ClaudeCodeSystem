@@ -92,7 +92,7 @@ Process the Brain Dump section in `Inbox/Today.md`. This is the user's quick-cap
 
 ## Section 1: Call Transcripts (through the connected notetaker)
 
-1. Read `System/Tools.md`. Find the notetaker section (Fathom, Fireflies, Granola, tl;dv, Grain, Zoom, Tactiq, Circleback) whose status starts with `connected`. If there is none, hold the line `no notetaker connected; call transcripts skipped` with the Routine health findings from Setup step 1 (the note phase places them) and go to Section 2.
+1. Read `System/Tools.md`. Find the notetaker section (Fathom, Fireflies, Granola, tl;dv, Grain, Zoom, Tactiq, Circleback) whose status starts with `connected`. If there is none, hold the line `no notetaker connected; call transcripts skipped` with the Routine health findings from the keys and connectors check in `eod.md` step 1 (the note phase places them) and go to Section 2.
 
 2. List today's meetings with that connector's tools, then fetch each transcript (and summary where the connector has one):
 
@@ -133,24 +133,20 @@ Gather still routes tasks and Inbox notes from each transcript (step 5 below). W
 
 ## Section 2: Tomorrow's Calendar
 
-1. Get a Google OAuth access token using the refresh token flow
-2. Fetch tomorrow's events:
-   ```
-   curl -s "https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=TOMORROWT00:00:00-05:00&timeMax=TOMORROWT23:59:59-05:00&singleEvents=true&orderBy=startTime" -H "Authorization: Bearer $ACCESS_TOKEN"
-   ```
+1. Read `System/Tools.md`. Find the calendar section (Google Calendar, or Microsoft 365 for Outlook) whose status starts with `connected`. If there is none, hold the line `no calendar connected; tomorrow's calendar skipped` with the Routine health findings from the keys and connectors check in `eod.md` step 1 (the note phase places them), write `No calendar connected` to `/tmp/eod-calendar-TODAY.md`, and go to Section 3.
+2. List tomorrow's events (`TOMORROW`, start to end of day in the owner's time zone) with that connector's tools: the Google Calendar connector's event list, or the Microsoft 365 connector's calendar search. Use the tool names the session shows.
 3. Format as readable list with times (your timezone), titles, attendees
 4. Flag early meetings (before 9 AM) and back-to-backs
 5. Write formatted schedule to `/tmp/eod-calendar-TODAY.md` for later phases
+
+A vault on the full control Google path (the Connecting Tools Appendix, `System/Connecting Tools.md`) reads the calendar the way that Appendix's test does, through `python3 scripts/with-env.py`.
 
 ---
 
 ## Section 3: Email Check
 
-1. Reuse Google OAuth access token
-2. Fetch today's emails:
-   ```
-   curl -s "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=newer_than:1d" -H "Authorization: Bearer $ACCESS_TOKEN"
-   ```
+1. Read `System/Tools.md`. Find the email section (Gmail, or Microsoft 365 for Outlook) whose status starts with `connected`. If there is none, hold the line `no email connected; email check skipped` with the Routine health findings from the keys and connectors check in `eod.md` step 1 and go to Section 4.
+2. Search today's mail with that connector's tools: the Gmail connector's search (today's messages, for example `newer_than:1d`), or the Microsoft 365 connector's mail search. Use the tool names the session shows.
 3. Get headers (From, To, Subject, Date) and body preview for first 15-20 messages
 4. Surface emails requiring response, client/team emails, time-sensitive items
 
@@ -160,15 +156,16 @@ Gather still routes tasks and Inbox notes from each transcript (step 5 below). W
    a. Tasks -> client file `Open Tasks`; Notes -> `## Notes` section
    b. Append manifest rows
 
+A vault on the full control Google path (the Connecting Tools Appendix, `System/Connecting Tools.md`) reads Gmail through `python3 scripts/with-env.py` with the values that Appendix saves.
+
 ---
 
 ## Section 4: Slack Check
 
-For each workspace (customize with your workspace names):
-1. Check unread DMs and mentions using `SLACK_TOKEN_<WORKSPACE>`
-2. Use `conversations.list` (types=im,mpim) then `conversations.history` with `unreads=true`
+1. Read `System/Tools.md`. If the Slack section's status does not start with `connected`, hold the line `Slack not connected; Slack check skipped` with the Routine health findings from the keys and connectors check in `eod.md` step 1 and go to Section 5.
+2. With the Slack connector's tools (the names the session shows), read today's direct messages, group messages, and mentions of you, for each workspace the connector can see
 3. Surface unread DMs, mentions, time-sensitive items
-4. Skip channels with no unread activity
+4. Skip channels with no activity today
 5. **ROUTE IMMEDIATELY**:
    a. Append items to client file `Open Tasks`
    b. Append manifest rows
