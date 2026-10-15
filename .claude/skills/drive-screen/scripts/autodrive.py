@@ -46,7 +46,7 @@ hanging. When a focus check failed because the person started using another
 app, the hand-back is `--quiet`: it notifies and leaves their app in front.
 --no-handback skips it, for a caller that hands back itself.
 
-Exit codes
+Exit codes (130 is Ctrl-C; the hand-back still runs)
   0  the turn completed
   1  timed out with the agent still working
   2  approvals are not reaching the session, the prompt could not be
@@ -149,6 +149,7 @@ HANDBACK_TEXT = {
     1: "Autodrive timed out. The driven session may still be working.",
     2: "Autodrive stopped: approvals are not landing, or the prompt could not be photographed.",
     3: "Autodrive stopped for you: a prompt needs reading.",
+    130: "Autodrive was interrupted (Ctrl-C).",
 }
 
 
@@ -167,7 +168,13 @@ def hand_back(code: int, dry_run: bool, quiet: bool) -> None:
     args = ["handback", "--text", handback_text(code, dry_run)]
     if quiet:
         args.append("--quiet")
-    r = screenctl(*args)
+    try:
+        r = screenctl(*args)
+    except OSError as e:
+        # The interpreter or screenctl.py could not be launched. The drive's
+        # own result still stands; say that the hand-back did not.
+        print(f"\nHANDBACK FAILED to launch ({e}). Switch back to Claude by hand.")
+        return
     out = ((r.stdout or "") + (r.stderr or "")).strip()
     print("\n" + (out[:400] or "HANDBACK: screenctl printed nothing"))
 
@@ -201,9 +208,13 @@ def parse_args(argv=None):
 
 
 def main(argv=None) -> int:
+    global FOCUS_LOST
+    FOCUS_LOST = False   # per run: a lost focus in one run must not quiet the next
     a = parse_args(argv)
     try:
         code = drive(a)
+    except KeyboardInterrupt:
+        code = 130   # the conventional Ctrl-C status; 3 is reserved for deliberate stops
     except SystemExit as e:
         # session_watch exits directly when it cannot find a transcript.
         code = e.code if isinstance(e.code, int) else 2

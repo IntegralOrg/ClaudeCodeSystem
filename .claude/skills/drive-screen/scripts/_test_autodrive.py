@@ -108,6 +108,36 @@ check("hand_back is loud by default", "--quiet" in sent[-1], False)
 ad.hand_back(2, dry_run=False, quiet=True)
 check("hand_back is quiet when the person took the machine back", "--quiet" in sent[-1], True)
 
+ad.hand_back(130, dry_run=False, quiet=False)
+check("Ctrl-C has its own text", "interrupted" in sent[-1][2], True)
+
+# The hand-back must never raise: a launch failure reports and returns.
+def _boom(*args):
+    raise OSError("no interpreter")
+ad.screenctl = _boom
+try:
+    ad.hand_back(0, dry_run=False, quiet=False)
+    check("hand_back survives a launch failure", True, True)
+except OSError:
+    check("hand_back survives a launch failure", False, True)
+
+# main(): focus-loss state is per run, Ctrl-C hands back with status 130.
+calls = []
+ad.screenctl = lambda *args: (calls.append(args),
+                              type("R", (), {"stdout": "HANDED_BACK", "stderr": "", "returncode": 0})())[1]
+ad.FOCUS_LOST = True
+def _interrupt(a):
+    raise KeyboardInterrupt
+ad.drive = _interrupt
+code = ad.main(["--title", "x", "--repo", "."])
+check("Ctrl-C exits 130", code, 130)
+check("Ctrl-C still hands back", calls[-1][0], "handback")
+check("a previous run's lost focus does not quiet this one", "--quiet" in calls[-1], False)
+ad.drive = lambda a: 0
+before = len(calls)
+ad.main(["--title", "x", "--repo", ".", "--no-handback"])
+check("--no-handback is honoured", len(calls), before)
+
 if FAILURES:
     print(f"FAILED {len(FAILURES)}:")
     for f in FAILURES:
