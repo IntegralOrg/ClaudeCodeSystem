@@ -212,20 +212,13 @@ End the daily note with one status line: `Routine status: <ok | needs you: <reas
 
 For each key, check `_generated/routine-alerts.json` (create if missing; treat malformed or missing as `{}`). Send a push (outside the vault) only if the key is absent from the JSON or its ISO date is 7 or more days ago. After sending, write today's date only for the keys actually sent, merge them into the JSON, and write it back. "Vault Hygiene: not yet run" never produces a push.
 
-To send: read CLAUDE.md's Owner section and extract the owner's email address. If absent, skip email and use the calendar fallback.
+To send: use the Google Calendar connector. Create an all-day event tomorrow. Title: `Brain needs you: <reason>` (the first missing item). Description: what is stale or missing (Vault Hygiene, names of keys, names of connectors) and the fix (from System/Routines.md or System/Connecting Tools.md). End of Day never sends an email.
 
-Email route (preferred): Use the Gmail connector's send tool. Subject: `Brain needs you: <reason>` (the first missing item). Body (3 lines):
-- What is stale or missing (Vault Hygiene, names of keys, names of connectors)
-- The fix (from System/Routines.md or System/Connecting Tools.md)
-- "reply not needed"
+If no calendar connector is present, there is no push: hold the reason for Routine health in the daily note and do not write the key to `_generated/routine-alerts.json`.
 
-If the Gmail connector can only draft (does not send), create the draft AND proceed to calendar fallback.
+On Microsoft 365 (the routine's `connectors:` is `[Microsoft 365]`) the connector cannot create an event, so there is no push: Routine health in the daily note is where End of Day tells the owner, and the line after the status reads `(no push channel on Microsoft 365)`.
 
-Calendar fallback: Use Google Calendar connector. All-day event tomorrow. Title: `Brain needs you: <reason>`. Description: the fix from System/Routines.md or System/Connecting Tools.md.
-
-On Microsoft 365 (the routine's `connectors:` is `[Microsoft 365]`) the connector can neither send mail nor create an event, so there is no push: Routine health in the daily note is where End of Day tells the owner, and the line after the status reads `(no push channel on Microsoft 365)`.
-
-Record which channel was used in the daily note after the status line: `(sent via Gmail | sent via calendar)`.
+Record the channel in the daily note after the status line: `(sent via calendar)`, or `(no push channel)` when none is connected.
 
 ---
 

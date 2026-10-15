@@ -68,7 +68,7 @@ optional_keys:
 
 ## If a routine is stale or not live
 
-There are two channels. The session-start note from `routine_health.py` says, with no connector needed, when End of Day has not run when it should. End of Day's **Routine health** section in `Work/Daily/<date>.md` records Vault Hygiene staleness and any missing keys or connectors (a missing connector shows as `connector-missing`), and the same reasons are pushed outside the vault: emailed to you when Gmail is connected, otherwise a "Brain needs you: <reason>" all-day event on your calendar (on Microsoft 365 there is no push, so Routine health is where it tells you). A reason is sent at most once a week.
+There are two channels. The session-start note from `routine_health.py` says, with no connector needed, when End of Day has not run when it should. End of Day's **Routine health** section in `Work/Daily/<date>.md` records Vault Hygiene staleness and any missing keys or connectors (a missing connector shows as `connector-missing`), and the same reasons are pushed outside the vault as a "Brain needs you: <reason>" all-day event on your calendar when Google Calendar is connected (End of Day never sends an email; with no calendar connector, such as on Microsoft 365, there is no push, so Routine health is where it tells you). A reason is pushed at most once a week.
 
 There are two fixes:
 

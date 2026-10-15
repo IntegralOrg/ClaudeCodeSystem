@@ -70,7 +70,7 @@ def test_end_of_day_declares_no_keys_and_setup_writes_its_connectors():
     assert "`[Gmail, Google Calendar]` for Google" in build and "`[Microsoft 365]` for Microsoft" in build
     ct = (ROOT / "System" / "Connecting Tools.md").read_text(encoding="utf-8")
     row = [line for line in ct.splitlines() if line.startswith("| Outlook and Teams")][0]
-    assert "not available on Microsoft today, so Routine health is where it tells you" in row
+    assert "not available on Microsoft today, so Routine health in the daily note is where it tells you" in row
     assert "falls back to the calendar event path" not in ct
     routines = (ROOT / "System" / "Routines.md").read_text(encoding="utf-8")
     assert "RIZE_API_KEY" in routines and "probe_url:" in routines
@@ -80,3 +80,13 @@ def test_first_local_session_opens_a_pop_up_only_for_a_ledger_key():
     text = (ROOT / "System" / "Adding Your Computer.md").read_text(encoding="utf-8")
     step = [line for line in text.splitlines() if line.startswith("2. ") and "check-keys.py --where" in line][0]
     assert "System/Tools.md" in step and "key <NAME>" in step and "(optional)" in step
+
+
+def test_eod_never_sends_email_and_pushes_a_calendar_event():
+    for rel in (".claude/commands/eod.md", "cowork-commands/eod.md"):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        assert "send tool" not in text, rel
+        assert "Email route" not in text, rel
+        assert "Brain needs you: <reason>" in text, rel
+        assert "all-day event" in text, rel
+        assert "never sends an email" in text, rel

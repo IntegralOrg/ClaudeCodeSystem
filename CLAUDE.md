@@ -10,7 +10,7 @@ This is [Your Name]'s comprehensive Markdown vault (a Git repository) and person
 
 ## Owner
 
-Setup fills this section; End of Day reads the email to reach the owner outside the vault.
+Setup fills this section. The email is kept for the record only; End of Day never sends email.
 
 - name: [Your Name]
 - role: [Your Role]

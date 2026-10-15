@@ -15,7 +15,7 @@ You do the clicking (sign in, Allow); the agent cannot sign in for you, and it w
 |---|---|---|---|---|
 | Gmail | Gmail | read, search, draft, send | none known | connector |
 | Google Calendar | Google Calendar | list, search, create events | none known | connector |
-| Outlook and Teams | Microsoft 365 | mail search, calendar search, chat search | no send, no event create | connector; End of Day's push to you (an email or a calendar event) is not available on Microsoft today, so Routine health is where it tells you |
+| Outlook and Teams | Microsoft 365 | mail search, calendar search, chat search | no send, no event create | connector; End of Day's push to you (the calendar event) is not available on Microsoft today, so Routine health in the daily note is where it tells you |
 | Slack | Slack | read channels, search, send | none known | connector |
 | Fathom | Fathom | meetings, summaries, transcripts, search | none known | connector (the API key path is retired) |
 | Fireflies, Granola, tl;dv, Grain, Zoom, Tactiq, Circleback | each | transcripts | varies; judged live | connector |

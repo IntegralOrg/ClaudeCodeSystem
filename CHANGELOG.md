@@ -17,6 +17,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **The first win** replaces the demo (Setup Procedure section 8): the email summary, one live `/eod` run that makes End of Day live the same day, and task one from the person's own answer.
 
 ### Changed
+- End of Day never sends an email; its one push outside the vault is the all-day calendar event, and without a calendar connector it tells you in the daily note's Routine health section.
 - **Keys live in two places only**: the pop-up on the computer and a **network secret** on the routine's cloud environment (Pro and Max). Cloud Environment variables are visible to anyone and are no longer documented as a key location; the credentials file is never named to the person.
 - **Setup Procedure section 1**: the inputs interview ("Where does information come in day to day?", Next connects and Skip defers), the microphone sentence, "Type your answers below and press Enter"; routines are created after the connect step with the connected connectors passed and verified.
 - **`System/Connecting Tools.md`** rewritten around a connector table (connector first; a key only for a tool with no good connector); the Google full-control steps move to an appendix.
