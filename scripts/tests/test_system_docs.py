@@ -125,12 +125,12 @@ def test_setup_procedure_is_safe_to_re_run():
     has(text, "list_triggers", "reuse it", "instead of creating a duplicate", "in place",
         "Create a routine by hand", "connector-missing", "persist_session: false",
         "Delete `SETUP_PENDING` now, so an interrupted hand-off never restarts setup")
-    # order after the keys step: completion line, then marker deletion, then landing, then the demo
+    # order after the keys step: completion line, then marker deletion, then landing, then the first win
     keys = text.index("## 5. Keys")
     done = text.index("Setup completed <date>")
     gone = text.index("Delete `SETUP_PENDING` now")
     land = text.index("land-local.sh --final")
-    demo = text.index("the first win")
+    demo = text.index("Local session: the first win")
     assert keys < done < gone < land < demo
     assert text.count("Delete `SETUP_PENDING`") == 1
 
