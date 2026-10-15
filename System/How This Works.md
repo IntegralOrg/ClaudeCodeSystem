@@ -61,7 +61,7 @@ Three small hooks run at the start of every session (cloud or local) and speak f
 - `routine_health.py` says when a routine has not run when it should (End of Day or Vault Hygiene), using the daily notes, the hygiene log, and the `live_since` lines in `System/Routines.md`.
 - `tools_health.py` reads `System/Tools.md` (the ledger of the tools you named at setup) and says which essential tool is still not connected, every session until it is; a tool you said you would connect later is mentioned once a week.
 
-When Google Calendar is connected, End of Day adds a push outside the vault: an all-day calendar event titled "Brain needs you: <reason>". It never sends an email. With no calendar connector, Routine health in the daily note and the session-start notes are how it tells you. It pushes a given reason at most once a week.
+When Google Calendar is connected, End of Day adds a push outside the vault: an all-day calendar event titled "Brain needs you: <reason>". It never sends an email. When no calendar connector is connected, or when Microsoft 365 is connected (it cannot create an event), Routine health in the daily note and the session-start notes are how it tells you. It pushes a given reason at most once a week.
 
 ## Who decides
 
