@@ -21,7 +21,7 @@ You do the clicking (sign in, Allow); the agent cannot sign in for you, and it w
 | Fireflies, Granola, tl;dv, Grain, Zoom, Tactiq, Circleback | each | transcripts | varies; judged live | connector |
 | Asana, ClickUp, Notion, Linear, monday | each | tasks | varies | connector |
 | HubSpot, Salesforce, QuickBooks, Google Drive | each | read, some write | varies | connector |
-| Text messages, WhatsApp | none | | | skipped: no route reads them today |
+| Text messages, WhatsApp | none | | | `skipped (no route reads it today)` |
 | Rize, Toggl, Harvest, anything not above | none in the registry | | | key, judged live |
 
 A tool not in the table is judged live: the agent compares the connector's tool list (from the registry) against what the routines need (read mail, read calendar, read transcripts, send one message to the owner) and rules connector, key, or both.
@@ -30,7 +30,7 @@ A tool not in the table is judged live: the agent compares the connector's tool 
 
 This is the connect step setup runs (section 3 of `System/Setup Procedure.md`), and the one "connect my tools" runs again in any later session.
 
-1. **First, the ones waiting for a check.** A tool marked `connected <date> (verify next session)` on the ledger was connected in a session that could not confirm it. The agent reads the connectors this session can see (`session_connectors_status`). If the tool's row says `connected` (or `disabled`, which the agent switches on), the ledger line becomes `connected <today>`. Any other answer, or no row at all, puts it back to `not connected`, and it is connected again below.
+1. **First, the ones waiting for a check.** A tool marked `connected <date> (verify next session)` on the ledger was connected in a session that could not confirm it. The agent reads the connectors this session can see (`session_connectors_status`). If the tool's row says `connected` (or `disabled`, which the agent switches on with `set_session_connector_enabled`), the ledger line becomes `connected <today>`. Any other answer, or no row at all, puts it back to `not connected`, and it is connected again below.
 2. **Then each tool still `not connected`,** the essential ones first (email, calendar, and your notetaker if you record calls), then the others if you want them now. The agent says in one sentence why it wants the tool ("Gmail, so End of Day can read what came in today") and puts a **Connect** button in the chat. Click **Connect**, sign in with the account you use for work, click **Allow** on each permissions screen, then tell the agent: **Connected** or **Later**.
 3. **If no button appears** (a cloud session, or an older Claude Desktop), use the Connectors page: in Claude, open **Customize**, then **Connectors**, find the tool (for example **Gmail**), click **Connect**, sign in, click **Allow**, then tell the agent. After the first one, the agent can drive the screen for you if you say yes. The last resort is the browser at claude.ai/customize/connectors; your browser asks you to sign in to Claude once there, with the same email as the app.
 4. **The agent checks and records it.** It reads `session_connectors_status` again and writes `- status: connected <today>` in that tool's section of `System/Tools.md`. When this session cannot see the new connector yet (it started before the connector was added, or you used the Connectors page), it writes `- status: connected <today> (verify next session)`, and the next "connect my tools" settles it (step 1). A sign-in that failed, or a connector still waiting for sign-in, counts as Later: the tool stays `not connected`.
@@ -42,7 +42,7 @@ One try per tool, and it never blocks: on Later the tool stays open on the ledge
 
 ## Keys, for a tool with no good connector
 
-Only for a tool whose ruling in the table is a key (Rize, Toggl, Harvest, or a tool judged that way), or a gap the table names. Fathom and Slack now have connectors, and a new vault uses those; End of Day's definition still lists their keys (`FATHOM_API_KEY`, `SLACK_TOKEN_WORKSPACE_A`) as optional, so they are the examples below. A key a routine uses lives in two places, and both are needed:
+Only for a tool whose ruling in the table is a key (Rize, Toggl, Harvest, or a tool judged that way), or a gap the table names. Fathom and Slack now have connectors, and a new vault uses those; End of Day's definition still lists their keys (`FATHOM_API_KEY`, `SLACK_TOKEN_WORKSPACE_A`) as optional, so they are the examples below. A key a routine uses lives in two places, and both are needed for a routine to use it:
 
 1. **The agent finds what is missing.** It runs `python3 scripts/check-keys.py --where`, which lists each missing key by name (never a value) and says where it goes: the `set-key.py` command for this computer, and the network secret for the routine's cloud environment, with its Allowed websites host and its header.
 2. **On this computer: the pop-up.** The agent runs `python3 scripts/set-key.py NAME` (for example `python3 scripts/set-key.py FATHOM_API_KEY --label "Fathom API key"`). A box opens on your screen with a hidden field: on a Mac a dialog, on Windows a masked box, and elsewhere a hidden prompt in the terminal. Paste the key there and click **Save**. The agent sees only `SAVED FATHOM_API_KEY`, never the value. If you cancel or the box was empty, it asks once more or moves on, and the ledger keeps the tool open. If no box can open at all, the agent follows "When a step fails" in `System/Setup Procedure.md`. In a cloud session there is no box; the copy on your computer is added later, in step 4 of `System/Adding Your Computer.md`.
@@ -76,19 +76,19 @@ When every tool on the ledger is connected, has its key, or is deliberately skip
 
 1. Runs `python3 scripts/check-keys.py --where` and confirms nothing required is missing (it exits 0). It lists names only; never open the credentials file to check.
 2. Confirms every connected connector has a matching allow entry in `.claude/settings.json`, that every workspace-configured MCP server has an entry in `.mcp.json`, and that no raw secret sits in either committed file (use `${ENV_VAR}` placeholders).
-3. Confirms every key a routine uses is also a network secret on the routine's environment, since a value on this computer is not there when a routine runs in the cloud.
+3. Asks the person to confirm that every key a routine uses is also a network secret on the routine's environment, since a value on this computer is not there when a routine runs in the cloud. The agent cannot read network secrets; the proof is `python3 scripts/check-keys.py` (the probe) or the routine's first run.
 4. Confirms `CLAUDE.md` lists the connected tools under the correct section (Direct Connections or Tools That Need Login Credentials), no longer lists skipped ones, and documents any new Local Tools scripts.
 5. Summarises: each tool as connected and tested, or skipped and why; which were built-in connectors, which were workspace MCP servers, and which keys are present or missing; and `System/Tools.md` says the same.
 
 ## Appendix: the full control way for Google (Cloud Console)
 
-Only for a Microsoft gap or a Team plan where the connector cannot do the job; everyone else uses the Gmail and Google Calendar connectors. One full control setup covers both Gmail and Google Calendar.
+Only when the table names a gap for the Gmail or Google Calendar connector that your routines need closed, or on a Team plan where the connector cannot do the job. This is the last resort; everyone else uses the Gmail and Google Calendar connectors. One full control setup covers both Gmail and Google Calendar.
 
 For the agent: the three values this path saves (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`) live in the vault's credentials file, `.env` at the vault root, one `NAME=` line per key with nothing after the `=` until `scripts/set-key.py` saves a value; the agent never opens it. In a routine they are read from the environment's Environment variables, because a network secret only adds a header and cannot do Google's token exchange.
 
 **The steps (full control way).** Prefer the `gws` CLI if it is available on the machine, since it automates most of this. If `gws` is unavailable or fails, use the Cloud Console path below. It assumes you have never seen Cloud Console and have no existing project.
 
-*Check access.* Go to **console.cloud.google.com** and sign in with the Google account you want to use. If a terms of service page appears, click **Agree and Continue**. If your organization blocks Cloud Console, the options are: switch to the easy way, try a personal Gmail account, ask IT for access and come back later, or skip Google for now.
+*Check access.* Go to **console.cloud.google.com** and sign in with the Google account you want to use. If a terms of service page appears, click **Agree and Continue**. If your organization blocks Cloud Console, the options are: use the Gmail and Google Calendar connectors, try a personal Gmail account, ask IT for access and come back later, or skip Google for now.
 
 *Create a project.*
 1. At the top of the page, click the **project selector dropdown** (it might say "Select a project" or show a project name).
@@ -111,7 +111,7 @@ If you already have a project you want to use, use that one.
 5. Test users (External only): click **Add Users**, enter your email, click **Add**, then **Save and Continue**.
 6. Summary: click **Back to Dashboard**.
 
-If an organization policy error appears, the consent screen cannot be completed with that account; fall back to the easy way or a personal account.
+If an organization policy error appears, the consent screen cannot be completed with that account; fall back to the Gmail and Google Calendar connectors or a personal account.
 
 *Create credentials.*
 1. Left sidebar: **APIs & Services**, then **Credentials**.
@@ -128,7 +128,7 @@ If an organization policy error appears, the consent screen cannot be completed 
 6. Click **Exchange authorization code for tokens**.
 7. Copy the **Refresh token** (a long string starting with `1//`).
 
-*Save and test.* Save three values, by name: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`. In a local session the agent runs `python3 scripts/set-key.py` once for each name and you paste the value in the box that opens; for routines, also add each as an environment variable in the environment's settings (the permanent copy). Then the agent runs this test (the script loads the values itself):
+*Save and test.* Save three values, by name: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`. In a local session the agent runs `python3 scripts/set-key.py GOOGLE_CLIENT_ID`, `python3 scripts/set-key.py GOOGLE_CLIENT_SECRET` and `python3 scripts/set-key.py GOOGLE_REFRESH_TOKEN`, once each, and you paste each value in the box that opens; for routines, also add each as an environment variable in the environment's settings (the permanent copy). Then the agent runs this test (the script loads the values itself):
 
 ```bash
 python3 scripts/with-env.py -- bash <<'SH'
